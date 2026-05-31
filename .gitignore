@@ -40,3 +40,7 @@ backups/
 # ── Misc ────────────────────────────────────────────────────────
 *.zip
 *.tar.gz
+
+# - Uploads ----
+uploads/
+huh/backend/app/uploads/
