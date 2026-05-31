@@ -7,6 +7,8 @@
 ![React](https://img.shields.io/badge/react-19-61DAFB)
 ![TypeScript](https://img.shields.io/badge/typescript-5.7-3178C6)
 ![License](https://img.shields.io/badge/license-MIT-green)
+[![CI](https://github.com/lokeshgoyal/receiptai/actions/workflows/ci.yml/badge.svg)](https://github.com/lokeshgoyal/receiptai/actions/workflows/ci.yml)
+[![Docker](https://img.shields.io/badge/docker-ready-blue?logo=docker)](https://github.com/lokeshgoyal/receiptai/pkgs/container/receiptai)
 
 ---
 
@@ -26,6 +28,37 @@
 - **Role-based Access** — Owner, admin, member roles per organization
 - **Backup & Restore** — Automated database backups with retention policy
 - **Vendor/Client Portals** — Self-service access for vendors and clients
+- **100+ Reports** — P&L, balance sheet, trial balance, cash flow, aging, budgets, and more
+- **Inventory Management** — Track stock, lots, serial numbers, valuations
+- **Project Accounting** — Job costing, time tracking, project billing
+- **Fixed Assets** — Depreciation schedules, asset lifecycle management
+- **Multi-company** — Consolidated reporting across multiple entities
+- **Tax Compliance** — TDS, GST/VAT, tax rules engine, tax calendar
+- **CRM** — Contact management with activity notes and email integration
+- **Document Management** — AI-powered OCR, version control, templates
+
+## Why ReceiptAI?
+
+| Feature | ReceiptAI | Invoice Ninja | Crater | Frappe Books |
+|---|---|---|---|---|
+| **Open source** | ✅ MIT | ✅ Elastic | ✅ MIT | ✅ GPL |
+| **Self-hosted** | ✅ | ✅ | ✅ | ✅ |
+| **FastAPI backend** | ✅ | ❌ (PHP/Laravel) | ❌ (PHP/Laravel) | ❌ (Python/ Flask) |
+| **React frontend** | ✅ (shadcn/ui) | ❌ (Flutter) | ❌ (Vue) | ❌ (Electron) |
+| **PII encryption** | ✅ (Fernet) | ❌ | ❌ | ❌ |
+| **Audit logging** | ✅ (auto, per-model) | ❌ | ❌ | ❌ |
+| **2FA** | ✅ (TOTP) | ✅ | ❌ | ❌ |
+| **Multi-currency** | ✅ (5 currencies) | ✅ | ✅ | ❌ |
+| **Payroll** | ✅ | ❌ | ❌ | ❌ |
+| **Bank reconciliation** | ✅ | ✅ | ✅ | ❌ |
+| **Field-level encryption** | ✅ | ❌ | ❌ | ❌ |
+| **CI/CD pipeline** | ✅ (GitHub Actions) | ❌ | ❌ | ❌ |
+| **Docker Compose** | ✅ (full stack) | ✅ | ✅ | ❌ |
+| **Rate limiting** | ✅ | ✅ | ❌ | ❌ |
+| **API docs (Swagger)** | ✅ (auto) | ✅ | ✅ | ❌ |
+| **Backup automation** | ✅ | ❌ | ❌ | ❌ |
+| **Stripe payments** | ✅ | ✅ | ✅ | ❌ |
+| **Vendor/client portal** | ✅ | ✅ | ❌ | ❌ |
 
 ## Architecture
 
@@ -145,28 +178,58 @@ npx vitest run
 
 ## Deployment
 
-### Docker
+### One-Click Deploy
+
+| Platform | Button |
+|---|---|
+| **Docker** (any VPS) | `docker compose up --build` |
+| **Railway** | [![Deploy on Railway](https://img.shields.io/badge/Railway-Deploy-0B0D0E?logo=railway)](https://railway.com/template/receiptai) |
+| **Render** | [![Deploy to Render](https://img.shields.io/badge/Render-Deploy-46E3B7?logo=render)](https://render.com/deploy?repo=https://github.com/lokeshgoyal/receiptai) |
+| **Fly.io** | [![Deploy on Fly](https://img.shields.io/badge/Fly.io-Deploy-24175C?logo=fly)](https://fly.io/launch/github/lokeshgoyal/receiptai) |
+
+### Docker (Production)
 
 ```bash
-# Build and run with Docker Compose
-docker-compose up --build
+# Clone and deploy
+git clone https://github.com/lokeshgoyal/receiptai.git
+cd receiptai
+
+# Set required secrets
+export SECRET_KEY=$(openssl rand -hex 32)
+export ENCRYPTION_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+
+# Launch full stack
+docker compose up --build -d
 ```
 
-### Manual
+### Manual (Production)
 
 1. Set `ENVIRONMENT=production` in `.env`
-2. Set `SECRET_KEY`, `ENCRYPTION_KEY`, and `CORS_ORIGINS`
-3. Use a production ASGI server: `uvicorn main:app --host 0.0.0.0 --port 5000 --workers 4`
-4. Serve the frontend build from `app/app/dist/public/` or via a CDN
+2. Generate and set `SECRET_KEY` and `ENCRYPTION_KEY`
+3. Configure `CORS_ORIGINS` with your domain
+4. Start the backend: `uvicorn main:app --host 0.0.0.0 --port 5000 --workers 4`
+5. Build the frontend: `cd app/app && npm run build`
+6. Serve `dist/public/` via nginx or a CDN
+
+## CI/CD
+
+Every commit is automatically:
+
+- ✅ **Linted** — Ruff (Python), ESLint (TypeScript)
+- ✅ **Type-checked** — `tsc --noEmit`
+- ✅ **Tested** — 30+ backend tests with pytest
+- ✅ **Security-scanned** — Bandit (Python), Gitleaks (secrets)
+- ✅ **Docker-built** — Compose build verified
+
+Status: [![CI](https://github.com/lokeshgoyal/receiptai/actions/workflows/ci.yml/badge.svg)](https://github.com/lokeshgoyal/receiptai/actions/workflows/ci.yml)
 
 ## License
 
 [MIT](LICENSE)
 
-## Contributing
+## Community
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## Security
-
-Report vulnerabilities to security@receiptai.dev — see [SECURITY.md](SECURITY.md).
+- [CONTRIBUTING.md](CONTRIBUTING.md) — How to contribute
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — Community guidelines
+- [SECURITY.md](SECURITY.md) — Reporting vulnerabilities
+- [Issues](https://github.com/lokeshgoyal/receiptai/issues) — Bug reports & feature requests
