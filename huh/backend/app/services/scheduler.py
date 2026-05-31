@@ -18,7 +18,7 @@ def process_recurring_transactions():
     try:
         today = date.today()
         recs = db.query(RecurringTransaction).filter(
-            RecurringTransaction.active == True,
+            RecurringTransaction.active,
             RecurringTransaction.next_date <= today,
         ).all()
         for rec in recs:
@@ -29,7 +29,6 @@ def process_recurring_transactions():
             )
             db.add(txn)
             db.flush()
-            cat = rec.category or "Other"
             if rec.transaction_type == "money_in" or rec.transaction_type == "income":
                 debit_acct = db.query(Account).filter(
                     Account.org_id == rec.org_id, Account.type == "asset",
@@ -147,7 +146,7 @@ def process_payment_reminders():
     try:
         now = datetime.now(timezone.utc)
         reminders = db.query(PaymentReminder).filter(
-            PaymentReminder.active == True,
+            PaymentReminder.active,
             PaymentReminder.next_send_at <= now,
         ).all()
         for r in reminders:

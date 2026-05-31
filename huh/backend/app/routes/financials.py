@@ -1,8 +1,7 @@
 from datetime import datetime, date, timezone
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from sqlalchemy.orm import Session, aliased
-from sqlalchemy import func, case
-from typing import List, Optional
+from sqlalchemy import func
 from decimal import Decimal
 
 from app.database import get_db
@@ -70,7 +69,7 @@ def balance_sheet(org_id: int, user: User = Depends(get_current_user), db: Sessi
         "liabilities": liabilities,
         "equity": equity,
         "total_assets": round(sum(a["balance"] for a in assets), 2),
-        "total_liabilities": round(sum(l["balance"] for l in liabilities), 2),
+        "total_liabilities": round(sum(item["balance"] for item in liabilities), 2),
         "total_equity": round(sum(e["balance"] for e in equity), 2),
     }
 
@@ -171,8 +170,8 @@ def create_journal(
     lines = json.loads(lines_json)
     if not lines:
         raise HTTPException(400, "At least one line required")
-    total_dr = sum(l.get("debit", 0) for l in lines)
-    total_cr = sum(l.get("credit", 0) for l in lines)
+    total_dr = sum(line.get("debit", 0) for line in lines)
+    total_cr = sum(line.get("credit", 0) for line in lines)
     if abs(total_dr - total_cr) > 0.01:
         raise HTTPException(400, f"Debits ({total_dr}) must equal Credits ({total_cr})")
 
@@ -220,7 +219,8 @@ def upload_statement(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    import csv, io
+    import csv
+    import io
     content = file.file.read().decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(content))
     stmt = StatementImport(org_id=org_id, filename=file.filename, status="pending")
@@ -277,10 +277,10 @@ def get_statement(org_id: int, import_id: int, user: User = Depends(get_current_
     return {
         "import": {"id": stmt.id, "filename": stmt.filename, "total_lines": stmt.total_lines, "matched_lines": stmt.matched_lines, "status": stmt.status},
         "lines": [{
-            "id": l.id, "date": l.date.isoformat(), "description": l.description,
-            "amount": float(l.amount), "type": l.type, "status": l.status,
-            "matched_transaction_id": l.matched_transaction_id,
-        } for l in lines],
+            "id": line.id, "date": line.date.isoformat(), "description": line.description,
+            "amount": float(line.amount), "type": line.type, "status": line.status,
+            "matched_transaction_id": line.matched_transaction_id,
+        } for line in lines],
     }
 
 

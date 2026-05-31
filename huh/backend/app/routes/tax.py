@@ -8,7 +8,6 @@ from app.database import get_db
 from app.models.user import User
 from app.models.tax import TaxRate, TaxReturn
 from app.models.invoice import Invoice
-from app.models.bill import Bill
 from app.services.tax import compute_invoice_tax, get_tax_breakdown
 from app.auth import get_current_user
 

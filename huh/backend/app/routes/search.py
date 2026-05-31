@@ -67,7 +67,7 @@ def global_search(
             "id": inv.id,
             "title": f"Invoice #{inv.number}",
             "subtitle": f"${float(inv.total):,.2f} | {inv.status}",
-            "url": f"/invoices",
+            "url": "/invoices",
         })
 
     # Bills
@@ -81,7 +81,7 @@ def global_search(
             "id": b.id,
             "title": f"Bill #{b.number}",
             "subtitle": f"${float(b.total):,.2f} | {b.status}",
-            "url": f"/bills",
+            "url": "/bills",
         })
 
     # Contacts
@@ -95,7 +95,7 @@ def global_search(
             "id": c.id,
             "title": c.name,
             "subtitle": c.email or c.phone or "",
-            "url": f"/people",
+            "url": "/people",
         })
 
     # Projects
@@ -109,7 +109,7 @@ def global_search(
             "id": p.id,
             "title": p.name,
             "subtitle": f"${float(p.budget or 0):,.2f} budget | {p.status}",
-            "url": f"/projects",
+            "url": "/projects",
         })
 
     # Employees
@@ -123,7 +123,7 @@ def global_search(
             "id": e.id,
             "title": e.name,
             "subtitle": f"{e.department or ''} | {e.designation or ''}",
-            "url": f"/payroll",
+            "url": "/payroll",
         })
 
     return {"results": results[:limit]}

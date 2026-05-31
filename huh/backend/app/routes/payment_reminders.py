@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import timedelta
 from app.database import get_db
 from app.models.payment_reminder import PaymentReminder, ReminderLog
 from app.models.invoice import Invoice
-from app.models.contact import Contact
 from app.auth import get_current_user
 
 router = APIRouter(prefix="/api/payment-reminders", tags=["Payment Reminders"])

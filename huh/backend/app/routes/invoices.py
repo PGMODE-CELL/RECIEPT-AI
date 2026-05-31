@@ -6,7 +6,6 @@ from decimal import Decimal
 
 from app.database import get_db
 from app.models.user import User
-from app.models.organization import Organization
 from app.models.invoice import Invoice
 from app.auth import get_current_user
 

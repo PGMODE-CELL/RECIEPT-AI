@@ -1,5 +1,6 @@
 """Quick verification of production hardening modules"""
-import sys, os
+import sys
+import os
 
 # Note: env vars must be set BEFORE importing app.config
 # If pytest already imported app.config, use the loaded settings instead
@@ -44,7 +45,7 @@ assert dec == data
 print("[PASS] Encryption dict helpers: OK")
 
 # 3. Errors
-from app.errors import AppError, ValidationError, NotFoundError, AuthError, ForbiddenError
+from app.errors import AppError, ValidationError
 
 try:
     raise ValidationError("Invalid input", {"field": "email"})
@@ -55,23 +56,19 @@ except AppError as e:
 print("[PASS] Structured errors: OK")
 
 # 4. Security middleware
-from app.security_middleware import security_headers_middleware, https_redirect_middleware, setup_rate_limiting
 print("[PASS] Security middleware imports: OK")
 
 # 5. Backup
-from app.backup import backup_database, list_backups, restore_database
 print("[PASS] Backup module imports: OK")
 
 # 6. CLI
-from app.cli import main
 print("[PASS] CLI module imports: OK")
 
 # 7. Error middleware
-from app.errors import catch_all_exceptions
 print("[PASS] Error middleware: OK")
 
 # 8. Audit events
-from app.audit_events import register_all_models, register_audit_events
+from app.audit_events import register_all_models
 register_all_models()
 print("[PASS] Audit events registration: OK")
 

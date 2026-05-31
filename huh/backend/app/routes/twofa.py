@@ -1,16 +1,13 @@
-import os
 import pyotp
 import qrcode
 import io
-import base64
 from fastapi import APIRouter, HTTPException, Depends, Form
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
 
 from app.database import get_db
 from app.models.user import User
-from app.auth import get_current_user, create_token
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/api/auth/2fa", tags=["2FA"])
 

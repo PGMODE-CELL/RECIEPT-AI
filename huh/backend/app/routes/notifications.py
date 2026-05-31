@@ -49,10 +49,10 @@ def list_notifications(
     require_member(org_id, user, db)
     q = db.query(Notification).filter(Notification.org_id == org_id)
     if unread_only:
-        q = q.filter(Notification.read == False)
+        q = q.filter(~Notification.read)
     notifications = q.order_by(desc(Notification.created_at)).limit(limit).all()
     unread_count = db.query(Notification).filter(
-        Notification.org_id == org_id, Notification.read == False
+        Notification.org_id == org_id, ~Notification.read
     ).count()
     return {"notifications": [_serialize(n) for n in notifications], "unread_count": unread_count}
 
@@ -96,7 +96,7 @@ def mark_all_read(
 ):
     require_member(org_id, user, db)
     db.query(Notification).filter(
-        Notification.org_id == org_id, Notification.read == False
+        Notification.org_id == org_id, ~Notification.read
     ).update({"read": True})
     db.commit()
     return {"ok": True}

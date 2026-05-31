@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from app.database import get_db
@@ -11,7 +11,6 @@ router = APIRouter(prefix="/api/dunning", tags=["Dunning"])
 
 @router.post("/process/{org_id}")
 def process_dunning(org_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    from datetime import timedelta
     today = datetime.now(timezone.utc)
     overdue_invoices = db.query(Invoice).filter(Invoice.org_id == org_id, Invoice.status.in_(["sent", "overdue"]), Invoice.paid < Invoice.total).all()
     processed = []

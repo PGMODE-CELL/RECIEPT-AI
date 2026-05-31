@@ -65,7 +65,7 @@ def list_recurring(
 ):
     items = (
         db.query(RecurringTransaction)
-        .filter(RecurringTransaction.org_id == org_id, RecurringTransaction.active == True)
+        .filter(RecurringTransaction.org_id == org_id, RecurringTransaction.active)
         .all()
     )
     return [

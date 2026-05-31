@@ -45,9 +45,9 @@ def list_audit_logs(
         "page": page,
         "per_page": per_page,
         "items": [{
-            "id": l.id, "user_id": l.user_id, "action": l.action,
-            "table_name": l.table_name, "record_id": l.record_id,
-            "old_values": l.old_values, "new_values": l.new_values,
-            "created_at": l.created_at.isoformat(),
-        } for l in logs],
+            "id": log.id, "user_id": log.user_id, "action": log.action,
+            "table_name": log.table_name, "record_id": log.record_id,
+            "old_values": log.old_values, "new_values": log.new_values,
+            "created_at": log.created_at.isoformat(),
+        } for log in logs],
     }

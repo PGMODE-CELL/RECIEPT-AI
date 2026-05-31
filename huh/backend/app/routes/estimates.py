@@ -20,7 +20,6 @@ def create_estimate(
     project_id: int = Form(0),
     user: User = Depends(get_current_user), db: Session = Depends(get_db),
 ):
-    import math
     count = db.query(Estimate).filter(Estimate.org_id == org_id).count()
     est = Estimate(
         org_id=org_id, contact_id=contact_id, project_id=project_id if project_id else None,
@@ -69,7 +68,6 @@ def convert_to_invoice(org_id: int, estimate_id: int,
         raise HTTPException(404, "Estimate not found")
     if est.status == "converted":
         raise HTTPException(400, "Already converted to invoice")
-    import math
     count = db.query(Invoice).filter(Invoice.org_id == org_id).count()
     inv = Invoice(
         org_id=org_id, contact_id=est.contact_id, project_id=est.project_id,

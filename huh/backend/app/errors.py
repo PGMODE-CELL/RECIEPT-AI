@@ -1,7 +1,6 @@
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
-import logging, traceback
+import logging
 
 logger = logging.getLogger("receipt_ai")
 

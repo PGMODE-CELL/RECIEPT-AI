@@ -36,7 +36,7 @@ async def import_csv(
 
     for row in rows:
         try:
-            category = categorize(row.get("description", ""), row.get("amount", 0))
+            categorize(row.get("description", ""), row.get("amount", 0))
             tx_date = row.get("date", str(date.today()))
 
             trans = Transaction(

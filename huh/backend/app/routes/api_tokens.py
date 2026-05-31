@@ -1,7 +1,6 @@
 import secrets
 from fastapi import APIRouter, HTTPException, Depends, Form
 from sqlalchemy.orm import Session
-from datetime import datetime
 
 from app.database import get_db
 from app.models.user import User

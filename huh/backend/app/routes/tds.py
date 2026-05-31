@@ -1,7 +1,6 @@
 from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Form
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from decimal import Decimal
 
 from app.database import get_db

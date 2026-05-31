@@ -46,7 +46,7 @@ def extract_date(text: str) -> Optional[str]:
 
 
 def extract_vendor(text: str) -> str:
-    lines = [l.strip() for l in text.split("\n") if l.strip()]
+    lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
     if not lines:
         return "Unknown Store"
 

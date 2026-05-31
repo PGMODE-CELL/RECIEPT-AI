@@ -2,7 +2,6 @@ import os
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
-import secrets
 from app.database import get_db
 from app.models.contact import Contact
 from app.models.purchase_order import PurchaseOrder

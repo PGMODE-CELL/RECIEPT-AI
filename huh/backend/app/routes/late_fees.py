@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from app.database import get_db
 from app.models.late_fee import LateFeeRule, LateFeeApplied
 from app.models.invoice import Invoice
@@ -34,7 +34,7 @@ def apply_late_fees(org_id: int, rule_id: int = None, db: Session = Depends(get_
             raise HTTPException(404, "Rule not found")
         rules = [rule]
     else:
-        rules = db.query(LateFeeRule).filter(LateFeeRule.org_id == org_id, LateFeeRule.active == True).all()
+        rules = db.query(LateFeeRule).filter(LateFeeRule.org_id == org_id, LateFeeRule.active).all()
     applied = []
     for inv in invoices:
         if not inv.due_date:

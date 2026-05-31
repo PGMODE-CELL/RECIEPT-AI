@@ -1,4 +1,3 @@
-import re
 
 CATEGORY_KEYWORDS = {
     "Food & Dining": [

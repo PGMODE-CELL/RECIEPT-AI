@@ -1,9 +1,8 @@
 from datetime import date, datetime
-from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from decimal import Decimal
-import os, uuid
 
 from app.database import get_db
 from app.models.user import User
@@ -11,7 +10,6 @@ from app.models.project import Project
 from app.models.transaction import Transaction
 from app.models.invoice import Invoice
 from app.models.bill import Bill
-from app.models.attachment import Attachment, UPLOAD_DIR
 from app.auth import get_current_user
 
 router = APIRouter(prefix="/api/projects", tags=["Projects"])

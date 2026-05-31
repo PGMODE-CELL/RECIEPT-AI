@@ -1,14 +1,10 @@
 from datetime import datetime, timezone, date
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from app.models.notification import Notification
 from app.models.invoice import Invoice
 from app.models.bill import Bill
 from app.models.budget import Budget
-from app.models.transaction import Transaction
-from app.models.payroll import Payslip
-from app.models.attachment import Attachment
 
 
 def create_notification(

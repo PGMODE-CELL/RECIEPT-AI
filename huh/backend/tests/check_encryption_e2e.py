@@ -1,5 +1,6 @@
 """Test PII field-level encryption end-to-end."""
-import sys; sys.path.insert(0, '.')
+import sys
+sys.path.insert(0, '.')
 from fastapi.testclient import TestClient
 from main import app
 

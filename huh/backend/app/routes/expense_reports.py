@@ -32,7 +32,7 @@ def get_report(org_id: int, report_id: int, db: Session = Depends(get_db), user=
     if not report:
         raise HTTPException(404, "Report not found")
     lines = db.query(ExpenseLine).filter(ExpenseLine.expense_report_id == report_id).all()
-    return {"report": {"id": report.id, "title": report.title, "description": report.description, "total": report.total, "status": report.status}, "lines": [{"id": l.id, "date": str(l.date.date()), "category": l.category, "amount": l.amount, "description": l.description, "billable": l.billable} for l in lines]}
+    return {"report": {"id": report.id, "title": report.title, "description": report.description, "total": report.total, "status": report.status}, "lines": [{"id": line.id, "date": str(line.date.date()), "category": line.category, "amount": line.amount, "description": line.description, "billable": line.billable} for line in lines]}
 
 
 @router.post("/{org_id}/{report_id}/lines")

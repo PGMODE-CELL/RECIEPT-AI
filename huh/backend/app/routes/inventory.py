@@ -1,7 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Form
 from sqlalchemy.orm import Session
-from datetime import date
-import json
 
 from app.database import get_db
 from app.models.user import User
@@ -34,7 +32,7 @@ def create_item(
 @router.get("/{org_id}/items")
 def list_items(org_id: int, page: int = 1, per_page: int = 50,
                user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    q = db.query(InventoryItem).filter(InventoryItem.org_id == org_id, InventoryItem.active == True)
+    q = db.query(InventoryItem).filter(InventoryItem.org_id == org_id, InventoryItem.active)
     total = q.count()
     items = q.offset((page - 1) * per_page).limit(per_page).all()
     return {"total": total, "page": page, "per_page": per_page, "items": [{
@@ -50,7 +48,7 @@ def low_stock(org_id: int, user: User = Depends(get_current_user), db: Session =
     items = db.query(InventoryItem).filter(
         InventoryItem.org_id == org_id,
         InventoryItem.quantity <= InventoryItem.reorder_level,
-        InventoryItem.active == True,
+        InventoryItem.active,
     ).all()
     return [{
         "id": i.id, "name": i.name, "sku": i.sku,

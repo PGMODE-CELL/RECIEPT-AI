@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 from app.models.tax import TaxRate
 from app.models.invoice import Invoice
 from app.models.bill import Bill
-from app.models.transaction import Transaction, TransactionLine
 
 
 def get_tax_rate(db: Session, org_id: int, rate_id: int) -> Optional[TaxRate]:

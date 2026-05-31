@@ -1,17 +1,14 @@
 from fastapi import APIRouter, HTTPException, Depends, Form
 from sqlalchemy.orm import Session
-from datetime import datetime, date, timezone
-from jose import jwt, JWTError
+from datetime import datetime, timezone
+from jose import jwt
 import os
 
 from app.database import get_db
-from app.models.user import User
 from app.models.invoice import Invoice
-from app.models.bill import Bill
 from app.models.contact import Contact
 from app.models.attachment import Attachment
 from app.models.payment import Payment
-from app.auth import get_current_user
 
 router = APIRouter(prefix="/api/client-portal", tags=["Client Portal"])
 

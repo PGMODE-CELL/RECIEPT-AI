@@ -1,9 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime
 from app.database import get_db
 from app.models.warehouse import Warehouse, WarehouseStock
-from app.models.inventory import InventoryItem
 from app.auth import get_current_user
 
 router = APIRouter(prefix="/api/warehouses", tags=["Warehouses"])
@@ -20,7 +18,7 @@ def create_warehouse(org_id: int, name: str = "", code: str = "", address: str =
 
 @router.get("/{org_id}")
 def list_warehouses(org_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    whs = db.query(Warehouse).filter(Warehouse.org_id == org_id, Warehouse.active == True).all()
+    whs = db.query(Warehouse).filter(Warehouse.org_id == org_id, Warehouse.active).all()
     return {"warehouses": [{"id": w.id, "name": w.name, "code": w.code, "city": w.city, "is_default": w.is_default} for w in whs]}
 
 

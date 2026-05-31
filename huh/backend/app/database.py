@@ -1,6 +1,5 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
-from fastapi import Depends
 from typing import Generator
 
 from app.config import settings

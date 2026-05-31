@@ -1,6 +1,5 @@
 """Tests for all new route modules: forex, depreciation, payroll, audit, roles, TDS, email, aging, projects, attachments, consolidation, notifications, search, contacts, invoices, bills, budgets, receipts, reports"""
 
-from datetime import date, timedelta
 import json
 import io
 
@@ -164,25 +163,25 @@ def test_profit_loss(client, auth_headers, org_id):
 
 def test_forex_rate(client, auth_headers, org_id):
     res = client.post(
-        f"/api/forex/rates",
+        "/api/forex/rates",
         headers=auth_headers,
         data={"from_currency": "USD", "to_currency": "EUR", "rate": "0.92"},
     )
     assert res.status_code == 200
     assert "Rate" in res.json()["message"]
 
-    res = client.get(f"/api/forex/rates?from_cur=USD&to_cur=EUR", headers=auth_headers)
+    res = client.get("/api/forex/rates?from_cur=USD&to_cur=EUR", headers=auth_headers)
     assert res.status_code == 200
     assert len(res.json()) > 0
 
 
 def test_forex_conversion(client, auth_headers, org_id):
     client.post(
-        f"/api/forex/rates",
+        "/api/forex/rates",
         headers=auth_headers,
         data={"from_currency": "USD", "to_currency": "EUR", "rate": "0.92"},
     )
-    res = client.get(f"/api/forex/convert?amount=100&from_cur=USD&to_cur=EUR", headers=auth_headers)
+    res = client.get("/api/forex/convert?amount=100&from_cur=USD&to_cur=EUR", headers=auth_headers)
     assert res.status_code == 200
     assert res.json()["converted"] == 92.0
 
@@ -230,26 +229,6 @@ def test_add_salary_component(client, auth_headers, org_id):
         data={"basic": "30000", "hra": "15000"},
     )
     assert res.status_code == 200
-
-
-def test_generate_payslip(client, auth_headers, org_id):
-    emp = client.post(
-        f"/api/payroll/{org_id}/employees",
-        headers=auth_headers,
-        data={"name": "Charlie", "email": "charlie@test.com", "doj": "2024-01-01"},
-    ).json()
-    client.post(
-        f"/api/payroll/{org_id}/employees/{emp['id']}/components",
-        headers=auth_headers,
-        data={"basic": "30000", "hra": "15000"},
-    )
-    res = client.post(
-        f"/api/payroll/{org_id}/employees/{emp['id']}/payslip",
-        headers=auth_headers,
-        data={"month": "2024-06"},
-    )
-    assert res.status_code == 200
-    assert "net_pay" in res.json()
 
 
 def test_generate_payslip(client, auth_headers, org_id):
@@ -412,7 +391,7 @@ def test_csv_export(client, auth_headers, org_id):
 
 def test_email_config(client, auth_headers, org_id):
     res = client.post(
-        f"/api/email/invoice/0",
+        "/api/email/invoice/0",
         headers=auth_headers,
     )
     # Invoice 0 doesn't exist, so we expect 404

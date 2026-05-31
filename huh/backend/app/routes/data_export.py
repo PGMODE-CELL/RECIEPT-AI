@@ -4,14 +4,13 @@ from app.database import get_db
 from app.models.organization import Organization
 from app.models.account import Account
 from app.models.contact import Contact
-from app.models.transaction import Transaction, TransactionLine
+from app.models.transaction import Transaction
 from app.models.invoice import Invoice
 from app.models.bill import Bill
 from app.models.receipt import Receipt
 from app.models.budget import Budget
 from app.models.project import Project
 from app.models.asset import Asset
-from app.models.payroll import Employee
 from app.models.purchase_order import PurchaseOrder
 from app.models.inventory import InventoryItem
 from app.models.estimate import Estimate

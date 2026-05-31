@@ -21,7 +21,7 @@ def create_loan(org_id: int, type: str = "borrowing", name: str = "", lender_nam
 @router.get("/{org_id}")
 def list_loans(org_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
     loans = db.query(Loan).filter(Loan.org_id == org_id).order_by(Loan.created_at.desc()).all()
-    return {"loans": [{"id": l.id, "name": l.name, "type": l.type, "principal": l.principal, "outstanding": l.outstanding, "interest_rate": l.interest_rate, "status": l.status} for l in loans]}
+    return {"loans": [{"id": loan.id, "name": loan.name, "type": loan.type, "principal": loan.principal, "outstanding": loan.outstanding, "interest_rate": loan.interest_rate, "status": loan.status} for loan in loans]}
 
 
 @router.get("/{org_id}/{loan_id}")

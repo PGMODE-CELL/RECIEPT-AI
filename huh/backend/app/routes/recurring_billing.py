@@ -5,7 +5,6 @@ import json
 from app.database import get_db
 from app.models.recurring_billing import RecurringBillingPlan
 from app.models.invoice import Invoice
-from app.models.contact import Contact
 from app.auth import get_current_user
 
 router = APIRouter(prefix="/api/recurring-billing", tags=["Recurring Billing"])

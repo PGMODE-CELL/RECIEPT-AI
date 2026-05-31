@@ -15,7 +15,6 @@ import os
 import secrets
 import sys
 import subprocess
-from datetime import datetime
 
 
 def cmd_key_generate(args):
@@ -94,7 +93,6 @@ def cmd_user_create(args):
     """Create a new user."""
     from app.database import SessionLocal
     from app.models.user import User
-    from app.security import hash_password
     from app.auth import get_password_hash
     db = SessionLocal()
     try:
@@ -159,7 +157,6 @@ def cmd_user_disable(args):
 
 def cmd_health(args):
     """Run health checks."""
-    import time
     import urllib.request
     failures = 0
 
