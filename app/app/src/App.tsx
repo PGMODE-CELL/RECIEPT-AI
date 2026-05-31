@@ -1,0 +1,248 @@
+import { lazy, Suspense } from "react";
+import { Routes, Route } from "react-router";
+import AppLayout from "./components/AppLayout";
+
+import Dashboard from "./pages/Dashboard";
+import CustomDashboard from "./pages/CustomDashboard";
+import AIInsights from "./pages/AIInsights";
+import CRM from "./pages/CRM";
+import Invoices from "./pages/Invoices";
+import InvoiceDetail from "./pages/InvoiceDetail";
+import Bills from "./pages/Bills";
+import BillDetail from "./pages/BillDetail";
+import Banking from "./pages/Banking";
+import BankFeedImport from "./pages/BankFeedImport";
+import Contacts from "./pages/Contacts";
+import ContactDetail from "./pages/ContactDetail";
+import Products from "./pages/Products";
+import Manufacturing from "./pages/Manufacturing";
+import Projects from "./pages/Projects";
+import Employees from "./pages/Employees";
+import Payroll from "./pages/Payroll";
+import Receipts from "./pages/Receipts";
+import ChartOfAccounts from "./pages/ChartOfAccounts";
+import JournalEntries from "./pages/JournalEntries";
+import CostCenters from "./pages/CostCenters";
+import Reports from "./pages/Reports";
+import TrialBalance from "./pages/TrialBalance";
+import GeneralLedger from "./pages/GeneralLedger";
+import CashBook from "./pages/CashBook";
+import ComplianceReports from "./pages/ComplianceReports";
+import CustomReports from "./pages/CustomReports";
+import Documents from "./pages/Documents";
+import Settings from "./pages/Settings";
+import Budgets from "./pages/Budgets";
+import FixedAssets from "./pages/FixedAssets";
+import Recurring from "./pages/Recurring";
+import Reconciliation from "./pages/Reconciliation";
+import AuditTrail from "./pages/AuditTrail";
+import CreditNotes from "./pages/CreditNotes";
+import PurchaseOrders from "./pages/PurchaseOrders";
+import Quotations from "./pages/Quotations";
+import TimeTracking from "./pages/TimeTracking";
+import ExpenseClaims from "./pages/ExpenseClaims";
+import NotificationCenter from "./pages/NotificationCenter";
+import InvoiceTemplates from "./pages/InvoiceTemplates";
+import EmailTemplates from "./pages/EmailTemplates";
+import ExchangeRates from "./pages/ExchangeRates";
+import DataImport from "./pages/DataImport";
+import Automation from "./pages/Automation";
+import PaymentGateway from "./pages/PaymentGateway";
+import APIDocumentation from "./pages/APIDocumentation";
+import SecurityCenter from "./pages/SecurityCenter";
+import LanguageSettings from "./pages/LanguageSettings";
+import Login from "./pages/Login";
+import OrgSetup from "./pages/OrgSetup";
+import NotFound from "./pages/NotFound";
+
+const MultiCompany = lazy(() => import("./pages/MultiCompany"));
+const PeriodClose = lazy(() => import("./pages/PeriodClose"));
+const RevenueRecognition = lazy(() => import("./pages/RevenueRecognition"));
+const LeaseAccounting = lazy(() => import("./pages/LeaseAccounting"));
+const InventoryLots = lazy(() => import("./pages/InventoryLots"));
+const JobCosting = lazy(() => import("./pages/JobCosting"));
+const ProjectBilling = lazy(() => import("./pages/ProjectBilling"));
+const BankRules = lazy(() => import("./pages/BankRules"));
+const InventoryValuation = lazy(() => import("./pages/InventoryValuation"));
+const CashFlowForecast = lazy(() => import("./pages/CashFlowForecast"));
+const FiscalYearSettings = lazy(() => import("./pages/FiscalYearSettings"));
+const TaxRules = lazy(() => import("./pages/TaxRules"));
+const Consolidation = lazy(() => import("./pages/Consolidation"));
+const InterCompany = lazy(() => import("./pages/InterCompany"));
+const Webhooks = lazy(() => import("./pages/Webhooks"));
+const WebhookLogs = lazy(() => import("./pages/WebhookLogs"));
+const EmailSender = lazy(() => import("./pages/EmailSender"));
+const PDFGenerator = lazy(() => import("./pages/PDFGenerator"));
+const DocumentVersions = lazy(() => import("./pages/DocumentVersions"));
+const DarkMode = lazy(() => import("./pages/DarkMode"));
+const SmartCategorization = lazy(() => import("./pages/SmartCategorization"));
+const AnomalyDetection = lazy(() => import("./pages/AnomalyDetection"));
+const CustomerAnalytics = lazy(() => import("./pages/CustomerAnalytics"));
+const ExpenseAnalytics = lazy(() => import("./pages/ExpenseAnalytics"));
+const WorkflowDesigner = lazy(() => import("./pages/WorkflowDesigner"));
+const CollaborationHub = lazy(() => import("./pages/CollaborationHub"));
+const ComplianceDashboard = lazy(() => import("./pages/ComplianceDashboard"));
+const ProfitabilityAnalysis = lazy(() => import("./pages/ProfitabilityAnalysis"));
+const InventoryAnalytics = lazy(() => import("./pages/InventoryAnalytics"));
+const FinancialHealth = lazy(() => import("./pages/FinancialHealth"));
+const InvoiceSplitter = lazy(() => import("./pages/InvoiceSplitter"));
+const BulkActions = lazy(() => import("./pages/BulkActions"));
+const SmartSearch = lazy(() => import("./pages/SmartSearch"));
+const FinancialCalendar = lazy(() => import("./pages/FinancialCalendar"));
+const VendorScorecard = lazy(() => import("./pages/VendorScorecard"));
+const CustomerPortal = lazy(() => import("./pages/CustomerPortal"));
+const TaxCalendar = lazy(() => import("./pages/TaxCalendar"));
+const InventoryForecast = lazy(() => import("./pages/InventoryForecast"));
+const KPIBuilder = lazy(() => import("./pages/KPIBuilder"));
+const AuditWizard = lazy(() => import("./pages/AuditWizard"));
+const CurrencyHedge = lazy(() => import("./pages/CurrencyHedge"));
+const SupplierPortal = lazy(() => import("./pages/SupplierPortal"));
+const DocumentAI = lazy(() => import("./pages/DocumentAI"));
+const BudgetVariance = lazy(() => import("./pages/BudgetVariance"));
+const MultiCurrencyInvoice = lazy(() => import("./pages/MultiCurrencyInvoice"));
+const ExpensePolicy = lazy(() => import("./pages/ExpensePolicy"));
+const ProjectGantt = lazy(() => import("./pages/ProjectGantt"));
+const InvoiceReminder = lazy(() => import("./pages/InvoiceReminder"));
+const CashPosition = lazy(() => import("./pages/CashPosition"));
+const CreditManagement = lazy(() => import("./pages/CreditManagement"));
+const SerialNumberTracker = lazy(() => import("./pages/SerialNumberTracker"));
+const BatchProcessing = lazy(() => import("./pages/BatchProcessing"));
+const DataBackup = lazy(() => import("./pages/DataBackup"));
+const APIWebhooks = lazy(() => import("./pages/APIWebhooks"));
+const SystemHealth = lazy(() => import("./pages/SystemHealth"));
+
+function PageLoader() {
+  return (
+    <div className="flex h-full items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-gray-500">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/org-setup" element={<OrgSetup />} />
+      <Route
+        path="/*"
+        element={
+          <AppLayout>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/custom-dashboard" element={<CustomDashboard />} />
+                <Route path="/ai-insights" element={<AIInsights />} />
+                <Route path="/crm" element={<CRM />} />
+                <Route path="/invoices" element={<Invoices />} />
+                <Route path="/invoices/:id" element={<InvoiceDetail />} />
+                <Route path="/credit-notes" element={<CreditNotes />} />
+                <Route path="/bills" element={<Bills />} />
+                <Route path="/bills/:id" element={<BillDetail />} />
+                <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                <Route path="/quotations" element={<Quotations />} />
+                <Route path="/banking" element={<Banking />} />
+                <Route path="/bank-feed" element={<BankFeedImport />} />
+                <Route path="/contacts" element={<Contacts />} />
+                <Route path="/contacts/:id" element={<ContactDetail />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/manufacturing" element={<Manufacturing />} />
+                <Route path="/projects" element={<Projects />} />
+                <Route path="/time-tracking" element={<TimeTracking />} />
+                <Route path="/expense-claims" element={<ExpenseClaims />} />
+                <Route path="/employees" element={<Employees />} />
+                <Route path="/payroll" element={<Payroll />} />
+                <Route path="/receipts" element={<Receipts />} />
+                <Route path="/accounts" element={<ChartOfAccounts />} />
+                <Route path="/journal" element={<JournalEntries />} />
+                <Route path="/cost-centers" element={<CostCenters />} />
+                <Route path="/budgets" element={<Budgets />} />
+                <Route path="/assets" element={<FixedAssets />} />
+                <Route path="/recurring" element={<Recurring />} />
+                <Route path="/reconciliation" element={<Reconciliation />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/trial-balance" element={<TrialBalance />} />
+                <Route path="/general-ledger" element={<GeneralLedger />} />
+                <Route path="/cash-book" element={<CashBook />} />
+                <Route path="/compliance" element={<ComplianceReports />} />
+                <Route path="/custom-reports" element={<CustomReports />} />
+                <Route path="/documents" element={<Documents />} />
+                <Route path="/email-templates" element={<EmailTemplates />} />
+                <Route path="/invoice-templates" element={<InvoiceTemplates />} />
+                <Route path="/exchange-rates" element={<ExchangeRates />} />
+                <Route path="/data-import" element={<DataImport />} />
+                <Route path="/automation" element={<Automation />} />
+                <Route path="/payment-gateway" element={<PaymentGateway />} />
+                <Route path="/api-docs" element={<APIDocumentation />} />
+                <Route path="/audit" element={<AuditTrail />} />
+                <Route path="/security" element={<SecurityCenter />} />
+                <Route path="/language" element={<LanguageSettings />} />
+                <Route path="/notifications" element={<NotificationCenter />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/multi-company" element={<MultiCompany />} />
+                <Route path="/period-close" element={<PeriodClose />} />
+                <Route path="/revenue-recognition" element={<RevenueRecognition />} />
+                <Route path="/lease-accounting" element={<LeaseAccounting />} />
+                <Route path="/inventory-lots" element={<InventoryLots />} />
+                <Route path="/job-costing" element={<JobCosting />} />
+                <Route path="/project-billing" element={<ProjectBilling />} />
+                <Route path="/bank-rules" element={<BankRules />} />
+                <Route path="/inventory-valuation" element={<InventoryValuation />} />
+                <Route path="/cash-flow-forecast" element={<CashFlowForecast />} />
+                <Route path="/fiscal-year" element={<FiscalYearSettings />} />
+                <Route path="/tax-rules" element={<TaxRules />} />
+                <Route path="/consolidation" element={<Consolidation />} />
+                <Route path="/inter-company" element={<InterCompany />} />
+                <Route path="/webhooks" element={<Webhooks />} />
+                <Route path="/webhook-logs" element={<WebhookLogs />} />
+                <Route path="/email-sender" element={<EmailSender />} />
+                <Route path="/pdf-generator" element={<PDFGenerator />} />
+                <Route path="/document-versions" element={<DocumentVersions />} />
+                <Route path="/dark-mode" element={<DarkMode />} />
+                <Route path="/smart-categorization" element={<SmartCategorization />} />
+                <Route path="/anomaly-detection" element={<AnomalyDetection />} />
+                <Route path="/customer-analytics" element={<CustomerAnalytics />} />
+                <Route path="/expense-analytics" element={<ExpenseAnalytics />} />
+                <Route path="/workflow-designer" element={<WorkflowDesigner />} />
+                <Route path="/collaboration-hub" element={<CollaborationHub />} />
+                <Route path="/compliance-dashboard" element={<ComplianceDashboard />} />
+                <Route path="/profitability-analysis" element={<ProfitabilityAnalysis />} />
+                <Route path="/inventory-analytics" element={<InventoryAnalytics />} />
+                <Route path="/financial-health" element={<FinancialHealth />} />
+                <Route path="/invoice-splitter" element={<InvoiceSplitter />} />
+                <Route path="/bulk-actions" element={<BulkActions />} />
+                <Route path="/smart-search" element={<SmartSearch />} />
+                <Route path="/financial-calendar" element={<FinancialCalendar />} />
+                <Route path="/vendor-scorecard" element={<VendorScorecard />} />
+                <Route path="/customer-portal" element={<CustomerPortal />} />
+                <Route path="/tax-calendar" element={<TaxCalendar />} />
+                <Route path="/inventory-forecast" element={<InventoryForecast />} />
+                <Route path="/kpi-builder" element={<KPIBuilder />} />
+                <Route path="/audit-wizard" element={<AuditWizard />} />
+                <Route path="/currency-hedge" element={<CurrencyHedge />} />
+                <Route path="/supplier-portal" element={<SupplierPortal />} />
+                <Route path="/document-ai" element={<DocumentAI />} />
+                <Route path="/budget-variance" element={<BudgetVariance />} />
+                <Route path="/multi-currency-invoice" element={<MultiCurrencyInvoice />} />
+                <Route path="/expense-policy" element={<ExpensePolicy />} />
+                <Route path="/project-gantt" element={<ProjectGantt />} />
+                <Route path="/invoice-reminder" element={<InvoiceReminder />} />
+                <Route path="/cash-position" element={<CashPosition />} />
+                <Route path="/credit-management" element={<CreditManagement />} />
+                <Route path="/serial-number-tracker" element={<SerialNumberTracker />} />
+                <Route path="/batch-processing" element={<BatchProcessing />} />
+                <Route path="/data-backup" element={<DataBackup />} />
+                <Route path="/api-webhooks" element={<APIWebhooks />} />
+                <Route path="/system-health" element={<SystemHealth />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </AppLayout>
+        }
+      />
+    </Routes>
+  );
+}
