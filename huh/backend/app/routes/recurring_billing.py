@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 from app.database import get_db
 from app.models.recurring_billing import RecurringBillingPlan
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/recurring-billing", tags=["Recurring Billing"])
 
 @router.post("/{org_id}")
 def create_plan(org_id: int, contact_id: int = None, name: str = "", frequency: str = "monthly", interval_count: int = 1, total_amount: float = 0, items: str = "[]", tax_rate_id: int = None, start_date: str = None, max_cycles: int = None, auto_send: str = "yes", notes: str = "", db: Session = Depends(get_db), user=Depends(get_current_user)):
-    sd = datetime.strptime(start_date, "%Y-%m-%d") if start_date else datetime.utcnow()
+    sd = datetime.strptime(start_date, "%Y-%m-%d") if start_date else datetime.now(timezone.utc)
     parsed_items = json.loads(items)
     next_billing = sd
     plan = RecurringBillingPlan(org_id=org_id, contact_id=contact_id, name=name, frequency=frequency, interval_count=interval_count, total_amount=total_amount, items=parsed_items, tax_rate_id=tax_rate_id, start_date=sd, max_cycles=max_cycles, next_billing_date=next_billing, auto_send=(auto_send == "yes"), notes=notes, status="active")
@@ -44,7 +44,7 @@ def generate_invoice(org_id: int, plan_id: int, db: Session = Depends(get_db), u
         db.commit()
         raise HTTPException(400, "Plan has reached maximum cycles")
     inv_count = db.query(Invoice).filter(Invoice.org_id == org_id).count()
-    inv = Invoice(org_id=org_id, contact_id=plan.contact_id, number=f"RBILL-{org_id}-{inv_count+1}", date=datetime.utcnow(), due_date=datetime.utcnow() + timedelta(days=30), total=plan.total_amount, paid=0, status="draft", items=plan.items)
+    inv = Invoice(org_id=org_id, contact_id=plan.contact_id, number=f"RBILL-{org_id}-{inv_count+1}", date=datetime.now(timezone.utc), due_date=datetime.now(timezone.utc) + timedelta(days=30), total=plan.total_amount, paid=0, status="draft", items=plan.items)
     db.add(inv)
     plan.current_cycle += 1
     next_date = plan.next_billing_date

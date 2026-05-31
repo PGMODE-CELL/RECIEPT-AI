@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Form
 from sqlalchemy.orm import Session
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from jose import jwt, JWTError
 import os
 
@@ -23,7 +23,7 @@ if not CLIENT_PORTAL_SECRET:
 
 
 def create_client_token(contact_id: int, org_id: int) -> str:
-    return jwt.encode({"contact_id": contact_id, "org_id": org_id, "exp": datetime.utcnow()}, CLIENT_PORTAL_SECRET, algorithm="HS256")
+    return jwt.encode({"contact_id": contact_id, "org_id": org_id, "exp": datetime.now(timezone.utc)}, CLIENT_PORTAL_SECRET, algorithm="HS256")
 
 
 @router.post("/login")

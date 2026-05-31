@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 from app.database import get_db
 from app.models.approval import ApprovalWorkflow, ApprovalStep, ApprovalRequest, ApprovalVote
 from app.auth import get_current_user
@@ -62,7 +62,7 @@ def approve_request(org_id: int, request_id: int, comment: str = "", db: Session
     vote = ApprovalVote(approval_request_id=request_id, user_id=user.id, decision="approved", comment=comment)
     db.add(vote)
     req.status = "approved"
-    req.resolved_at = datetime.utcnow()
+    req.resolved_at = datetime.now(timezone.utc)
     req.resolved_by = user.id
     db.commit()
     return {"success": True, "status": "approved"}
@@ -78,7 +78,7 @@ def reject_request(org_id: int, request_id: int, comment: str = "", db: Session 
     vote = ApprovalVote(approval_request_id=request_id, user_id=user.id, decision="rejected", comment=comment)
     db.add(vote)
     req.status = "rejected"
-    req.resolved_at = datetime.utcnow()
+    req.resolved_at = datetime.now(timezone.utc)
     req.resolved_by = user.id
     db.commit()
     return {"success": True, "status": "rejected"}

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.database import get_db
 from app.models.late_fee import LateFeeRule, LateFeeApplied
 from app.models.invoice import Invoice
@@ -26,7 +26,7 @@ def list_rules(org_id: int, db: Session = Depends(get_db), user=Depends(get_curr
 
 @router.post("/apply/{org_id}")
 def apply_late_fees(org_id: int, rule_id: int = None, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    today = datetime.utcnow()
+    today = datetime.now(timezone.utc)
     invoices = db.query(Invoice).filter(Invoice.org_id == org_id, Invoice.status.in_(["sent", "overdue"]), Invoice.paid < Invoice.total).all()
     if rule_id:
         rule = db.query(LateFeeRule).filter(LateFeeRule.id == rule_id, LateFeeRule.org_id == org_id).first()

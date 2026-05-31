@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 from app.database import get_db
 from app.models.timesheet import TimesheetEntry
 from app.auth import get_current_user
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/api/timesheets", tags=["Timesheets"])
 
 @router.post("/{org_id}")
 def create_entry(org_id: int, date: str = None, hours: float = 0, description: str = "", project_id: int = None, contact_id: int = None, billable: str = "yes", hourly_rate: float = 0, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    td = datetime.strptime(date, "%Y-%m-%d") if date else datetime.utcnow()
+    td = datetime.strptime(date, "%Y-%m-%d") if date else datetime.now(timezone.utc)
     entry = TimesheetEntry(org_id=org_id, user_id=user.id, date=td, hours=hours, description=description, project_id=project_id, contact_id=contact_id, billable=billable, hourly_rate=hourly_rate, status="approved")
     db.add(entry)
     db.commit()

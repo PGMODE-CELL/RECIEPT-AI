@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 from app.database import get_db
 from app.models.expense_report import ExpenseReport, ExpenseLine
 from app.auth import get_current_user
@@ -40,7 +40,7 @@ def add_line(org_id: int, report_id: int, date: str = None, category: str = "", 
     report = db.query(ExpenseReport).filter(ExpenseReport.id == report_id, ExpenseReport.org_id == org_id).first()
     if not report:
         raise HTTPException(404, "Report not found")
-    ld = datetime.strptime(date, "%Y-%m-%d") if date else datetime.utcnow()
+    ld = datetime.strptime(date, "%Y-%m-%d") if date else datetime.now(timezone.utc)
     line = ExpenseLine(expense_report_id=report_id, date=ld, category=category, amount=amount, description=description, billable=billable, project_id=project_id)
     db.add(line)
     report.total += amount
@@ -65,7 +65,7 @@ def approve_report(org_id: int, report_id: int, db: Session = Depends(get_db), u
         raise HTTPException(404, "Report not found")
     report.status = "approved"
     report.approved_by = user.id
-    report.approved_at = datetime.utcnow()
+    report.approved_at = datetime.now(timezone.utc)
     db.commit()
     return {"success": True, "status": "approved"}
 

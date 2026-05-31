@@ -1,7 +1,7 @@
 import os
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import secrets
 from app.database import get_db
 from app.models.contact import Contact
@@ -23,7 +23,7 @@ def vendor_login(email: str = "", db: Session = Depends(get_db), user=Depends(ge
     contact = db.query(Contact).filter(Contact.email == email).first()
     if not contact:
         raise HTTPException(404, "Vendor not found")
-    token = jwt.encode({"contact_id": contact.id, "org_id": contact.org_id, "exp": datetime.utcnow() + timedelta(days=7)}, VENDOR_PORTAL_SECRET, algorithm="HS256")
+    token = jwt.encode({"contact_id": contact.id, "org_id": contact.org_id, "exp": datetime.now(timezone.utc) + timedelta(days=7)}, VENDOR_PORTAL_SECRET, algorithm="HS256")
     return {"success": True, "token": token, "vendor": {"id": contact.id, "name": contact.name, "email": contact.email}}
 
 

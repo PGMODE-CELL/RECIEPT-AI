@@ -2,7 +2,7 @@ import os
 import json
 from fastapi import APIRouter, HTTPException, Depends, Form, Request
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database import get_db
 from app.models.user import User
@@ -80,7 +80,7 @@ async def stripe_webhook(org_id: int, request: Request, db: Session = Depends(ge
         if pay:
             pay.status = "completed"
             pay.gateway_status = "succeeded"
-            pay.paid_at = datetime.utcnow()
+            pay.paid_at = datetime.now(timezone.utc)
             inv = db.query(Invoice).filter(Invoice.id == pay.invoice_id).first()
             if inv:
                 inv.paid = float(inv.paid) + float(pay.amount)
@@ -121,7 +121,7 @@ def record_manual_payment(
         currency=inv.currency or "USD", gateway="manual",
         gateway_payment_id=reference, gateway_status="completed",
         payment_method=method, payer_name=reference,
-        status="completed", paid_at=datetime.utcnow(),
+        status="completed", paid_at=datetime.now(timezone.utc),
     )
     db.add(pay)
     inv.paid = float(inv.paid) + amount

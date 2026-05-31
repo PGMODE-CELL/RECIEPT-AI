@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 from app.database import get_db
 from app.models.dunning import DunningEntry
 from app.models.invoice import Invoice
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/dunning", tags=["Dunning"])
 @router.post("/process/{org_id}")
 def process_dunning(org_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
     from datetime import timedelta
-    today = datetime.utcnow()
+    today = datetime.now(timezone.utc)
     overdue_invoices = db.query(Invoice).filter(Invoice.org_id == org_id, Invoice.status.in_(["sent", "overdue"]), Invoice.paid < Invoice.total).all()
     processed = []
     for inv in overdue_invoices:
@@ -30,7 +30,7 @@ def process_dunning(org_id: int, db: Session = Depends(get_db), user=Depends(get
         actions = {1: "reminder_email", 2: "reminder_email", 3: "phone_call", 4: "demand_letter", 5: "legal_notice"}
         entry.action_taken = actions.get(level, "reminder_email")
         entry.status = "sent"
-        entry.action_date = datetime.utcnow()
+        entry.action_date = datetime.now(timezone.utc)
         processed.append({"invoice_id": inv.id, "level": level, "days_overdue": days_overdue, "action": entry.action_taken})
     db.commit()
     return {"success": True, "processed": processed}

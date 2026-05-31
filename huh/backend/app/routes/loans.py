@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 from app.database import get_db
 from app.models.loan import Loan, LoanRepayment
 from app.auth import get_current_user
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/api/loans", tags=["Loans"])
 
 @router.post("/{org_id}")
 def create_loan(org_id: int, type: str = "borrowing", name: str = "", lender_name: str = "", principal: float = 0, interest_rate: float = 0, interest_type: str = "simple", tenure_months: int = 0, start_date: str = None, contact_id: int = None, account_id: int = None, notes: str = "", db: Session = Depends(get_db), user=Depends(get_current_user)):
-    sd = datetime.strptime(start_date, "%Y-%m-%d") if start_date else datetime.utcnow()
+    sd = datetime.strptime(start_date, "%Y-%m-%d") if start_date else datetime.now(timezone.utc)
     loan = Loan(org_id=org_id, type=type, name=name, lender_name=lender_name, principal=principal, outstanding=principal, interest_rate=interest_rate, interest_type=interest_type, tenure_months=tenure_months, start_date=sd, contact_id=contact_id, account_id=account_id, notes=notes)
     db.add(loan)
     db.commit()
@@ -38,7 +38,7 @@ def record_repayment(org_id: int, loan_id: int, date: str = None, amount: float 
     loan = db.query(Loan).filter(Loan.id == loan_id, Loan.org_id == org_id).first()
     if not loan:
         raise HTTPException(404, "Loan not found")
-    rd = datetime.strptime(date, "%Y-%m-%d") if date else datetime.utcnow()
+    rd = datetime.strptime(date, "%Y-%m-%d") if date else datetime.now(timezone.utc)
     repayment = LoanRepayment(loan_id=loan_id, date=rd, amount=amount, principal_part=principal_part, interest_part=interest_part, notes=notes, status="completed")
     db.add(repayment)
     loan.outstanding -= principal_part

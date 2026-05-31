@@ -1,0 +1,35 @@
+# Auto detect text files and normalize line endings
+* text=auto
+
+# Source code
+*.py text diff=python
+*.ts text diff=typescript
+*.tsx text diff=typescript
+*.js text diff=javascript
+*.jsx text diff=javascript
+*.css text
+*.json text
+*.md text
+*.yml text
+*.yaml text
+*.toml text
+*.cfg text
+*.ini text
+*.sh text eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binaries
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+
+# Generated files
+package-lock.json -diff
+*.pyc binary
+*.pyo binary

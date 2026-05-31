@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, case
@@ -295,7 +295,7 @@ def match_line(org_id: int, line_id: int, transaction_id: int = Form(...), user:
 
     line.status = "matched"
     line.matched_transaction_id = txn.id
-    line.matched_at = datetime.utcnow()
+    line.matched_at = datetime.now(timezone.utc)
 
     stmt = db.query(StatementImport).filter(StatementImport.id == line.import_id).first()
     matched = db.query(func.count(StatementLine.id)).filter(

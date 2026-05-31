@@ -1,5 +1,5 @@
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.database import SessionLocal
 from app.models.recurring import RecurringTransaction
@@ -108,8 +108,8 @@ def process_recurring_billing():
             inv = Invoice(
                 org_id=plan.org_id, contact_id=plan.contact_id,
                 number=f"RBILL-{plan.org_id}-{inv_count+1}",
-                date=datetime.utcnow(),
-                due_date=datetime.utcnow() + timedelta(days=30),
+                date=datetime.now(timezone.utc),
+                due_date=datetime.now(timezone.utc) + timedelta(days=30),
                 total=plan.total_amount, paid=0, status="draft",
                 items=plan.items,
             )
@@ -145,7 +145,7 @@ def process_recurring_billing():
 def process_payment_reminders():
     db = SessionLocal()
     try:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         reminders = db.query(PaymentReminder).filter(
             PaymentReminder.active == True,
             PaymentReminder.next_send_at <= now,
