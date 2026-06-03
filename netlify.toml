@@ -12,7 +12,7 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "https://d1b7f0db56e512.lhr.life/api/:splat"
+  to = "https://117a93dc538e2c.lhr.life/api/:splat"
   status = 200
   force = true
 
