@@ -2,9 +2,9 @@
 
 ## Maintainer
 
-- **Lokesh Goyal** (@lokeshgoyal) — project lead
+- **PGMODE-CELL** — project maintainer
 
 ## Contributors
 
 A full list of contributors is available at:
-https://github.com/lokeshgoyal/receiptai/graphs/contributors
+https://github.com/PGMODE-CELL/RECIEPT-AI/graphs/contributors

@@ -7,8 +7,8 @@
 ![React](https://img.shields.io/badge/react-19-61DAFB)
 ![TypeScript](https://img.shields.io/badge/typescript-5.7-3178C6)
 ![License](https://img.shields.io/badge/license-MIT-green)
-[![CI](https://github.com/lokeshgoyal/receiptai/actions/workflows/ci.yml/badge.svg)](https://github.com/lokeshgoyal/receiptai/actions/workflows/ci.yml)
-[![Docker](https://img.shields.io/badge/docker-ready-blue?logo=docker)](https://github.com/lokeshgoyal/receiptai/pkgs/container/receiptai)
+[![CI](https://github.com/PGMODE-CELL/RECIEPT-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/PGMODE-CELL/RECIEPT-AI/actions/workflows/ci.yml)
+[![Docker](https://img.shields.io/badge/docker-ready-blue?logo=docker)](https://github.com/PGMODE-CELL/RECIEPT-AI/pkgs/container/receiptai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -188,14 +188,14 @@ npx vitest run
 |---|---|
 | **Docker** (any VPS) | `docker compose up --build` |
 | **Railway** | [![Deploy on Railway](https://img.shields.io/badge/Railway-Deploy-0B0D0E?logo=railway)](https://railway.com/template/receiptai) |
-| **Render** | [![Deploy to Render](https://img.shields.io/badge/Render-Deploy-46E3B7?logo=render)](https://render.com/deploy?repo=https://github.com/lokeshgoyal/receiptai) |
-| **Fly.io** | [![Deploy on Fly](https://img.shields.io/badge/Fly.io-Deploy-24175C?logo=fly)](https://fly.io/launch/github/lokeshgoyal/receiptai) |
+| **Render** | [![Deploy to Render](https://img.shields.io/badge/Render-Deploy-46E3B7?logo=render)](https://render.com/deploy?repo=https://github.com/PGMODE-CELL/RECIEPT-AI) |
+| **Fly.io** | [![Deploy on Fly](https://img.shields.io/badge/Fly.io-Deploy-24175C?logo=fly)](https://fly.io/launch/github/PGMODE-CELL/RECIEPT-AI) |
 
 ### Docker (Production)
 
 ```bash
 # Clone and deploy
-git clone https://github.com/lokeshgoyal/receiptai.git
+git clone https://github.com/PGMODE-CELL/RECIEPT-AI.git
 cd receiptai
 
 # Set required secrets
@@ -225,7 +225,7 @@ Every commit is automatically:
 - ✅ **Security-scanned** — Bandit (Python), Gitleaks (secrets)
 - ✅ **Docker-built** — Compose build verified
 
-Status: [![CI](https://github.com/lokeshgoyal/receiptai/actions/workflows/ci.yml/badge.svg)](https://github.com/lokeshgoyal/receiptai/actions/workflows/ci.yml)
+Status: [![CI](https://github.com/PGMODE-CELL/RECIEPT-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/PGMODE-CELL/RECIEPT-AI/actions/workflows/ci.yml)
 
 ## License
 
@@ -236,4 +236,4 @@ Status: [![CI](https://github.com/lokeshgoyal/receiptai/actions/workflows/ci.yml
 - [CONTRIBUTING.md](CONTRIBUTING.md) — How to contribute
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — Community guidelines
 - [SECURITY.md](SECURITY.md) — Reporting vulnerabilities
-- [Issues](https://github.com/lokeshgoyal/receiptai/issues) — Bug reports & feature requests
+- [Issues](https://github.com/PGMODE-CELL/RECIEPT-AI/issues) — Bug reports & feature requests

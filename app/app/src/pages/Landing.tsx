@@ -45,7 +45,7 @@ export default function Landing() {
             <span className="font-bold text-xl text-gray-900 dark:text-white">ReceiptAI</span>
           </Link>
           <div className="flex items-center gap-4">
-            <a href="https://github.com/lokeshgoyal/receiptai" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+            <a href="https://github.com/PGMODE-CELL/RECIEPT-AI" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
               <Github className="w-5 h-5" />
             </a>
             <Link to="/login">
@@ -82,7 +82,7 @@ export default function Landing() {
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
-              <a href="https://github.com/lokeshgoyal/receiptai" target="_blank" rel="noopener noreferrer">
+              <a href="https://github.com/PGMODE-CELL/RECIEPT-AI" target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="lg" className="text-base">
                   <Github className="mr-2 w-5 h-5" />
                   View on GitHub
@@ -176,7 +176,7 @@ export default function Landing() {
             <div className="flex items-center gap-6 text-sm text-gray-500">
               <Link to="/terms" className="hover:text-gray-700 dark:hover:text-gray-300">Terms</Link>
               <Link to="/privacy" className="hover:text-gray-700 dark:hover:text-gray-300">Privacy</Link>
-              <a href="https://github.com/lokeshgoyal/receiptai" target="_blank" rel="noopener noreferrer" className="hover:text-gray-700 dark:hover:text-gray-300">GitHub</a>
+              <a href="https://github.com/PGMODE-CELL/RECIEPT-AI" target="_blank" rel="noopener noreferrer" className="hover:text-gray-700 dark:hover:text-gray-300">GitHub</a>
             </div>
             <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()} ReceiptAI. Free & open-source.</p>
           </div>

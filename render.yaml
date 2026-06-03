@@ -18,10 +18,7 @@ services:
       - key: ENCRYPTION_KEY
         generateValue: true
       - key: CORS_ORIGINS
-        fromService:
-          type: web
-          name: receipt-ai-backend
-          envVarKey: RENDER_EXTERNAL_URL
+        value: https://recieptsoftwareai.netlify.app,https://receipt-ai-backend.onrender.com
       - key: RATE_LIMIT_ENABLED
         value: "true"
       - key: RATE_LIMIT_AUTH

@@ -4,8 +4,8 @@ from fastapi.responses import PlainTextResponse
 router = APIRouter(tags=["Well Known"])
 
 SECURITY_TXT = """Contact: mailto:security@receiptai.dev
-Contact: https://github.com/lokeshgoyal/receiptai/security/advisories/new
-Policy: https://github.com/lokeshgoyal/receiptai/blob/main/SECURITY.md
+Contact: https://github.com/PGMODE-CELL/RECIEPT-AI/security/advisories/new
+Policy: https://github.com/PGMODE-CELL/RECIEPT-AI/blob/main/SECURITY.md
 Preferred-Languages: en
 Canonical: https://receiptai.dev/.well-known/security.txt
 """

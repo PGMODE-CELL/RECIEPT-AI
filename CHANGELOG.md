@@ -52,4 +52,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Pre-commit hooks for code quality
 - Production CLI (`receiptai`) with admin commands
 
-[1.0.0]: https://github.com/lokeshgoyal/receiptai/releases/tag/v1.0.0
+[1.0.0]: https://github.com/PGMODE-CELL/RECIEPT-AI/releases/tag/v1.0.0
