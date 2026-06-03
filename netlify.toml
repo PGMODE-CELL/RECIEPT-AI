@@ -1,7 +1,6 @@
 [build]
   command = "cd app/app && npm run build"
   publish = "app/app/dist/public/"
-  functions = "netlify/functions/"
 
 [[headers]]
   for = "/*"
@@ -9,11 +8,6 @@
     X-Frame-Options = "SAMEORIGIN"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/health"
-  status = 200
 
 [[redirects]]
   from = "/*"
