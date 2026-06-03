@@ -1,9 +1,10 @@
 from datetime import date, datetime
 from fastapi import APIRouter, HTTPException, Depends, Form
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from decimal import Decimal, ROUND_HALF_UP
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 from app.models.asset import Asset, DepreciationEntry
 from app.models.transaction import Transaction, TransactionLine
@@ -23,7 +24,7 @@ def compute_wdv(book_value: Decimal, rate: Decimal) -> Decimal:
 
 
 @router.post("/{org_id}/assets")
-def create_asset(
+async def create_asset(
     org_id: int,
     name: str = Form(...),
     purchase_cost: float = Form(...),
@@ -34,7 +35,7 @@ def create_asset(
     rate: float = Form(0),
     account_id: int = Form(0),
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     cost = Decimal(str(purchase_cost))
     salvage = Decimal(str(salvage_value))
@@ -54,13 +55,14 @@ def create_asset(
         current_book_value=cost, account_id=account_id if account_id else None,
     )
     db.add(asset)
-    db.commit()
+    await db.commit()
     return {"id": asset.id, "name": asset.name, "annual_depreciation": float(annual_dep), "message": f"Asset '{name}' added"}
 
 
 @router.get("/{org_id}/assets")
-def list_assets(org_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    assets = db.query(Asset).filter(Asset.org_id == org_id).order_by(Asset.name).all()
+async def list_assets(org_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Asset).filter(Asset.org_id == org_id).order_by(Asset.name))
+    assets = result.scalars().all()
     return [{
         "id": a.id, "name": a.name, "purchase_date": a.purchase_date.isoformat(),
         "purchase_cost": float(a.purchase_cost), "current_book_value": float(a.current_book_value),
@@ -71,8 +73,8 @@ def list_assets(org_id: int, user: User = Depends(get_current_user), db: Session
 
 
 @router.get("/{org_id}/assets/{asset_id}/schedule")
-def get_schedule(org_id: int, asset_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    asset = db.query(Asset).filter(Asset.id == asset_id, Asset.org_id == org_id).first()
+async def get_schedule(org_id: int, asset_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    asset = (await db.execute(select(Asset).filter(Asset.id == asset_id, Asset.org_id == org_id))).scalar_one_or_none()
     if not asset:
         raise HTTPException(404, "Asset not found")
 
@@ -101,19 +103,21 @@ def get_schedule(org_id: int, asset_id: int, user: User = Depends(get_current_us
 
 
 @router.post("/{org_id}/assets/{asset_id}/depreciate")
-def post_depreciation(
+async def post_depreciation(
     org_id: int, asset_id: int,
     period: str = Form(...),  # "2024-01"
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
-    asset = db.query(Asset).filter(Asset.id == asset_id, Asset.org_id == org_id).first()
+    asset = (await db.execute(select(Asset).filter(Asset.id == asset_id, Asset.org_id == org_id))).scalar_one_or_none()
     if not asset:
         raise HTTPException(404, "Asset not found")
 
-    existing = db.query(DepreciationEntry).filter(
-        DepreciationEntry.asset_id == asset_id, DepreciationEntry.period == period
-    ).first()
+    existing = (await db.execute(
+        select(DepreciationEntry).filter(
+            DepreciationEntry.asset_id == asset_id, DepreciationEntry.period == period
+        )
+    )).scalar_one_or_none()
     if existing:
         raise HTTPException(400, "Depreciation already posted for this period")
 
@@ -128,8 +132,12 @@ def post_depreciation(
     if monthly <= 0:
         raise HTTPException(400, "Asset fully depreciated")
 
-    dep_expense_acct = db.query(Account).filter(Account.org_id == org_id, Account.name.ilike("%depreciation%")).first()
-    accum_dep_acct = db.query(Account).filter(Account.org_id == org_id, Account.name.ilike("%accumulated depreciation%")).first()
+    dep_expense_acct = (await db.execute(
+        select(Account).filter(Account.org_id == org_id, Account.name.ilike("%depreciation%"))
+    )).scalar_one_or_none()
+    accum_dep_acct = (await db.execute(
+        select(Account).filter(Account.org_id == org_id, Account.name.ilike("%accumulated depreciation%"))
+    )).scalar_one_or_none()
     if not dep_expense_acct or not accum_dep_acct:
         raise HTTPException(400, "Create 'Depreciation Expense' and 'Accumulated Depreciation' accounts first")
 
@@ -138,7 +146,7 @@ def post_depreciation(
         amount=monthly, type="journal", date=date.today(),
     )
     db.add(txn)
-    db.flush()
+    await db.flush()
 
     db.add(TransactionLine(transaction_id=txn.id, debit_account_id=dep_expense_acct.id, credit_account_id=accum_dep_acct.id, amount=monthly))
     update_account_balance(db, dep_expense_acct.id, monthly, is_debit=True)
@@ -152,5 +160,71 @@ def post_depreciation(
     if asset.current_book_value <= asset.salvage_value:
         asset.status = "disposed"
 
-    db.commit()
+    await db.commit()
     return {"message": f"Depreciation of ${float(monthly):.2f} posted for {period}", "book_value": float(asset.current_book_value)}
+
+
+@router.get("/{org_id}/assets/{asset_id}")
+async def get_asset(
+    org_id: int,
+    asset_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    asset = (await db.execute(select(Asset).filter(Asset.id == asset_id, Asset.org_id == org_id))).scalar_one_or_none()
+    if not asset:
+        raise HTTPException(404, "Asset not found")
+    return {
+        "id": asset.id, "name": asset.name, "purchase_date": asset.purchase_date.isoformat(),
+        "purchase_cost": float(asset.purchase_cost), "current_book_value": float(asset.current_book_value),
+        "accumulated_dep": float(asset.accumulated_dep), "method": asset.method,
+        "useful_life_years": asset.useful_life_years, "salvage_value": float(asset.salvage_value),
+        "status": asset.status,
+    }
+
+
+@router.put("/{org_id}/assets/{asset_id}")
+async def update_asset(
+    org_id: int,
+    asset_id: int,
+    name: str = Form(None),
+    purchase_cost: float = Form(None),
+    useful_life_years: int = Form(None),
+    salvage_value: float = Form(None),
+    method: str = Form(None),
+    status: str = Form(None),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    asset = (await db.execute(select(Asset).filter(Asset.id == asset_id, Asset.org_id == org_id))).scalar_one_or_none()
+    if not asset:
+        raise HTTPException(404, "Asset not found")
+    if name is not None:
+        asset.name = name
+    if purchase_cost is not None:
+        asset.purchase_cost = Decimal(str(purchase_cost))
+    if useful_life_years is not None:
+        asset.useful_life_years = useful_life_years
+    if salvage_value is not None:
+        asset.salvage_value = Decimal(str(salvage_value))
+    if method is not None:
+        asset.method = method
+    if status is not None:
+        asset.status = status
+    await db.commit()
+    return {"message": "Asset updated"}
+
+
+@router.delete("/{org_id}/assets/{asset_id}")
+async def delete_asset(
+    org_id: int,
+    asset_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    asset = (await db.execute(select(Asset).filter(Asset.id == asset_id, Asset.org_id == org_id))).scalar_one_or_none()
+    if not asset:
+        raise HTTPException(404, "Asset not found")
+    await db.delete(asset)
+    await db.commit()
+    return {"message": "Asset deleted"}

@@ -3,7 +3,7 @@ import { useApi } from "@/providers/ApiProvider";
 
 function isDemoMode() {
   try {
-    return !!localStorage.getItem("ledgerai_demo_user");
+    return !!localStorage.getItem("receiptai_demo_user");
   } catch { return false; }
 }
 

@@ -72,8 +72,8 @@ function computeKPIs(stats: any, pl: any): KPI[] {
 }
 
 export default function KPIBuilder() {
-  const { data: stats } = trpc.dashboard.stats.useQuery();
-  const { data: pl } = trpc.report.profitLoss.useQuery({ from: "2026-01-01", to: "2026-12-31" });
+  const { data: stats } = trpc.dashboard.stats.useQuery(undefined, { enabled: false });
+  const { data: pl } = trpc.report.profitLoss.useQuery({ from: "2026-01-01", to: "2026-12-31" }, { enabled: false });
   const [localKPIs, setLocalKPIs] = useState<KPI[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedKPI, setSelectedKPI] = useState<KPI | null>(null);

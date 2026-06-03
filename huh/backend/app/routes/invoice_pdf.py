@@ -1,7 +1,8 @@
 import io
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import (
@@ -14,7 +15,7 @@ from reportlab.platypus import (
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 from app.models.organization import Organization
 from app.models.invoice import Invoice
@@ -25,22 +26,23 @@ router = APIRouter(prefix="/api/invoices", tags=["Invoices"])
 
 
 @router.get("/{org_id}/{invoice_id}/pdf")
-def get_invoice_pdf(
+async def get_invoice_pdf(
     org_id: int,
     invoice_id: int,
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
-    invoice = (
-        db.query(Invoice)
-        .filter(Invoice.id == invoice_id, Invoice.org_id == org_id)
-        .first()
+    result = await db.execute(
+        select(Invoice).filter(Invoice.id == invoice_id, Invoice.org_id == org_id)
     )
+    invoice = result.scalars().first()
     if not invoice:
         raise HTTPException(404, "Invoice not found")
 
-    org = db.query(Organization).filter(Organization.id == org_id).first()
-    contact = db.query(Contact).filter(Contact.id == invoice.contact_id).first()
+    org_result = await db.execute(select(Organization).filter(Organization.id == org_id))
+    org = org_result.scalars().first()
+    contact_result = await db.execute(select(Contact).filter(Contact.id == invoice.contact_id))
+    contact = contact_result.scalars().first()
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)

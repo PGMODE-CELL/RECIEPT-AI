@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 from app.models.organization import Organization
 from app.models.account import Account
@@ -127,10 +128,10 @@ def get_countries():
 
 
 @router.post("/create")
-def setup_org(
+async def setup_org(
     data: SetupOrgRequest,
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     config = COUNTRY_CONFIGS.get(data.country, COUNTRY_CONFIGS["US"])
     encrypted = encrypt_dict({"tax_id": data.tax_id}, ["tax_id"])
@@ -142,8 +143,8 @@ def setup_org(
         tax_id=encrypted["tax_id"],
     )
     db.add(org)
-    db.commit()
-    db.refresh(org)
+    await db.commit()
+    await db.refresh(org)
 
     for i, acc in enumerate(config["accounts"]):
         db.add(
@@ -152,7 +153,7 @@ def setup_org(
             )
         )
     db.add(OrganizationMember(user_id=user.id, org_id=org.id, role="owner"))
-    db.commit()
+    await db.commit()
 
     return {
         "org_id": org.id,

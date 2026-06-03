@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, DateTime, Date, Text, JSON
-from datetime import datetime, date
+from datetime import datetime, date, UTC
 
 from app.database import Base
 
@@ -19,4 +19,4 @@ class Estimate(Base):
     items = Column(JSON)
     notes = Column(Text)
     terms = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))

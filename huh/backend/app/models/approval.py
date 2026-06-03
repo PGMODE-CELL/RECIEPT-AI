@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, UTC
 from app.database import Base
 
 
@@ -15,7 +15,7 @@ class ApprovalWorkflow(Base):
     approval_order = Column(String, default="parallel")
     require_all = Column(Boolean, default=True)
     active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     organization = relationship("Organization")
 
@@ -30,7 +30,7 @@ class ApprovalStep(Base):
     approver_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     min_amount = Column(Float, nullable=True)
     max_amount = Column(Float, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     workflow = relationship("ApprovalWorkflow")
     approver = relationship("User")
@@ -50,7 +50,7 @@ class ApprovalRequest(Base):
     notes = Column(Text, nullable=True)
     resolved_at = Column(DateTime, nullable=True)
     resolved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     organization = relationship("Organization")
     workflow = relationship("ApprovalWorkflow")
@@ -67,7 +67,7 @@ class ApprovalVote(Base):
     step_id = Column(Integer, ForeignKey("approval_steps.id"), nullable=True)
     decision = Column(String, nullable=False)
     comment = Column(Text, nullable=True)
-    decided_at = Column(DateTime, default=datetime.utcnow)
+    decided_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     approval_request = relationship("ApprovalRequest")
     user = relationship("User")

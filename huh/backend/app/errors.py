@@ -66,5 +66,17 @@ async def catch_all_exceptions(request: Request, call_next):
         msg = ERROR_MESSAGES.get(e.status_code, str(e.detail))
         return _make_error(e.status_code, "http_error", msg if isinstance(msg, str) else str(msg))
     except Exception as e:
+        if tracer:
+            with tracer.start_as_current_span("catch_all_exceptions") as span:
+                span.set_attribute("error.type", type(e).__name__)
+                span.set_attribute("error.message", str(e))
+                span.record_exception(e)
         logger.exception("Unhandled error: %s", e)
         return _make_error(500, "internal_error", ERROR_MESSAGES[500])
+
+
+try:
+    from opentelemetry import trace
+    tracer = trace.get_tracer(__name__)
+except ImportError:
+    tracer = None

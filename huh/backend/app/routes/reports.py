@@ -1,9 +1,9 @@
 from datetime import date
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 from app.models.account import Account
 from app.models.transaction import Transaction
@@ -16,62 +16,73 @@ router = APIRouter(prefix="/api/reports", tags=["Reports"])
 
 
 @router.get("/{org_id}/dashboard")
-def get_dashboard(
+async def get_dashboard(
     org_id: int,
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     income = (
-        db.query(func.sum(Transaction.amount))
-        .filter(Transaction.org_id == org_id, Transaction.type == "money_in")
-        .scalar()
-        or 0
-    )
+        await db.execute(
+            select(func.sum(Transaction.amount))
+            .filter(Transaction.org_id == org_id, Transaction.type == "money_in")
+        )
+    ).scalar() or 0
     expenses = (
-        db.query(func.sum(Transaction.amount))
-        .filter(Transaction.org_id == org_id, Transaction.type == "money_out")
-        .scalar()
-        or 0
-    )
+        await db.execute(
+            select(func.sum(Transaction.amount))
+            .filter(Transaction.org_id == org_id, Transaction.type == "money_out")
+        )
+    ).scalar() or 0
     outstanding = (
-        db.query(func.sum(Invoice.total - Invoice.paid))
-        .filter(Invoice.org_id == org_id, Invoice.status != "paid")
-        .scalar()
-        or 0
-    )
+        await db.execute(
+            select(func.sum(Invoice.total - Invoice.paid))
+            .filter(Invoice.org_id == org_id, Invoice.status != "paid")
+        )
+    ).scalar() or 0
     bills_due = (
-        db.query(func.sum(Bill.total - Bill.paid))
-        .filter(Bill.org_id == org_id, Bill.status != "paid")
-        .scalar()
-        or 0
-    )
-    accounts = db.query(Account).filter(Account.org_id == org_id).all()
+        await db.execute(
+            select(func.sum(Bill.total - Bill.paid))
+            .filter(Bill.org_id == org_id, Bill.status != "paid")
+        )
+    ).scalar() or 0
+    result_accounts = await db.execute(select(Account).filter(Account.org_id == org_id))
+    accounts = result_accounts.scalars().all()
 
     today = date.today()
-    overdue_inv = db.query(Invoice).filter(
-        Invoice.org_id == org_id, Invoice.status.notin_(["paid", "draft"]),
-        Invoice.due_date < today
-    ).count()
-    upcoming_bills = db.query(Bill).filter(
-        Bill.org_id == org_id, Bill.status.notin_(["paid", "draft"]),
-        Bill.due_date >= today, Bill.due_date <= today
-    ).count()  # due today
-    budgets = db.query(Budget).filter(Budget.org_id == org_id).all()
+    overdue_inv = (
+        await db.execute(
+            select(func.count()).select_from(Invoice).filter(
+                Invoice.org_id == org_id, Invoice.status.notin_(["paid", "draft"]),
+                Invoice.due_date < today
+            )
+        )
+    ).scalar()
+    upcoming_bills = (
+        await db.execute(
+            select(func.count()).select_from(Bill).filter(
+                Bill.org_id == org_id, Bill.status.notin_(["paid", "draft"]),
+                Bill.due_date >= today, Bill.due_date <= today
+            )
+        )
+    ).scalar()  # due today
+    result_budgets = await db.execute(select(Budget).filter(Budget.org_id == org_id))
+    budgets = result_budgets.scalars().all()
     over_budget = sum(1 for b in budgets if float(b.spent or 0) > float(b.limit or 0))
 
-    recent = (
-        db.query(Transaction)
+    result_recent = await db.execute(
+        select(Transaction)
         .filter(Transaction.org_id == org_id)
         .order_by(Transaction.date.desc())
         .limit(10)
-        .all()
     )
+    recent = result_recent.scalars().all()
 
     cash = (
-        db.query(func.sum(Account.balance))
-        .filter(Account.org_id == org_id, Account.type == "asset")
-        .scalar() or 0
-    )
+        await db.execute(
+            select(func.sum(Account.balance))
+            .filter(Account.org_id == org_id, Account.type == "asset")
+        )
+    ).scalar() or 0
 
     return {
         "plain_english": {
@@ -117,23 +128,23 @@ def get_dashboard(
 
 
 @router.get("/{org_id}/profit-loss")
-def get_profit_loss(
+async def get_profit_loss(
     org_id: int,
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     income = (
-        db.query(func.sum(Transaction.amount))
-        .filter(Transaction.org_id == org_id, Transaction.type == "money_in")
-        .scalar()
-        or 0
-    )
+        await db.execute(
+            select(func.sum(Transaction.amount))
+            .filter(Transaction.org_id == org_id, Transaction.type == "money_in")
+        )
+    ).scalar() or 0
     expenses = (
-        db.query(func.sum(Transaction.amount))
-        .filter(Transaction.org_id == org_id, Transaction.type == "money_out")
-        .scalar()
-        or 0
-    )
+        await db.execute(
+            select(func.sum(Transaction.amount))
+            .filter(Transaction.org_id == org_id, Transaction.type == "money_out")
+        )
+    ).scalar() or 0
 
     return {
         "plain_english": (

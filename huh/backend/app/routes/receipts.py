@@ -1,8 +1,9 @@
 from datetime import date
 from fastapi import APIRouter, Depends, UploadFile, File
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 from app.models.receipt import Receipt
 from app.auth import get_current_user
@@ -15,7 +16,7 @@ async def upload_receipt(
     org_id: int,
     file: UploadFile = File(...),
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     await file.read()
 
@@ -38,8 +39,8 @@ async def upload_receipt(
         extracted_data=extracted,
     )
     db.add(receipt)
-    db.commit()
-    db.refresh(receipt)
+    await db.commit()
+    await db.refresh(receipt)
     return {
         "receipt_id": receipt.id,
         "message": "Receipt uploaded! AI will extract details shortly.",
@@ -48,23 +49,17 @@ async def upload_receipt(
 
 
 @router.get("/{org_id}")
-def list_receipts(
+async def list_receipts(
     org_id: int,
     page: int = 1,
     per_page: int = 25,
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     offset = (page - 1) * per_page
-    total = db.query(Receipt).filter(Receipt.org_id == org_id).count()
-    receipts = (
-        db.query(Receipt)
-        .filter(Receipt.org_id == org_id)
-        .order_by(Receipt.date.desc())
-        .offset(offset)
-        .limit(per_page)
-        .all()
-    )
+    total = (await db.execute(select(func.count()).select_from(Receipt).filter(Receipt.org_id == org_id))).scalar()
+    result = await db.execute(select(Receipt).filter(Receipt.org_id == org_id).order_by(Receipt.date.desc()).offset(offset).limit(per_page))
+    receipts = result.scalars().all()
     return {
         "total": total,
         "page": page,

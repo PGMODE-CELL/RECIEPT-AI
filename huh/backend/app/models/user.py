@@ -16,6 +16,8 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     totp_secret = Column(String(255), nullable=True)
     totp_enabled = Column(Boolean, default=False)
+    reset_token = Column(String(255), nullable=True)
+    reset_token_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     orgs = relationship("Organization", back_populates="owner")

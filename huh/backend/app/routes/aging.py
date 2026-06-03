@@ -1,8 +1,10 @@
 from datetime import date
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 from app.models.invoice import Invoice
 from app.models.bill import Bill
@@ -24,11 +26,14 @@ def bucket_aging(days: int) -> str:
 
 
 @router.get("/{org_id}/receivables")
-def ar_aging(org_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def ar_aging(org_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     today = date.today()
-    invoices = db.query(Invoice).filter(
-        Invoice.org_id == org_id, Invoice.status != "paid"
-    ).all()
+    result = await db.execute(
+        select(Invoice).filter(
+            Invoice.org_id == org_id, Invoice.status != "paid"
+        ).options(selectinload(Invoice.contact))
+    )
+    invoices = result.scalars().all()
     buckets = {"current": 0, "1-30": 0, "31-60": 0, "61-90": 0, "90+": 0}
     details = []
     for inv in invoices:
@@ -47,11 +52,14 @@ def ar_aging(org_id: int, user: User = Depends(get_current_user), db: Session = 
 
 
 @router.get("/{org_id}/payables")
-def ap_aging(org_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def ap_aging(org_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     today = date.today()
-    bills = db.query(Bill).filter(
-        Bill.org_id == org_id, Bill.status != "paid"
-    ).all()
+    result = await db.execute(
+        select(Bill).filter(
+            Bill.org_id == org_id, Bill.status != "paid"
+        ).options(selectinload(Bill.contact))
+    )
+    bills = result.scalars().all()
     buckets = {"current": 0, "1-30": 0, "31-60": 0, "61-90": 0, "90+": 0}
     details = []
     for b in bills:

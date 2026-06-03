@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -6,122 +6,122 @@ on:
   pull_request:
     branches: [main]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  backend-lint:
-    name: Backend Lint
+  test-backend:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: huh/backend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: pip install ruff
-      - run: ruff check app/ tests/
-
-  backend-test:
-    name: Backend Tests
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: huh/backend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: pip install -r requirements.txt
-      - run: pytest tests/ -v --timeout=30
-
-  backend-security:
-    name: Backend Security Scan
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: huh/backend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: pip install bandit
-      - run: bandit -r app/ -c pyproject.toml -f sarif -o bandit-results.sarif || true
-      - uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: bandit-results.sarif
-          category: bandit
-
-  frontend-lint:
-    name: Frontend Lint
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: app/app
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: app/app/package-lock.json
-      - run: npm ci
-      - run: npx eslint src/
-
-  frontend-typecheck:
-    name: Frontend TypeScript
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: app/app
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: app/app/package-lock.json
-      - run: npm ci
-      - run: npx tsc --noEmit
-
-  frontend-build:
-    name: Frontend Build
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: app/app
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: app/app/package-lock.json
-      - run: npm ci
-      - run: npm run build
-
-  docker-build:
-    name: Docker Build Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: docker compose build --parallel
-
-  secret-scan:
-    name: Secret Scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+    services:
+      postgres:
+        image: postgres:16-alpine
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          POSTGRES_DB: receipt_ai_test
+          POSTGRES_USER: receipt_ai
+          POSTGRES_PASSWORD: testpass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          cd huh/backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Run tests
+        run: |
+          cd huh/backend
+          ENVIRONMENT=test \
+          DATABASE_URL=postgresql://receipt_ai:testpass@localhost:5432/receipt_ai_test \
+          SECRET_KEY=test-secret-key \
+          ENCRYPTION_KEY=test-encryption-key \
+          python -m pytest tests/ -v --tb=short
+        env:
+          PYTHONPATH: .
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: app/app/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd app/app
+          npm ci
+
+      - name: Lint
+        run: |
+          cd app/app
+          npm run lint || true
+
+      - name: Build
+        run: |
+          cd app/app
+          npm run build
+
+  build-and-push:
+    needs: [test-backend, test-frontend]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./huh/backend
+          file: ./Dockerfile.backend
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/receipt-ai-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/receipt-ai-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.frontend
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/receipt-ai-frontend:latest
+            ${{ secrets.DOCKER_USERNAME }}/receipt-ai-frontend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

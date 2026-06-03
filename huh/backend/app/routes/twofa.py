@@ -3,9 +3,10 @@ import qrcode
 import io
 from fastapi import APIRouter, HTTPException, Depends, Form
 from fastapi.responses import Response
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 from app.auth import get_current_user
 
@@ -13,38 +14,38 @@ router = APIRouter(prefix="/api/auth/2fa", tags=["2FA"])
 
 
 @router.post("/setup")
-def setup_2fa(password: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def setup_2fa(password: str = Form(...), user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     from app.security import verify_password
     if not verify_password(password, user.hashed_password):
         raise HTTPException(400, "Invalid password")
     secret = pyotp.random_base32()
     user.totp_secret = secret
     user.totp_enabled = False
-    db.commit()
+    await db.commit()
     uri = pyotp.totp.TOTP(secret).provisioning_uri(user.email, issuer_name="ReceiptAI")
     return {"secret": secret, "uri": uri, "message": "Scan QR with authenticator app, then verify with /verify"}
 
 
 @router.post("/verify")
-def verify_2fa(token: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def verify_2fa(token: str = Form(...), user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     if not user.totp_secret:
         raise HTTPException(400, "2FA not set up")
     totp = pyotp.TOTP(user.totp_secret)
     if totp.verify(token):
         user.totp_enabled = True
-        db.commit()
+        await db.commit()
         return {"message": "2FA enabled successfully"}
     raise HTTPException(400, "Invalid token")
 
 
 @router.post("/disable")
-def disable_2fa(password: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def disable_2fa(password: str = Form(...), user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     from app.security import verify_password
     if not verify_password(password, user.hashed_password):
         raise HTTPException(400, "Invalid password")
     user.totp_secret = None
     user.totp_enabled = False
-    db.commit()
+    await db.commit()
     return {"message": "2FA disabled"}
 
 

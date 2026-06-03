@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from datetime import date
 from decimal import Decimal
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 from app.models.transaction import Transaction, TransactionLine
 from app.models.account import Account
@@ -20,7 +21,7 @@ async def import_csv(
     org_id: int,
     file: UploadFile = File(...),
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     if not file.filename.endswith(".csv"):
         raise HTTPException(400, "Only CSV files are supported")
@@ -48,31 +49,23 @@ async def import_csv(
                 date=tx_date,
             )
             db.add(trans)
-            db.flush()
+            await db.flush()
 
             tx_type = row.get("type", "money_out")
             if tx_type == "money_in":
                 debit_acc = (
-                    db.query(Account)
-                    .filter(Account.org_id == org_id, Account.type == "asset")
-                    .first()
-                )
+                    await db.execute(select(Account).filter(Account.org_id == org_id, Account.type == "asset"))
+                ).scalar_one_or_none()
                 credit_acc = (
-                    db.query(Account)
-                    .filter(Account.org_id == org_id, Account.type == "income")
-                    .first()
-                )
+                    await db.execute(select(Account).filter(Account.org_id == org_id, Account.type == "income"))
+                ).scalar_one_or_none()
             else:
                 debit_acc = (
-                    db.query(Account)
-                    .filter(Account.org_id == org_id, Account.type == "expense")
-                    .first()
-                )
+                    await db.execute(select(Account).filter(Account.org_id == org_id, Account.type == "expense"))
+                ).scalar_one_or_none()
                 credit_acc = (
-                    db.query(Account)
-                    .filter(Account.org_id == org_id, Account.type == "asset")
-                    .first()
-                )
+                    await db.execute(select(Account).filter(Account.org_id == org_id, Account.type == "asset"))
+                ).scalar_one_or_none()
 
             if debit_acc and credit_acc:
                 db.add(
@@ -91,7 +84,7 @@ async def import_csv(
         except Exception:
             errors += 1
 
-    db.commit()
+    await db.commit()
 
     return {
         "imported": imported,

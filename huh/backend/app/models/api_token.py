@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime
-from datetime import datetime
+from datetime import datetime, UTC
 
 from app.database import Base
 
@@ -14,4 +14,4 @@ class ApiToken(Base):
     scopes = Column(String(500), default="read")  # read, write, admin
     last_used_at = Column(DateTime, nullable=True)
     active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))

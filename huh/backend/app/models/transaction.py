@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, DateTime, Date
 from sqlalchemy.orm import relationship
-from datetime import datetime, date
+from datetime import datetime, date, UTC
 
 from app.database import Base
 
@@ -19,7 +19,7 @@ class Transaction(Base):
     exchange_rate = Column(Numeric(15, 6), nullable=True)
     original_amount = Column(Numeric(15, 2), nullable=True)
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     org = relationship("Organization", back_populates="transactions")
     lines = relationship("TransactionLine", back_populates="transaction", cascade="all, delete-orphan")

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.auth import get_current_user
 from app.models.user import User
 from app.models.notification import Notification
@@ -12,13 +12,15 @@ from app.services.notifications import generate_all_notifications
 router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
 
 
-def require_member(org_id: int, user: User, db: Session):
+async def require_member(org_id: int, user: User, db: AsyncSession):
     if user.id == 1:
         return
-    member = db.query(OrganizationMember).filter(
-        OrganizationMember.org_id == org_id,
-        OrganizationMember.user_id == user.id,
-    ).first()
+    member = (await db.execute(
+        select(OrganizationMember).filter(
+            OrganizationMember.org_id == org_id,
+            OrganizationMember.user_id == user.id,
+        )
+    )).scalar_one_or_none()
     if not member:
         raise HTTPException(403, "Not a member of this organization")
 
@@ -39,64 +41,87 @@ def _serialize(n: Notification):
 
 
 @router.get("/{org_id}")
-def list_notifications(
+async def list_notifications(
     org_id: int,
     limit: int = 50,
     unread_only: bool = False,
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
-    require_member(org_id, user, db)
-    q = db.query(Notification).filter(Notification.org_id == org_id)
+    await require_member(org_id, user, db)
+    q = select(Notification).filter(Notification.org_id == org_id)
     if unread_only:
         q = q.filter(~Notification.read)
-    notifications = q.order_by(desc(Notification.created_at)).limit(limit).all()
-    unread_count = db.query(Notification).filter(
-        Notification.org_id == org_id, ~Notification.read
-    ).count()
+    result = await db.execute(q.order_by(Notification.created_at.desc()).limit(limit))
+    notifications = result.scalars().all()
+    unread_count = (await db.execute(
+        select(func.count()).select_from(Notification).filter(
+            Notification.org_id == org_id, ~Notification.read
+        )
+    )).scalar()
     return {"notifications": [_serialize(n) for n in notifications], "unread_count": unread_count}
 
 
 @router.post("/{org_id}/generate")
-def generate_notifications(
+async def generate_notifications(
     org_id: int,
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
-    require_member(org_id, user, db)
-    result = generate_all_notifications(db, org_id)
-    db.commit()
+    await require_member(org_id, user, db)
+    result = await generate_all_notifications(db, org_id)
+    await db.commit()
     return result
 
 
 @router.put("/{org_id}/read/{notification_id}")
-def mark_read(
+async def mark_read(
     org_id: int,
     notification_id: int,
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
-    require_member(org_id, user, db)
-    n = db.query(Notification).filter(
-        Notification.id == notification_id,
-        Notification.org_id == org_id,
-    ).first()
+    await require_member(org_id, user, db)
+    n = (await db.execute(
+        select(Notification).filter(
+            Notification.id == notification_id,
+            Notification.org_id == org_id,
+        )
+    )).scalar_one_or_none()
     if not n:
         raise HTTPException(404, "Notification not found")
     n.read = True
-    db.commit()
+    await db.commit()
     return _serialize(n)
 
 
 @router.put("/{org_id}/read-all")
-def mark_all_read(
+async def mark_all_read(
     org_id: int,
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
-    require_member(org_id, user, db)
-    db.query(Notification).filter(
-        Notification.org_id == org_id, ~Notification.read
-    ).update({"read": True})
-    db.commit()
+    await require_member(org_id, user, db)
+    from sqlalchemy import update as sql_update
+    await db.execute(
+        sql_update(Notification).where(
+            Notification.org_id == org_id, ~Notification.read
+        ).values(read=True)
+    )
+    await db.commit()
     return {"ok": True}
+
+
+@router.get("/{org_id}/unread-count")
+async def unread_count(
+    org_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await require_member(org_id, user, db)
+    count = (await db.execute(
+        select(func.count()).select_from(Notification).filter(
+            Notification.org_id == org_id, ~Notification.read
+        )
+    )).scalar()
+    return {"unread_count": count}

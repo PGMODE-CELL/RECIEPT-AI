@@ -1,9 +1,10 @@
 from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Form
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 from decimal import Decimal
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 from app.models.tds import TdsRate, TdsDeduction, TdsCertificate
 from app.auth import get_current_user
@@ -14,34 +15,34 @@ router = APIRouter(prefix="/api/tds", tags=["TDS"])
 # --- TDS Rate CRUD ---
 
 @router.get("/{org_id}/rates")
-def list_rates(org_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    rates = db.query(TdsRate).filter(TdsRate.org_id == org_id).all()
+async def list_rates(org_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    rates = (await db.execute(select(TdsRate).filter(TdsRate.org_id == org_id))).scalars().all()
     return [{"id": r.id, "section": r.section, "name": r.name, "rate": float(r.rate),
              "threshold": float(r.threshold), "applicable_to": r.applicable_to} for r in rates]
 
 
 @router.post("/{org_id}/rates")
-def add_rate(
+async def add_rate(
     org_id: int,
     section: str = Form(...), name: str = Form(...), rate: float = Form(...),
     threshold: float = Form(0), applicable_to: str = Form("all"),
-    user: User = Depends(get_current_user), db: Session = Depends(get_db),
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db),
 ):
     r = TdsRate(org_id=org_id, section=section, name=name, rate=Decimal(str(rate)),
                 threshold=Decimal(str(threshold)), applicable_to=applicable_to)
     db.add(r)
-    db.commit()
+    await db.commit()
     return {"id": r.id, "message": f"TDS rate for Section {section} ({name}) = {rate}%"}
 
 
 # --- TDS Deduction CRUD ---
 
 @router.get("/{org_id}/deductions")
-def list_deductions(org_id: int, section: str = "", user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    q = db.query(TdsDeduction).filter(TdsDeduction.org_id == org_id)
+async def list_deductions(org_id: int, section: str = "", user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    stmt = select(TdsDeduction).filter(TdsDeduction.org_id == org_id)
     if section:
-        q = q.filter(TdsDeduction.section == section)
-    ds = q.order_by(TdsDeduction.date.desc()).all()
+        stmt = stmt.filter(TdsDeduction.section == section)
+    ds = (await db.execute(stmt.order_by(TdsDeduction.date.desc()))).scalars().all()
     return [{
         "id": d.id, "section": d.section, "deductee_name": d.deductee_name,
         "deductee_pan": d.deductee_pan, "amount": float(d.amount),
@@ -51,17 +52,17 @@ def list_deductions(org_id: int, section: str = "", user: User = Depends(get_cur
 
 
 @router.post("/{org_id}/compute")
-def compute_tds(
+async def compute_tds(
     org_id: int,
     section: str = Form(...), deductee_name: str = Form(...),
     deductee_pan: str = Form(""), amount: float = Form(...),
     date_str: str = Form(""), is_salary: bool = Form(False),
     remarks: str = Form(""),
-    user: User = Depends(get_current_user), db: Session = Depends(get_db),
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db),
 ):
-    rate_config = db.query(TdsRate).filter(
+    rate_config = (await db.execute(select(TdsRate).filter(
         TdsRate.org_id == org_id, TdsRate.section == section
-    ).first()
+    ))).scalar_one_or_none()
     if not rate_config:
         raise HTTPException(400, "TDS rate not configured for this section")
 
@@ -80,7 +81,7 @@ def compute_tds(
         is_salary=is_salary, remarks=remarks,
     )
     db.add(d)
-    db.commit()
+    await db.commit()
     return {
         "id": d.id,
         "message": f"TDS ${float(tds_amount):.2f} deducted at {float(rate_config.rate)}% under Section {section}",
@@ -91,16 +92,16 @@ def compute_tds(
 # --- TDS Certificates / Form 26Q/27Q ---
 
 @router.post("/{org_id}/certificate")
-def generate_certificate(
+async def generate_certificate(
     org_id: int,
     financial_year: str = Form(...), quarter: str = Form(...), section: str = Form(""),
-    user: User = Depends(get_current_user), db: Session = Depends(get_db),
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db),
 ):
-    q = db.query(TdsDeduction).filter(TdsDeduction.org_id == org_id)
+    stmt = select(TdsDeduction).filter(TdsDeduction.org_id == org_id)
     if section:
-        q = q.filter(TdsDeduction.section == section)
+        stmt = stmt.filter(TdsDeduction.section == section)
 
-    deductions = q.all()
+    deductions = (await db.execute(stmt)).scalars().all()
     if not deductions:
         raise HTTPException(400, "No deductions found for this period")
 
@@ -114,7 +115,7 @@ def generate_certificate(
         total_tds=total_tds, deductee_count=deductee_count,
     )
     db.add(cert)
-    db.commit()
+    await db.commit()
 
     return {
         "id": cert.id,
@@ -128,8 +129,8 @@ def generate_certificate(
 
 
 @router.get("/{org_id}/certificates")
-def list_certificates(org_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    certs = db.query(TdsCertificate).filter(TdsCertificate.org_id == org_id).order_by(TdsCertificate.generated_at.desc()).all()
+async def list_certificates(org_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    certs = (await db.execute(select(TdsCertificate).filter(TdsCertificate.org_id == org_id).order_by(TdsCertificate.generated_at.desc()))).scalars().all()
     return [{
         "id": c.id, "financial_year": c.financial_year, "quarter": c.quarter,
         "section": c.section, "total_deductions": float(c.total_deductions),

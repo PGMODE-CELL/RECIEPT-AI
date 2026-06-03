@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException, Depends, Form
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 from datetime import date
 import json
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 from app.models.estimate import Estimate
 from app.models.invoice import Invoice
@@ -13,14 +14,14 @@ router = APIRouter(prefix="/api/estimates", tags=["Estimates"])
 
 
 @router.post("/{org_id}")
-def create_estimate(
+async def create_estimate(
     org_id: int,
     contact_id: int = Form(...), items: str = Form("[]"), total: float = Form(0),
     valid_until: str = Form(""), notes: str = Form(""), terms: str = Form(""),
     project_id: int = Form(0),
-    user: User = Depends(get_current_user), db: Session = Depends(get_db),
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db),
 ):
-    count = db.query(Estimate).filter(Estimate.org_id == org_id).count()
+    count = (await db.execute(select(func.count()).select_from(Estimate).filter(Estimate.org_id == org_id))).scalar()
     est = Estimate(
         org_id=org_id, contact_id=contact_id, project_id=project_id if project_id else None,
         number=f"EST-{org_id}-{count + 1}",
@@ -28,16 +29,18 @@ def create_estimate(
         items=json.loads(items), notes=notes, terms=terms,
     )
     db.add(est)
-    db.commit()
+    await db.commit()
     return {"id": est.id, "number": est.number, "message": f"Estimate {est.number} created"}
 
 
 @router.get("/{org_id}")
-def list_estimates(org_id: int, page: int = 1, per_page: int = 25,
-                   user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    q = db.query(Estimate).filter(Estimate.org_id == org_id).order_by(Estimate.created_at.desc())
-    total = q.count()
-    ests = q.offset((page - 1) * per_page).limit(per_page).all()
+async def list_estimates(org_id: int, page: int = 1, per_page: int = 25,
+                         user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    total = (await db.execute(select(func.count()).select_from(Estimate).filter(Estimate.org_id == org_id))).scalar()
+    result = await db.execute(
+        select(Estimate).filter(Estimate.org_id == org_id).order_by(Estimate.created_at.desc()).offset((page - 1) * per_page).limit(per_page)
+    )
+    ests = result.scalars().all()
     return {"total": total, "page": page, "per_page": per_page, "items": [{
         "id": e.id, "number": e.number, "contact_id": e.contact_id,
         "date": str(e.date), "valid_until": str(e.valid_until) if e.valid_until else None,
@@ -46,9 +49,9 @@ def list_estimates(org_id: int, page: int = 1, per_page: int = 25,
 
 
 @router.get("/{org_id}/{estimate_id}")
-def get_estimate(org_id: int, estimate_id: int,
-                 user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    est = db.query(Estimate).filter(Estimate.id == estimate_id, Estimate.org_id == org_id).first()
+async def get_estimate(org_id: int, estimate_id: int,
+                       user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    est = (await db.execute(select(Estimate).filter(Estimate.id == estimate_id, Estimate.org_id == org_id))).scalar_one_or_none()
     if not est:
         raise HTTPException(404, "Estimate not found")
     return {
@@ -61,14 +64,14 @@ def get_estimate(org_id: int, estimate_id: int,
 
 
 @router.post("/{org_id}/{estimate_id}/convert")
-def convert_to_invoice(org_id: int, estimate_id: int,
-                       user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    est = db.query(Estimate).filter(Estimate.id == estimate_id, Estimate.org_id == org_id).first()
+async def convert_to_invoice(org_id: int, estimate_id: int,
+                             user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    est = (await db.execute(select(Estimate).filter(Estimate.id == estimate_id, Estimate.org_id == org_id))).scalar_one_or_none()
     if not est:
         raise HTTPException(404, "Estimate not found")
     if est.status == "converted":
         raise HTTPException(400, "Already converted to invoice")
-    count = db.query(Invoice).filter(Invoice.org_id == org_id).count()
+    count = (await db.execute(select(func.count()).select_from(Invoice).filter(Invoice.org_id == org_id))).scalar()
     inv = Invoice(
         org_id=org_id, contact_id=est.contact_id, project_id=est.project_id,
         number=f"INV-{org_id}-{count + 1}", date=date.today(),
@@ -76,16 +79,16 @@ def convert_to_invoice(org_id: int, estimate_id: int,
     )
     db.add(inv)
     est.status = "converted"
-    db.commit()
+    await db.commit()
     return {"invoice_id": inv.id, "number": inv.number, "message": f"Invoice {inv.number} created from estimate"}
 
 
 @router.put("/{org_id}/{estimate_id}/status")
-def update_estimate_status(org_id: int, estimate_id: int, status: str = Form(...),
-                           user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    est = db.query(Estimate).filter(Estimate.id == estimate_id, Estimate.org_id == org_id).first()
+async def update_estimate_status(org_id: int, estimate_id: int, status: str = Form(...),
+                                 user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    est = (await db.execute(select(Estimate).filter(Estimate.id == estimate_id, Estimate.org_id == org_id))).scalar_one_or_none()
     if not est:
         raise HTTPException(404, "Estimate not found")
     est.status = status
-    db.commit()
+    await db.commit()
     return {"message": f"Estimate status updated to {status}"}

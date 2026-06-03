@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Wallet, Loader2, Building2, Globe } from "lucide-react";
 import { useApi, ApiError } from "@/providers/ApiProvider";
+import { getToken } from "@/lib/api";
 import { toast } from "sonner";
 
 export default function OrgSetup() {
@@ -20,11 +21,15 @@ export default function OrgSetup() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    if (!getToken()) {
+      navigate("/login");
+      return;
+    }
     api.setup.countries().then(c => {
       setCountries(c);
       if (c.length > 0) setCountry(c[0].code);
     }).catch(() => {}).finally(() => setChecking(false));
-  }, [api]);
+  }, [api, navigate]);
 
   useEffect(() => {
     if (orgId) navigate("/");

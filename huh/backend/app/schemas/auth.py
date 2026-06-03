@@ -1,14 +1,14 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 
 
 class RegisterRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str = Field(..., min_length=6)
     full_name: str
 
 
 class LoginRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 
 
@@ -17,7 +17,16 @@ class AuthResponse(BaseModel):
     user: dict
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str = Field(..., min_length=6)
+
+
 class UserResponse(BaseModel):
     id: int
-    email: str
+    email: EmailStr
     name: str

@@ -1,36 +1,27 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Wallet, Shield, BarChart3, Users, Loader2, Mail, Lock, UserPlus } from "lucide-react";
-import { setDemoUser } from "@/hooks/useAuth";
 import { useApi, ApiError } from "@/providers/ApiProvider";
 import { toast } from "sonner";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, register } = useApi();
+  const { login, register, isAuthenticated, isLoading } = useApi();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate("/org-setup");
+    }
+  }, [isAuthenticated, isLoading, navigate]);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-
-  const handleDemoLogin = () => {
-    setLoading(true);
-    setDemoUser({
-      id: 1,
-      unionId: "demo-user-001",
-      name: "Demo User",
-      email: "demo@ledgerai.app",
-      avatar: null,
-      role: "admin",
-    });
-    toast.success("Logged in as Demo User");
-    window.location.href = "/";
-  };
 
   const handleRealLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,8 +58,8 @@ export default function Login() {
           <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Wallet className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">LedgerAI</h1>
-          <p className="text-gray-500 mt-2">Modern Accounting Software</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">ReceiptAI</h1>
+          <p className="text-gray-500 mt-2">Open-Source Accounting & ERP</p>
         </div>
 
         <Card className="shadow-lg">
@@ -103,6 +94,11 @@ export default function Login() {
                     {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                     {loading ? "Signing in..." : "Sign In"}
                   </Button>
+                  <div className="text-center">
+                    <Link to="/forgot-password" className="text-sm text-indigo-600 hover:text-indigo-500">
+                      Forgot Password?
+                    </Link>
+                  </div>
                 </form>
               </TabsContent>
 
@@ -136,20 +132,6 @@ export default function Login() {
                 </form>
               </TabsContent>
             </Tabs>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-gray-500">or continue as guest</span>
-              </div>
-            </div>
-
-            <Button variant="outline" className="w-full" onClick={handleDemoLogin} disabled={loading}>
-              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              Demo Login
-            </Button>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">

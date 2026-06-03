@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { useApi } from "@/providers/ApiProvider";
+import { getToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Receipt, FileText, Users, Package,
@@ -139,7 +140,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { orgId } = useApi();
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && !orgId) {
+    if (!isLoading && isAuthenticated && !orgId && getToken()) {
       navigate("/org-setup");
     }
   }, [isLoading, isAuthenticated, orgId, navigate]);
@@ -221,7 +222,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-lg text-gray-900 dark:text-white">LedgerAI</span>
+              <span className="font-bold text-lg text-gray-900 dark:text-white">ReceiptAI</span>
             </Link>
           )}
           {collapsed && (

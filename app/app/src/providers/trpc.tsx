@@ -12,42 +12,79 @@ declare global {
   var __originalFetch: typeof fetch | undefined;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 function getDemoUser() {
-  try { const stored = localStorage.getItem("ledgerai_demo_user"); return stored ? JSON.parse(stored) : null; } catch { return null; }
+  try { const stored = localStorage.getItem("receiptai_demo_user"); return stored ? JSON.parse(stored) : null; } catch { return null; }
 }
 
 function isDemoMode() { return !!getDemoUser(); }
 function isRealMode() { return !!getToken(); }
 
 // Maps tRPC procedure paths → FastAPI REST endpoints
-// Procedures not listed here fall back to mock data.
+// Every tRPC procedure must be listed here to avoid falling back to mock data.
+// Procedures without a backend route will receive a 404 error (visible to user).
 const ROUTE_MAP: Record<string, { method: string; path: string; needsOrg: boolean }> = {
+  // Auth
   "auth.me": { method: "GET", path: "/api/auth/me", needsOrg: false },
   "auth.logout": { method: "POST", path: "/api/auth/logout", needsOrg: false },
+  // Dashboard
   "dashboard.stats": { method: "GET", path: "/api/reports/{orgId}/dashboard", needsOrg: true },
   "dashboard.recentActivity": { method: "GET", path: "/api/transactions/{orgId}", needsOrg: true },
+  // Invoice
   "invoice.list": { method: "GET", path: "/api/invoices/{orgId}", needsOrg: true },
-  "invoice.create": { method: "POST", path: "/api/invoices/{orgId}", needsOrg: true },
-  "invoice.delete": { method: "DELETE", path: "/api/invoices/{orgId}/{id}", needsOrg: true },
   "invoice.getById": { method: "GET", path: "/api/invoices/{orgId}/{id}", needsOrg: true },
+  "invoice.create": { method: "POST", path: "/api/invoices/{orgId}", needsOrg: true },
+  "invoice.update": { method: "PUT", path: "/api/invoices/{orgId}/{id}", needsOrg: true },
+  "invoice.updateStatus": { method: "PUT", path: "/api/invoices/{orgId}/{id}/status", needsOrg: true },
+  "invoice.recordPayment": { method: "POST", path: "/api/invoices/{orgId}/{id}/pay", needsOrg: true },
+  "invoice.delete": { method: "DELETE", path: "/api/invoices/{orgId}/{id}", needsOrg: true },
   "invoice.nextNumber": { method: "GET", path: "/api/invoices/{orgId}", needsOrg: true },
   "invoice.pay": { method: "POST", path: "/api/invoices/{orgId}/{id}/pay", needsOrg: true },
   "invoice.pdf": { method: "GET", path: "/api/invoices/{orgId}/{id}/pdf", needsOrg: true },
+  // Bill
   "bill.list": { method: "GET", path: "/api/bills/{orgId}", needsOrg: true },
-  "bill.create": { method: "POST", path: "/api/bills/{orgId}", needsOrg: true },
   "bill.getById": { method: "GET", path: "/api/bills/{orgId}/{id}", needsOrg: true },
+  "bill.create": { method: "POST", path: "/api/bills/{orgId}", needsOrg: true },
+  "bill.update": { method: "PUT", path: "/api/bills/{orgId}/{id}", needsOrg: true },
+  "bill.updateStatus": { method: "PUT", path: "/api/bills/{orgId}/{id}/status", needsOrg: true },
+  "bill.recordPayment": { method: "POST", path: "/api/bills/{orgId}/{id}/pay", needsOrg: true },
+  "bill.delete": { method: "DELETE", path: "/api/bills/{orgId}/{id}", needsOrg: true },
   "bill.nextNumber": { method: "GET", path: "/api/bills/{orgId}", needsOrg: true },
+  // Contact
   "contact.list": { method: "GET", path: "/api/contacts/{orgId}", needsOrg: true },
-  "contact.create": { method: "POST", path: "/api/contacts/{orgId}", needsOrg: true },
+  "contact.search": { method: "GET", path: "/api/contacts/{orgId}", needsOrg: true },
   "contact.getById": { method: "GET", path: "/api/contacts/{orgId}/{id}", needsOrg: true },
+  "contact.create": { method: "POST", path: "/api/contacts/{orgId}", needsOrg: true },
+  "contact.update": { method: "PUT", path: "/api/contacts/{orgId}/{id}", needsOrg: true },
+  "contact.delete": { method: "DELETE", path: "/api/contacts/{orgId}/{id}", needsOrg: true },
+  "contact.statement": { method: "GET", path: "/api/contacts/{orgId}/{id}/statement", needsOrg: true },
+  // Product / Inventory
   "product.list": { method: "GET", path: "/api/inventory/{orgId}/items", needsOrg: true },
+  "product.search": { method: "GET", path: "/api/inventory/{orgId}/items", needsOrg: true },
+  "product.getById": { method: "GET", path: "/api/inventory/{orgId}/items/{id}", needsOrg: true },
   "product.create": { method: "POST", path: "/api/inventory/{orgId}/items", needsOrg: true },
+  "product.update": { method: "PUT", path: "/api/inventory/{orgId}/items/{id}", needsOrg: true },
+  "product.delete": { method: "DELETE", path: "/api/inventory/{orgId}/items/{id}", needsOrg: true },
+  // Transaction
   "transaction.list": { method: "GET", path: "/api/transactions/{orgId}", needsOrg: true },
   "transaction.create": { method: "POST", path: "/api/transactions/simple", needsOrg: false },
+  "transaction.delete": { method: "DELETE", path: "/api/transactions/{orgId}/{id}", needsOrg: true },
+  // Account
+  "account.list": { method: "GET", path: "/api/financials/{orgId}/accounts", needsOrg: true },
+  "account.getById": { method: "GET", path: "/api/financials/{orgId}/accounts/{id}", needsOrg: true },
+  "account.create": { method: "POST", path: "/api/financials/{orgId}/accounts", needsOrg: true },
+  "account.update": { method: "PUT", path: "/api/financials/{orgId}/accounts/{id}", needsOrg: true },
+  "account.delete": { method: "DELETE", path: "/api/financials/{orgId}/accounts/{id}", needsOrg: true },
+  "account.ledger": { method: "GET", path: "/api/financials/{orgId}/ledger/{accountId}", needsOrg: true },
+  // Receipt
   "receipt.list": { method: "GET", path: "/api/receipts/{orgId}", needsOrg: true },
+  "receipt.getById": { method: "GET", path: "/api/receipts/{orgId}/{id}", needsOrg: true },
+  "receipt.create": { method: "POST", path: "/api/receipts/{orgId}/upload", needsOrg: true },
   "receipt.upload": { method: "POST", path: "/api/receipts/{orgId}/upload", needsOrg: true },
+  "receipt.update": { method: "PUT", path: "/api/receipts/{orgId}/{id}", needsOrg: true },
+  "receipt.delete": { method: "DELETE", path: "/api/receipts/{orgId}/{id}", needsOrg: true },
+  // Reports
   "report.profitLoss": { method: "GET", path: "/api/reports/{orgId}/profit-loss", needsOrg: true },
   "report.balanceSheet": { method: "GET", path: "/api/financials/{orgId}/balance-sheet", needsOrg: true },
   "report.cashFlow": { method: "GET", path: "/api/financials/{orgId}/cash-flow", needsOrg: true },
@@ -55,78 +92,303 @@ const ROUTE_MAP: Record<string, { method: string; path: string; needsOrg: boolea
   "report.agedReceivables": { method: "GET", path: "/api/aging/{orgId}/receivables", needsOrg: true },
   "report.agedPayables": { method: "GET", path: "/api/aging/{orgId}/payables", needsOrg: true },
   "report.taxSummary": { method: "GET", path: "/api/tax/{orgId}/return", needsOrg: true },
-  "account.list": { method: "GET", path: "/api/financials/{orgId}/accounts", needsOrg: true },
-  "journal.create": { method: "POST", path: "/api/financials/journal", needsOrg: false },
+  // Journal Entry
+  "journalEntry.list": { method: "GET", path: "/api/financials/{orgId}/journal", needsOrg: true },
+  "journalEntry.getById": { method: "GET", path: "/api/financials/{orgId}/journal/{id}", needsOrg: true },
   "journalEntry.create": { method: "POST", path: "/api/financials/journal", needsOrg: false },
+  "journalEntry.delete": { method: "DELETE", path: "/api/financials/{orgId}/journal/{id}", needsOrg: true },
+  "journalEntry.nextNumber": { method: "GET", path: "/api/financials/journal/count", needsOrg: false },
+  "journal.create": { method: "POST", path: "/api/financials/journal", needsOrg: false },
+  // Budget
   "budget.list": { method: "GET", path: "/api/budgets/{orgId}", needsOrg: true },
+  "budget.getById": { method: "GET", path: "/api/budgets/{orgId}/{id}", needsOrg: true },
   "budget.create": { method: "POST", path: "/api/budgets/{orgId}", needsOrg: true },
   "budget.update": { method: "PUT", path: "/api/budgets/{orgId}/{id}", needsOrg: true },
   "budget.delete": { method: "DELETE", path: "/api/budgets/{orgId}/{id}", needsOrg: true },
-  "recurring.list": { method: "GET", path: "/api/recurring/{orgId}", needsOrg: true },
-  "recurring.create": { method: "POST", path: "/api/recurring/{orgId}", needsOrg: true },
+  "budget.getSummary": { method: "GET", path: "/api/budgets/{orgId}/summary", needsOrg: true },
+  // Project
   "project.list": { method: "GET", path: "/api/projects/{orgId}", needsOrg: true },
+  "project.getById": { method: "GET", path: "/api/projects/{orgId}/{id}", needsOrg: true },
   "project.create": { method: "POST", path: "/api/projects/{orgId}", needsOrg: true },
-  "audit.list": { method: "GET", path: "/api/audit/{orgId}", needsOrg: true },
-  "notification.list": { method: "GET", path: "/api/notifications/{orgId}", needsOrg: true },
-  "notification.markRead": { method: "PUT", path: "/api/notifications/{orgId}/read/{id}", needsOrg: true },
-  "notification.markAllRead": { method: "PUT", path: "/api/notifications/{orgId}/read-all", needsOrg: true },
-  "payment.history": { method: "GET", path: "/api/payments/{orgId}/history", needsOrg: true },
-  "payment.record": { method: "POST", path: "/api/payments/{orgId}/manual", needsOrg: true },
+  "project.update": { method: "PUT", path: "/api/projects/{orgId}/{id}", needsOrg: true },
+  "project.delete": { method: "DELETE", path: "/api/projects/{orgId}/{id}", needsOrg: true },
+  "project.createTask": { method: "POST", path: "/api/projects/{orgId}/{id}/tasks", needsOrg: true },
+  "project.updateTask": { method: "PUT", path: "/api/projects/{orgId}/{id}/tasks/{taskId}", needsOrg: true },
+  "project.deleteTask": { method: "DELETE", path: "/api/projects/{orgId}/{id}/tasks/{taskId}", needsOrg: true },
+  // Estimate / Quotation
   "estimate.list": { method: "GET", path: "/api/estimates/{orgId}", needsOrg: true },
+  "estimate.getById": { method: "GET", path: "/api/estimates/{orgId}/{id}", needsOrg: true },
   "estimate.create": { method: "POST", path: "/api/estimates/{orgId}", needsOrg: true },
   "estimate.convert": { method: "POST", path: "/api/estimates/{orgId}/{id}/convert", needsOrg: true },
+  "quotation.list": { method: "GET", path: "/api/estimates/{orgId}", needsOrg: true },
+  "quotation.getById": { method: "GET", path: "/api/estimates/{orgId}/{id}", needsOrg: true },
+  "quotation.create": { method: "POST", path: "/api/estimates/{orgId}", needsOrg: true },
+  "quotation.convertToInvoice": { method: "POST", path: "/api/estimates/{orgId}/{id}/convert", needsOrg: true },
+  "quotation.nextNumber": { method: "GET", path: "/api/estimates/{orgId}?limit=1", needsOrg: true },
+  // Purchase Order
   "purchaseOrder.list": { method: "GET", path: "/api/purchase-orders/{orgId}", needsOrg: true },
+  "purchaseOrder.getById": { method: "GET", path: "/api/purchase-orders/{orgId}/{id}", needsOrg: true },
   "purchaseOrder.create": { method: "POST", path: "/api/purchase-orders/{orgId}", needsOrg: true },
+  "purchaseOrder.update": { method: "PUT", path: "/api/purchase-orders/{orgId}/{id}", needsOrg: true },
+  "purchaseOrder.updateStatus": { method: "PUT", path: "/api/purchase-orders/{orgId}/{id}/status", needsOrg: true },
+  "purchaseOrder.delete": { method: "DELETE", path: "/api/purchase-orders/{orgId}/{id}", needsOrg: true },
+  "purchaseOrder.nextNumber": { method: "GET", path: "/api/purchase-orders/{orgId}", needsOrg: true },
+  // Credit Note
   "creditNote.list": { method: "GET", path: "/api/credit-notes/{orgId}", needsOrg: true },
+  "creditNote.getById": { method: "GET", path: "/api/credit-notes/{orgId}/{id}", needsOrg: true },
   "creditNote.create": { method: "POST", path: "/api/credit-notes/{orgId}", needsOrg: true },
+  "creditNote.update": { method: "PUT", path: "/api/credit-notes/{orgId}/{id}", needsOrg: true },
+  "creditNote.delete": { method: "DELETE", path: "/api/credit-notes/{orgId}/{id}", needsOrg: true },
+  "creditNote.nextNumber": { method: "GET", path: "/api/credit-notes/{orgId}", needsOrg: true },
+  // Fixed Asset
   "fixedAsset.list": { method: "GET", path: "/api/depreciation/{orgId}/assets", needsOrg: true },
+  "fixedAsset.getById": { method: "GET", path: "/api/depreciation/{orgId}/assets/{id}", needsOrg: true },
   "fixedAsset.create": { method: "POST", path: "/api/depreciation/{orgId}/assets", needsOrg: true },
+  "fixedAsset.update": { method: "PUT", path: "/api/depreciation/{orgId}/assets/{id}", needsOrg: true },
+  "fixedAsset.delete": { method: "DELETE", path: "/api/depreciation/{orgId}/assets/{id}", needsOrg: true },
+  "fixedAsset.depreciate": { method: "POST", path: "/api/depreciation/{orgId}/assets/{id}/depreciate", needsOrg: true },
+  "fixedAsset.getSummary": { method: "GET", path: "/api/depreciation/{orgId}/summary", needsOrg: true },
+  // Employee
+  "employee.list": { method: "GET", path: "/api/payroll/{orgId}/employees", needsOrg: true },
+  "employee.getById": { method: "GET", path: "/api/payroll/{orgId}/employees/{id}", needsOrg: true },
+  "employee.create": { method: "POST", path: "/api/payroll/{orgId}/employees", needsOrg: true },
+  "employee.update": { method: "PUT", path: "/api/payroll/{orgId}/employees/{id}", needsOrg: true },
+  "employee.delete": { method: "DELETE", path: "/api/payroll/{orgId}/employees/{id}", needsOrg: true },
+  // Payroll
+  "payroll.list": { method: "GET", path: "/api/payroll/{orgId}/payslips", needsOrg: true },
+  "payroll.getById": { method: "GET", path: "/api/payroll/{orgId}/payslips/{id}", needsOrg: true },
+  "payroll.getStats": { method: "GET", path: "/api/payroll/{orgId}/stats", needsOrg: true },
+  "payroll.create": { method: "POST", path: "/api/payroll/{orgId}/payslips", needsOrg: true },
+  "payroll.updateStatus": { method: "PUT", path: "/api/payroll/{orgId}/payslips/{id}/status", needsOrg: true },
+  "payroll.delete": { method: "DELETE", path: "/api/payroll/{orgId}/payslips/{id}", needsOrg: true },
   "payroll.employee.list": { method: "GET", path: "/api/payroll/{orgId}/employees", needsOrg: true },
   "payroll.employee.create": { method: "POST", path: "/api/payroll/{orgId}/employees", needsOrg: true },
   "payroll.payslip.list": { method: "GET", path: "/api/payroll/{orgId}/payslips", needsOrg: true },
   "payroll.payslip.generate": { method: "POST", path: "/api/payroll/{orgId}/employees/{empId}/payslip", needsOrg: true },
+  // Document
+  "document.list": { method: "GET", path: "/api/attachments/{orgId}/list", needsOrg: true },
+  "document.create": { method: "POST", path: "/api/attachments/{orgId}/upload", needsOrg: true },
+  "document.delete": { method: "DELETE", path: "/api/attachments/{orgId}/{id}", needsOrg: true },
+  // Settings
+  "settings.getCompany": { method: "GET", path: "/api/orgs", needsOrg: false },
+  "settings.saveCompany": { method: "PUT", path: "/api/orgs/{id}", needsOrg: false },
+  "settings.listTaxRates": { method: "GET", path: "/api/tax/{orgId}/rates", needsOrg: true },
+  "settings.createTaxRate": { method: "POST", path: "/api/tax/{orgId}/rates", needsOrg: true },
+  "settings.deleteTaxRate": { method: "DELETE", path: "/api/tax/{orgId}/rates/{id}", needsOrg: true },
+  "settings.listCurrencies": { method: "GET", path: "/api/forex/rates", needsOrg: false },
+  "settings.updateCurrency": { method: "PUT", path: "/api/forex/rates/{id}", needsOrg: false },
+  // Recurring
+  "recurring.list": { method: "GET", path: "/api/recurring/{orgId}", needsOrg: true },
+  "recurring.getById": { method: "GET", path: "/api/recurring/{orgId}/{id}", needsOrg: true },
+  "recurring.create": { method: "POST", path: "/api/recurring/{orgId}", needsOrg: true },
+  "recurring.update": { method: "PUT", path: "/api/recurring/{orgId}/{id}", needsOrg: true },
+  "recurring.delete": { method: "DELETE", path: "/api/recurring/{orgId}/{id}", needsOrg: true },
+  "recurring.getSummary": { method: "GET", path: "/api/recurring/{orgId}/summary", needsOrg: true },
+  // Notification
+  "notification.list": { method: "GET", path: "/api/notifications/{orgId}", needsOrg: true },
+  "notification.markRead": { method: "PUT", path: "/api/notifications/{orgId}/read/{id}", needsOrg: true },
+  "notification.markAllRead": { method: "PUT", path: "/api/notifications/{orgId}/read-all", needsOrg: true },
+  "notification.getUnreadCount": { method: "GET", path: "/api/notifications/{orgId}/unread-count", needsOrg: true },
+  // Audit
+  "audit.list": { method: "GET", path: "/api/audit/{orgId}", needsOrg: true },
+  "audit.log": { method: "POST", path: "/api/audit/{orgId}/log", needsOrg: true },
+  "audit.getStats": { method: "GET", path: "/api/audit/{orgId}/stats", needsOrg: true },
+  // Timesheet
   "timesheet.list": { method: "GET", path: "/api/timesheets/{orgId}", needsOrg: true },
   "timesheet.create": { method: "POST", path: "/api/timesheets/{orgId}", needsOrg: true },
+  // Expense Report
   "expenseReport.list": { method: "GET", path: "/api/expense-reports/{orgId}", needsOrg: true },
   "expenseReport.create": { method: "POST", path: "/api/expense-reports/{orgId}", needsOrg: true },
+  // Reconciliation
+  "reconciliation.list": { method: "GET", path: "/api/financials/{orgId}/statement/reconciliation", needsOrg: true },
+  "reconciliation.create": { method: "POST", path: "/api/financials/{orgId}/statement/reconciliation", needsOrg: true },
+  "reconciliation.reconcile": { method: "POST", path: "/api/financials/{orgId}/statement/{id}/reconcile", needsOrg: true },
+  "reconciliation.delete": { method: "DELETE", path: "/api/financials/{orgId}/statement/reconciliation/{id}", needsOrg: true },
+  "reconciliation.getUnreconciled": { method: "GET", path: "/api/financials/{orgId}/statement/{importId}/suggestions", needsOrg: true },
+  // Payment
+  "payment.history": { method: "GET", path: "/api/payments/{orgId}/history", needsOrg: true },
+  "payment.record": { method: "POST", path: "/api/payments/{orgId}/manual", needsOrg: true },
+  // Multi-Company
+  "multiCompany.list": { method: "GET", path: "/api/orgs", needsOrg: false },
+  "multiCompany.getById": { method: "GET", path: "/api/orgs/{id}", needsOrg: false },
+  "multiCompany.create": { method: "POST", path: "/api/setup/create", needsOrg: false },
+  "multiCompany.update": { method: "PUT", path: "/api/orgs/{id}", needsOrg: false },
+  "multiCompany.delete": { method: "DELETE", path: "/api/orgs/{id}", needsOrg: false },
+  "multiCompany.switchActive": { method: "POST", path: "/api/orgs/{id}/switch", needsOrg: false },
+  // Period Close
+  "periodClose.list": { method: "GET", path: "/api/accounting-periods/{orgId}", needsOrg: true },
+  "periodClose.getById": { method: "GET", path: "/api/accounting-periods/{orgId}/{id}", needsOrg: true },
+  "periodClose.create": { method: "POST", path: "/api/accounting-periods/{orgId}", needsOrg: true },
+  "periodClose.update": { method: "PUT", path: "/api/accounting-periods/{orgId}/{id}", needsOrg: true },
+  "periodClose.delete": { method: "DELETE", path: "/api/accounting-periods/{orgId}/{id}", needsOrg: true },
+  "periodClose.closePeriod": { method: "POST", path: "/api/accounting-periods/{orgId}/{id}/close", needsOrg: true },
+  "periodClose.reopenPeriod": { method: "POST", path: "/api/accounting-periods/{orgId}/{id}/open", needsOrg: true },
+  // Aging
   "aging.receivables": { method: "GET", path: "/api/aging/{orgId}/receivables", needsOrg: true },
   "aging.payables": { method: "GET", path: "/api/aging/{orgId}/payables", needsOrg: true },
+  // Forex
   "forex.rates": { method: "GET", path: "/api/forex/rates", needsOrg: false },
+  // Tax
   "tax.rates": { method: "GET", path: "/api/tax/{orgId}/rates", needsOrg: true },
   "tax.compute": { method: "POST", path: "/api/tax/{orgId}/compute-invoice", needsOrg: true },
   "tax.return.list": { method: "GET", path: "/api/tax/{orgId}/returns", needsOrg: true },
+  // Accounting Period
   "accountingPeriod.list": { method: "GET", path: "/api/accounting-periods/{orgId}", needsOrg: true },
   "accountingPeriod.close": { method: "POST", path: "/api/accounting-periods/{orgId}/{id}/close", needsOrg: true },
+  // Roles
   "role.members": { method: "GET", path: "/api/roles/{orgId}/members", needsOrg: true },
+  // Consolidation
   "consolidation.summary": { method: "GET", path: "/api/consolidation/{orgId}/summary", needsOrg: true },
+  // Search
   "search.all": { method: "GET", path: "/api/search/{orgId}", needsOrg: true },
+  // Inventory extras
   "inventory.lowStock": { method: "GET", path: "/api/inventory/{orgId}/items/low-stock", needsOrg: true },
   "inventory.movements": { method: "GET", path: "/api/inventory/{orgId}/movements", needsOrg: true },
+  // Email
   "email.sendInvoice": { method: "POST", path: "/api/email/invoice/{id}", needsOrg: false },
   "email.sendReminders": { method: "POST", path: "/api/email/reminders/{orgId}", needsOrg: true },
-  "export.transactions": { method: "GET", path: "/api/export/{orgId}/transactions", needsOrg: true },
-  "export.invoices": { method: "GET", path: "/api/export/{orgId}/invoices", needsOrg: true },
+  // Export
+  "export.transactions": { method: "GET", path: "/api/exports/{orgId}/transactions", needsOrg: true },
+  "export.invoices": { method: "GET", path: "/api/exports/{orgId}/invoices", needsOrg: true },
+  "export.bills": { method: "GET", path: "/api/exports/{orgId}/bills", needsOrg: true },
+  // Company / Org
   "company.list": { method: "GET", path: "/api/orgs", needsOrg: false },
   "company.create": { method: "POST", path: "/api/setup/create", needsOrg: false },
   "company.getById": { method: "GET", path: "/api/orgs", needsOrg: false },
+  // Wizard
   "wizard.countries": { method: "GET", path: "/api/setup/countries", needsOrg: false },
   "wizard.setup": { method: "POST", path: "/api/setup/create", needsOrg: false },
+  // General Ledger
   "generalLedger.list": { method: "GET", path: "/api/financials/{orgId}/ledger/{accountId}", needsOrg: true },
+  // Payment Gateway
   "paymentGateway.createIntent": { method: "POST", path: "/api/payments/{orgId}/stripe/create-payment-intent", needsOrg: true },
+  // Attachment
   "attachment.list": { method: "GET", path: "/api/attachments/{orgId}/list", needsOrg: true },
   "attachment.upload": { method: "POST", path: "/api/attachments/{orgId}/upload", needsOrg: true },
   "attachment.delete": { method: "DELETE", path: "/api/attachments/{orgId}/{id}", needsOrg: true },
+  // Time Tracking
+  "timeTracking.list": { method: "GET", path: "/api/timesheets/{orgId}", needsOrg: true },
+  "timeTracking.getById": { method: "GET", path: "/api/timesheets/{orgId}/{id}", needsOrg: true },
+  "timeTracking.create": { method: "POST", path: "/api/timesheets/{orgId}", needsOrg: true },
+  "timeTracking.update": { method: "PUT", path: "/api/timesheets/{orgId}/{id}", needsOrg: true },
+  "timeTracking.delete": { method: "DELETE", path: "/api/timesheets/{orgId}/{id}", needsOrg: true },
+  "timeTracking.getSummary": { method: "GET", path: "/api/timesheets/{orgId}/summary", needsOrg: true },
+  // Expense Claim
+  "expenseClaim.list": { method: "GET", path: "/api/expense-reports/{orgId}", needsOrg: true },
+  "expenseClaim.getById": { method: "GET", path: "/api/expense-reports/{orgId}/{id}", needsOrg: true },
+  "expenseClaim.create": { method: "POST", path: "/api/expense-reports/{orgId}", needsOrg: true },
+  "expenseClaim.update": { method: "PUT", path: "/api/expense-reports/{orgId}/{id}", needsOrg: true },
+  "expenseClaim.updateStatus": { method: "PUT", path: "/api/expense-reports/{orgId}/{id}/status", needsOrg: true },
+  "expenseClaim.delete": { method: "DELETE", path: "/api/expense-reports/{orgId}/{id}", needsOrg: true },
+  "expenseClaim.nextNumber": { method: "GET", path: "/api/expense-reports/{orgId}", needsOrg: true },
+  // Cash Flow Forecast
+  "cashFlowForecast.list": { method: "GET", path: "/api/cash-flow-forecast/{orgId}", needsOrg: true },
+  "cashFlowForecast.create": { method: "POST", path: "/api/cash-flow-forecast/{orgId}", needsOrg: true },
+  "cashFlowForecast.delete": { method: "DELETE", path: "/api/cash-flow-forecast/{orgId}/{id}", needsOrg: true },
+  // CRM
+  "crm.listLeads": { method: "GET", path: "/api/crm/{orgId}/leads", needsOrg: true },
+  "crm.getById": { method: "GET", path: "/api/crm/{orgId}/leads/{id}", needsOrg: true },
+  "crm.createLead": { method: "POST", path: "/api/crm/{orgId}/leads", needsOrg: true },
+  "crm.updateLead": { method: "PUT", path: "/api/crm/{orgId}/leads/{id}", needsOrg: true },
+  "crm.deleteLead": { method: "DELETE", path: "/api/crm/{orgId}/leads/{id}", needsOrg: true },
+  "crm.listActivities": { method: "GET", path: "/api/crm/{orgId}/leads/{id}/activities", needsOrg: true },
+  "crm.createActivity": { method: "POST", path: "/api/crm/{orgId}/activities", needsOrg: true },
+  // Manufacturing
+  "manufacturing.listBoms": { method: "GET", path: "/api/manufacturing/{orgId}/boms", needsOrg: true },
+  "manufacturing.createBom": { method: "POST", path: "/api/manufacturing/{orgId}/boms", needsOrg: true },
+  "manufacturing.updateBom": { method: "PUT", path: "/api/manufacturing/{orgId}/boms/{id}", needsOrg: true },
+  "manufacturing.deleteBom": { method: "DELETE", path: "/api/manufacturing/{orgId}/boms/{id}", needsOrg: true },
+  "manufacturing.listBomItems": { method: "GET", path: "/api/manufacturing/{orgId}/boms/{id}/items", needsOrg: true },
+  "manufacturing.addBomItem": { method: "POST", path: "/api/manufacturing/{orgId}/boms/{id}/items", needsOrg: true },
+  "manufacturing.removeBomItem": { method: "DELETE", path: "/api/manufacturing/{orgId}/boms/{id}/items/{itemId}", needsOrg: true },
+  "manufacturing.listWorkOrders": { method: "GET", path: "/api/manufacturing/{orgId}/work-orders", needsOrg: true },
+  "manufacturing.createWorkOrder": { method: "POST", path: "/api/manufacturing/{orgId}/work-orders", needsOrg: true },
+  "manufacturing.updateWorkOrder": { method: "PUT", path: "/api/manufacturing/{orgId}/work-orders/{id}", needsOrg: true },
+  "manufacturing.deleteWorkOrder": { method: "DELETE", path: "/api/manufacturing/{orgId}/work-orders/{id}", needsOrg: true },
+  // Revenue Recognition
+  "revenueRecognition.list": { method: "GET", path: "/api/revenue-recognition/{orgId}", needsOrg: true },
+  "revenueRecognition.getById": { method: "GET", path: "/api/revenue-recognition/{orgId}/{id}", needsOrg: true },
+  "revenueRecognition.create": { method: "POST", path: "/api/revenue-recognition/{orgId}", needsOrg: true },
+  "revenueRecognition.update": { method: "PUT", path: "/api/revenue-recognition/{orgId}/{id}", needsOrg: true },
+  "revenueRecognition.delete": { method: "DELETE", path: "/api/revenue-recognition/{orgId}/{id}", needsOrg: true },
+  "revenueRecognition.recognizeRevenue": { method: "POST", path: "/api/revenue-recognition/{orgId}/{id}/recognize", needsOrg: true },
+  // Lease
+  "lease.list": { method: "GET", path: "/api/leases/{orgId}", needsOrg: true },
+  "lease.getById": { method: "GET", path: "/api/leases/{orgId}/{id}", needsOrg: true },
+  "lease.create": { method: "POST", path: "/api/leases/{orgId}", needsOrg: true },
+  "lease.update": { method: "PUT", path: "/api/leases/{orgId}/{id}", needsOrg: true },
+  "lease.delete": { method: "DELETE", path: "/api/leases/{orgId}/{id}", needsOrg: true },
+  "lease.calculateLiability": { method: "POST", path: "/api/leases/{orgId}/{id}/calculate-liability", needsOrg: true },
+  // Inventory Lot
+  "inventoryLot.list": { method: "GET", path: "/api/inventory-lots/{orgId}", needsOrg: true },
+  "inventoryLot.getById": { method: "GET", path: "/api/inventory-lots/{orgId}/{id}", needsOrg: true },
+  "inventoryLot.create": { method: "POST", path: "/api/inventory-lots/{orgId}", needsOrg: true },
+  "inventoryLot.update": { method: "PUT", path: "/api/inventory-lots/{orgId}/{id}", needsOrg: true },
+  "inventoryLot.delete": { method: "DELETE", path: "/api/inventory-lots/{orgId}/{id}", needsOrg: true },
+  "inventoryLot.batchUpdate": { method: "PUT", path: "/api/inventory-lots/{orgId}/batch", needsOrg: true },
+  // Job Costing
+  "jobCosting.list": { method: "GET", path: "/api/job-costing/{orgId}", needsOrg: true },
+  "jobCosting.getById": { method: "GET", path: "/api/job-costing/{orgId}/{id}", needsOrg: true },
+  "jobCosting.create": { method: "POST", path: "/api/job-costing/{orgId}", needsOrg: true },
+  "jobCosting.update": { method: "PUT", path: "/api/job-costing/{orgId}/{id}", needsOrg: true },
+  "jobCosting.delete": { method: "DELETE", path: "/api/job-costing/{orgId}/{id}", needsOrg: true },
+  "jobCosting.calculateWip": { method: "POST", path: "/api/job-costing/{orgId}/{id}/calculate-wip", needsOrg: true },
+  "jobCosting.addCostEntry": { method: "POST", path: "/api/job-costing/{orgId}", needsOrg: true },
+  // Bank Rule
+  "bankRule.list": { method: "GET", path: "/api/bank-rules/{orgId}", needsOrg: true },
+  "bankRule.getById": { method: "GET", path: "/api/bank-rules/{orgId}/{id}", needsOrg: true },
+  "bankRule.create": { method: "POST", path: "/api/bank-rules/{orgId}", needsOrg: true },
+  "bankRule.update": { method: "PUT", path: "/api/bank-rules/{orgId}/{id}", needsOrg: true },
+  "bankRule.delete": { method: "DELETE", path: "/api/bank-rules/{orgId}/{id}", needsOrg: true },
+  "bankRule.applyToTransactions": { method: "POST", path: "/api/bank-rules/{orgId}/apply", needsOrg: true },
+  // Webhook
+  "webhook.list": { method: "GET", path: "/api/webhooks/{orgId}", needsOrg: true },
+  "webhook.getById": { method: "GET", path: "/api/webhooks/{orgId}/{id}", needsOrg: true },
+  "webhook.create": { method: "POST", path: "/api/webhooks/{orgId}", needsOrg: true },
+  "webhook.update": { method: "PUT", path: "/api/webhooks/{orgId}/{id}", needsOrg: true },
+  "webhook.delete": { method: "DELETE", path: "/api/webhooks/{orgId}/{id}", needsOrg: true },
+  "webhook.trigger": { method: "POST", path: "/api/webhooks/{orgId}/{id}/trigger", needsOrg: true },
+  "webhook.getLogs": { method: "GET", path: "/api/webhooks/{orgId}/{id}/logs", needsOrg: true },
+  // Document Version
+  "documentVersion.list": { method: "GET", path: "/api/document-versions/{orgId}", needsOrg: true },
+  "documentVersion.getById": { method: "GET", path: "/api/document-versions/{orgId}/{id}", needsOrg: true },
+  "documentVersion.create": { method: "POST", path: "/api/document-versions/{orgId}", needsOrg: true },
+  "documentVersion.update": { method: "PUT", path: "/api/document-versions/{orgId}/{id}", needsOrg: true },
+  "documentVersion.delete": { method: "DELETE", path: "/api/document-versions/{orgId}/{id}", needsOrg: true },
+  "documentVersion.getVersionHistory": { method: "GET", path: "/api/document-versions/{orgId}/{id}/history", needsOrg: true },
+  // Inventory Valuation
+  "inventoryValuation.list": { method: "GET", path: "/api/inventory-valuation/{orgId}", needsOrg: true },
+  "inventoryValuation.getById": { method: "GET", path: "/api/inventory-valuation/{orgId}/{id}", needsOrg: true },
+  "inventoryValuation.create": { method: "POST", path: "/api/inventory-valuation/{orgId}", needsOrg: true },
+  "inventoryValuation.update": { method: "PUT", path: "/api/inventory-valuation/{orgId}/{id}", needsOrg: true },
+  "inventoryValuation.delete": { method: "DELETE", path: "/api/inventory-valuation/{orgId}/{id}", needsOrg: true },
+  "inventoryValuation.calculateValues": { method: "GET", path: "/api/inventory-valuation/{orgId}/calculate", needsOrg: true },
+  // Fiscal Period
+  "fiscalPeriod.list": { method: "GET", path: "/api/accounting-periods/{orgId}", needsOrg: true },
+  "fiscalPeriod.getById": { method: "GET", path: "/api/accounting-periods/{orgId}/{id}", needsOrg: true },
+  "fiscalPeriod.create": { method: "POST", path: "/api/accounting-periods/{orgId}", needsOrg: true },
+  "fiscalPeriod.update": { method: "PUT", path: "/api/accounting-periods/{orgId}/{id}", needsOrg: true },
+  "fiscalPeriod.delete": { method: "DELETE", path: "/api/accounting-periods/{orgId}/{id}", needsOrg: true },
+  "fiscalPeriod.closePeriod": { method: "POST", path: "/api/accounting-periods/{orgId}/{id}/close", needsOrg: true },
+  // Tax Rule
+  "taxRule.list": { method: "GET", path: "/api/tax/{orgId}/rates", needsOrg: true },
+  "taxRule.getById": { method: "GET", path: "/api/tax/{orgId}/rates/{id}", needsOrg: true },
+  "taxRule.create": { method: "POST", path: "/api/tax/{orgId}/rates", needsOrg: true },
+  "taxRule.update": { method: "PUT", path: "/api/tax/{orgId}/rates/{id}", needsOrg: true },
+  "taxRule.delete": { method: "DELETE", path: "/api/tax/{orgId}/rates/{id}", needsOrg: true },
+  "taxRule.applyToTransaction": { method: "POST", path: "/api/tax/{orgId}/compute-invoice", needsOrg: true },
 };
 
 function resolvePath(route: typeof ROUTE_MAP[string], input: any): { url: string; queryParams: Record<string, string> } {
   const orgId = getOrgId();
   let path = route.path;
-  const pathParams: Record<string, string> = { orgId: String(orgId || ""), id: "", accountId: "", empId: "" };
+  const pathParams: Record<string, string> = { orgId: String(orgId || ""), id: "", accountId: "", empId: "", itemId: "" };
 
   // Extract IDs from input
   if (input?.id !== undefined) pathParams.id = String(input.id);
   if (input?.accountId !== undefined) pathParams.accountId = String(input.accountId);
   if (input?.empId !== undefined) pathParams.empId = String(input.empId);
+  if (input?.itemId !== undefined) pathParams.itemId = String(input.itemId);
   if (input?.invoiceId !== undefined) pathParams.id = String(input.invoiceId);
   if (input?.budgetId !== undefined) pathParams.id = String(input.budgetId);
   if (input?.estimateId !== undefined) pathParams.id = String(input.estimateId);
@@ -140,7 +402,7 @@ function resolvePath(route: typeof ROUTE_MAP[string], input: any): { url: string
   // Build query params from input (exclude known path params and special keys)
   const queryParams: Record<string, string> = {};
   if (input && typeof input === "object" && !Array.isArray(input)) {
-    const skipKeys = new Set(["id", "accountId", "empId", "invoiceId", "invoiceIds", "budgetId", "estimateId", "poId", "items"]);
+    const skipKeys = new Set(["id", "accountId", "empId", "itemId", "invoiceId", "invoiceIds", "budgetId", "estimateId", "poId", "items"]);
     Object.entries(input).forEach(([k, v]) => {
       if (!skipKeys.has(k) && v !== undefined && v !== null && v !== "") {
         // Map period.from/.to → period_start/period_end for backend params
@@ -333,12 +595,175 @@ function normalizeResponse(procedure: string, data: any): any {
   return data;
 }
 
+// ===== Request data mapping: frontend → backend field names =====
+
+function camelToSnake(s: string): string {
+  return s.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`);
+}
+
+// Per-procedure input transforms: maps frontend data shape → backend-expected data shape.
+// After each transform, remaining camelCase keys are auto-converted to snake_case.
+// This handles: renames (contactId→contact_id), value generation (dueDate→due_days),
+// items format (unitPrice→price), dropping fields, and expanding items into totals.
+const INPUT_TRANSFORMS: Record<string, (data: Record<string, any>) => void> = {
+  "invoice.create": (data) => {
+    if (Array.isArray(data.items)) {
+      data.items = data.items.map((item: any) => ({
+        description: item.description,
+        price: parseFloat(item.unitPrice || "0"),
+        quantity: parseFloat(item.quantity || "0"),
+      }));
+    }
+    data.contact_id = data.contactId;
+    delete data.contactId;
+    if (data.dueDate) {
+      const due = new Date(data.dueDate as string);
+      const issue = data.issueDate ? new Date(data.issueDate as string) : new Date();
+      data.due_days = Math.max(1, Math.round((due.getTime() - issue.getTime()) / 86400000));
+    } else { data.due_days = 30; }
+    delete data.invoiceNumber;
+    delete data.issueDate;
+    delete data.dueDate;
+    delete data.currency;
+    delete data.notes;
+  },
+
+  "bill.create": (data) => {
+    if (Array.isArray(data.items)) {
+      const items = data.items as any[];
+      data.amount = items.reduce((s: number, i: any) => s + parseFloat(i.amount || "0"), 0);
+      data.description = items.filter((i: any) => i.description).map((i: any) => i.description).join("; ") || "Bill items";
+    }
+    delete data.items;
+    data.contact_id = data.contactId;
+    delete data.contactId;
+    if (data.dueDate) {
+      const due = new Date(data.dueDate as string);
+      data.due_days = Math.max(1, Math.round((due.getTime() - Date.now()) / 86400000));
+    } else { data.due_days = 30; }
+    delete data.billNumber;
+    delete data.billDate;
+    delete data.dueDate;
+    delete data.currency;
+    delete data.notes;
+  },
+
+  "product.create": (data) => {
+    data.price = data.salePrice;
+    data.quantity = data.quantityOnHand;
+    delete data.salePrice;
+    delete data.quantityOnHand;
+    delete data.type;
+  },
+
+  "journalEntry.create": (data) => {
+    data.lines_json = data.lines;
+    delete data.lines;
+    delete data.entryNumber;
+  },
+
+  "transaction.create": (data) => {
+    delete data.accountId;
+    delete data.direction;
+    delete data.reference;
+  },
+
+  "estimate.create": (data) => {
+    data.contact_id = data.contactId;
+    delete data.contactId;
+    if (Array.isArray(data.items)) {
+      data.items = data.items.map((item: any) => ({
+        description: item.description,
+        price: parseFloat(item.unitPrice || "0"),
+        quantity: parseFloat(item.quantity || "0"),
+      }));
+    }
+  },
+
+  "purchaseOrder.create": (data) => {
+    data.contact_id = data.contactId;
+    delete data.contactId;
+    delete data.orderNumber;
+    delete data.orderDate;
+    delete data.deliveryAddress;
+    if (Array.isArray(data.items)) {
+      data.items = data.items.map((item: any) => ({
+        description: item.description,
+        price: parseFloat(item.unitPrice || "0"),
+        quantity: parseFloat(item.quantity || "0"),
+      }));
+    }
+  },
+
+  "creditNote.create": (data) => {
+    delete data.creditNumber;
+  },
+
+  "project.create": (data) => {
+    data.contact_id = data.contactId;
+    delete data.contactId;
+  },
+
+  "budget.create": (data) => {
+    delete data.accountId;
+    delete data.startDate;
+    delete data.endDate;
+  },
+
+  "recurring.create": (data) => {
+    delete data.nextDate;
+  },
+
+  "invoice.recordPayment": (data) => {
+    data.invoice_id = data.id;
+    delete data.id;
+    delete data.accountId;
+  },
+
+  "bill.recordPayment": (data) => {
+    data.invoice_id = data.id;
+    delete data.id;
+    delete data.accountId;
+  },
+
+  "crm.createLead": (data) => {
+    if (data.contactName) { data.name = data.contactName; delete data.contactName; }
+  },
+  "crm.updateLead": (data) => {
+    if (data.contactName) { data.name = data.contactName; delete data.contactName; }
+  },
+
+  "revenueRecognition.create": (data) => {
+    if (Array.isArray(data.schedule)) {
+      data.schedule = JSON.stringify(data.schedule);
+    }
+    delete data.totalAmount;  // backend computes this
+  },
+
+  "webhook.create": (data) => {
+    if (Array.isArray(data.events)) {
+      data.events = JSON.stringify(data.events);
+    }
+  },
+  "webhook.update": (data) => {
+    if (Array.isArray(data.events)) {
+      data.events = JSON.stringify(data.events);
+    }
+  },
+};
+
+// Procedures that use bare query params (no Form() / no JSON body)
+const QUERY_PARAM_PROCEDURES = new Set([
+  "budget.create", "budget.update",
+  "creditNote.create",
+  "recurring.create",
+]);
+
 // Handle tRPC fetch for real API mode
 async function handleRealApiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const url = typeof input === "string" ? input : input instanceof URL ? input.href : String(input);
 
   if (!url.includes("/api/trpc")) {
-    // Pass through non-tRPC requests (for our API client)
     const originalFetch = globalThis.__originalFetch || globalThis.fetch.bind(globalThis);
     return originalFetch(input, init);
   }
@@ -349,7 +774,6 @@ async function handleRealApiFetch(input: RequestInfo | URL, init?: RequestInit):
   const route = ROUTE_MAP[procedurePath];
 
   if (!route) {
-    // Unknown procedure - return empty mock
     return Promise.resolve(new Response(JSON.stringify({ result: { data: mockResponse(procedurePath) } }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -362,33 +786,50 @@ async function handleRealApiFetch(input: RequestInfo | URL, init?: RequestInit):
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  // Build URL with query params
   const finalUrl = new URL(apiUrl);
   Object.entries(queryParams).forEach(([k, v]) => finalUrl.searchParams.set(k, v));
 
-  // Handle POST/PUT body - FastAPI uses Form for most endpoints, JSON for auth
+  // Handle POST/PUT body with field mapping
   let body: string | undefined;
   if (route.method === "POST" || route.method === "PUT") {
     const isJsonEndpoint = procedurePath.startsWith("auth.") || procedurePath === "ping" || procedurePath === "health" || procedurePath === "transaction.create" || procedurePath === "report.profitLoss";
+
     if (inputData && typeof inputData === "object" && !Array.isArray(inputData)) {
       const cleanData = { ...inputData };
       delete cleanData.id;
       delete cleanData.accountId;
+
+      // Apply per-procedure input transform
+      const transform = INPUT_TRANSFORMS[procedurePath];
+      if (transform) transform(cleanData);
+
+      // Auto-convert remaining camelCase keys to snake_case
+      const converted: Record<string, any> = {};
+      for (const [key, value] of Object.entries(cleanData)) {
+        if (value !== undefined && value !== null) {
+          converted[camelToSnake(key)] = value;
+        }
+      }
+
       if (isJsonEndpoint) {
         headers["Content-Type"] = "application/json";
-        body = JSON.stringify(cleanData);
+        body = JSON.stringify(converted);
+      } else if (QUERY_PARAM_PROCEDURES.has(procedurePath)) {
+        Object.entries(converted).forEach(([k, v]) => {
+          if (v !== undefined && v !== null && v !== "") {
+            finalUrl.searchParams.set(k, String(v));
+          }
+        });
+        body = undefined;
       } else {
         const formData = new URLSearchParams();
-        // Add org_id when needed (it's required by backend for Form endpoints)
         const orgId = getOrgId();
-        if (orgId && !cleanData.org_id && !cleanData.orgId) {
+        if (orgId && !converted.org_id && !converted.orgId) {
           formData.set("org_id", String(orgId));
         }
-        Object.entries(cleanData).forEach(([k, v]) => {
+        Object.entries(converted).forEach(([k, v]) => {
           if (v !== undefined && v !== null) {
-            // Map lines → lines_json for journal entry creation
-            const key = k === "lines" ? "lines_json" : k;
-            formData.set(key, typeof v === "object" ? JSON.stringify(v) : String(v));
+            formData.set(k, typeof v === "object" ? JSON.stringify(v) : String(v));
           }
         });
         headers["Content-Type"] = "application/x-www-form-urlencoded";
@@ -409,9 +850,15 @@ async function handleRealApiFetch(input: RequestInfo | URL, init?: RequestInit):
     });
 
     if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      // Return empty data on error so pages don't crash
-      return Promise.resolve(new Response(JSON.stringify({ result: { data: null } }), {
+      const errorBody = await res.text().catch(() => "");
+      let errorMessage = `Backend returned ${res.status}`;
+      try {
+        const parsed = JSON.parse(errorBody);
+        errorMessage = parsed.detail || parsed.message || errorMessage;
+      } catch { /* use default */ }
+      return Promise.resolve(new Response(JSON.stringify({
+        error: { message: errorMessage, code: "INTERNAL_SERVER_ERROR" }
+      }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }));
@@ -423,42 +870,39 @@ async function handleRealApiFetch(input: RequestInfo | URL, init?: RequestInit):
       headers: { "Content-Type": "application/json" },
     }));
   } catch {
-    return Promise.resolve(new Response(JSON.stringify({ result: { data: mockResponse(procedurePath) } }), {
+    return Promise.resolve(new Response(JSON.stringify({
+      error: { message: "Network error - backend unreachable", code: "INTERNAL_SERVER_ERROR" }
+    }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     }));
   }
 }
 
-// Setup fetch interceptor based on mode
-if (isDemoMode()) {
-  const originalFetch = globalThis.fetch.bind(globalThis);
-  globalThis.__originalFetch = originalFetch;
-  globalThis.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.href : String(input);
-    if (url.includes("/api/trpc")) {
-      let procs: string[] = [];
-      const urlObj = new URL(url, window.location.origin);
-      const pathPart = urlObj.pathname.replace("/api/trpc/", "");
-      if (pathPart) procs = pathPart.split(",");
-      if (procs.length === 0) {
-        try { const body = init?.body ? JSON.parse(String(init.body)) : {}; procs = Object.keys(body).map((_, i) => String(i)); } catch { }
-      }
-      const results = procs.map(proc => ({ result: { data: mockResponse(proc) } }));
-      if (procs.length === 0) results.push({ result: { data: null } });
-      return Promise.resolve(new Response(JSON.stringify(results.length === 1 ? results[0] : results), {
-        status: 200, headers: { "Content-Type": "application/json" },
-      }));
+// Always install a dynamic fetch interceptor that checks credentials at request time
+const originalFetch = globalThis.fetch.bind(globalThis);
+globalThis.__originalFetch = originalFetch;
+globalThis.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const url = typeof input === "string" ? input : input instanceof URL ? input.href : String(input);
+  if (!url.includes("/api/trpc")) {
+    return originalFetch(input, init);
+  }
+  if (isDemoMode()) {
+    let procs: string[] = [];
+    const urlObj = new URL(url, window.location.origin);
+    const pathPart = urlObj.pathname.replace("/api/trpc/", "");
+    if (pathPart) procs = pathPart.split(",");
+    if (procs.length === 0) {
+      try { const body = init?.body ? JSON.parse(String(init.body)) : {}; procs = Object.keys(body).map((_, i) => String(i)); } catch { }
     }
-    return (globalThis.__originalFetch || originalFetch)(input, init);
-  } as typeof globalThis.fetch;
-} else if (isRealMode()) {
-  const originalFetch = globalThis.fetch.bind(globalThis);
-  globalThis.__originalFetch = originalFetch;
-  globalThis.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-    return handleRealApiFetch(input, init);
-  } as typeof globalThis.fetch;
-}
+    const results = procs.map(proc => ({ result: { data: mockResponse(proc) } }));
+    if (procs.length === 0) results.push({ result: { data: null } });
+    return Promise.resolve(new Response(JSON.stringify(results.length === 1 ? results[0] : results), {
+      status: 200, headers: { "Content-Type": "application/json" },
+    }));
+  }
+  return handleRealApiFetch(input, init);
+} as typeof globalThis.fetch;
 
 const queryClient = new QueryClient({
   defaultOptions: {

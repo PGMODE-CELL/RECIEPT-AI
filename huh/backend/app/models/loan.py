@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, UTC
 from app.database import Base
 
 
@@ -23,7 +23,7 @@ class Loan(Base):
     status = Column(String, default="active")
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     organization = relationship("Organization")
     contact = relationship("Contact")
@@ -42,7 +42,7 @@ class LoanRepayment(Base):
     status = Column(String, default="scheduled")
     transaction_id = Column(Integer, ForeignKey("transactions.id"), nullable=True)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     loan = relationship("Loan")
     transaction = relationship("Transaction")

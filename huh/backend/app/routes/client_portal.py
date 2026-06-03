@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends, Form
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 from datetime import datetime, timezone
 from jose import jwt
 import os
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.invoice import Invoice
 from app.models.contact import Contact
 from app.models.attachment import Attachment
@@ -24,8 +25,8 @@ def create_client_token(contact_id: int, org_id: int) -> str:
 
 
 @router.post("/login")
-def client_login(email: str = Form(...), db: Session = Depends(get_db)):
-    contact = db.query(Contact).filter(Contact.email == email).first()
+async def client_login(email: str = Form(...), db: AsyncSession = Depends(get_db)):
+    contact = (await db.execute(select(Contact).filter(Contact.email == email))).scalar_one_or_none()
     if not contact:
         raise HTTPException(404, "No client found with this email")
     token = create_client_token(contact.id, contact.org_id)
@@ -33,10 +34,10 @@ def client_login(email: str = Form(...), db: Session = Depends(get_db)):
 
 
 @router.get("/invoices")
-def client_invoices(contact_id: int = Form(...), org_id: int = Form(...), db: Session = Depends(get_db)):
-    invs = db.query(Invoice).filter(
+async def client_invoices(contact_id: int = Form(...), org_id: int = Form(...), db: AsyncSession = Depends(get_db)):
+    invs = (await db.execute(select(Invoice).filter(
         Invoice.contact_id == contact_id, Invoice.org_id == org_id
-    ).order_by(Invoice.date.desc()).all()
+    ).order_by(Invoice.date.desc()))).scalars().all()
     return [{
         "id": i.id, "number": i.number, "date": str(i.date), "due_date": str(i.due_date),
         "total": float(i.total), "paid": float(i.paid), "status": i.status,
@@ -45,10 +46,10 @@ def client_invoices(contact_id: int = Form(...), org_id: int = Form(...), db: Se
 
 
 @router.get("/invoices/{invoice_id}")
-def client_invoice_detail(invoice_id: int, contact_id: int = Form(...), org_id: int = Form(...), db: Session = Depends(get_db)):
-    inv = db.query(Invoice).filter(
+async def client_invoice_detail(invoice_id: int, contact_id: int = Form(...), org_id: int = Form(...), db: AsyncSession = Depends(get_db)):
+    inv = (await db.execute(select(Invoice).filter(
         Invoice.id == invoice_id, Invoice.contact_id == contact_id, Invoice.org_id == org_id
-    ).first()
+    ))).scalar_one_or_none()
     if not inv:
         raise HTTPException(404, "Invoice not found")
     return {
@@ -59,19 +60,25 @@ def client_invoice_detail(invoice_id: int, contact_id: int = Form(...), org_id: 
 
 
 @router.get("/invoices/{invoice_id}/attachments")
-def client_invoice_attachments(invoice_id: int, contact_id: int = Form(...), org_id: int = Form(...), db: Session = Depends(get_db)):
-    atts = db.query(Attachment).filter(
-        Attachment.record_type == "invoice", Attachment.record_id == invoice_id,
-        Attachment.org_id == org_id,
-    ).all()
+async def client_invoice_attachments(invoice_id: int, contact_id: int = Form(...), org_id: int = Form(...), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Attachment).filter(
+            Attachment.record_type == "invoice", Attachment.record_id == invoice_id,
+            Attachment.org_id == org_id,
+        )
+    )
+    atts = result.scalars().all()
     return [{"id": a.id, "original_name": a.original_name, "size": a.size} for a in atts]
 
 
 @router.get("/payments")
-def client_payments(contact_id: int = Form(...), org_id: int = Form(...), db: Session = Depends(get_db)):
-    pays = db.query(Payment).join(Invoice).filter(
-        Invoice.contact_id == contact_id, Payment.org_id == org_id
-    ).order_by(Payment.created_at.desc()).all()
+async def client_payments(contact_id: int = Form(...), org_id: int = Form(...), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Payment).join(Invoice).filter(
+            Invoice.contact_id == contact_id, Payment.org_id == org_id
+        ).order_by(Payment.created_at.desc())
+    )
+    pays = result.scalars().all()
     return [{
         "id": p.id, "amount": float(p.amount), "currency": p.currency,
         "gateway": p.gateway, "status": p.status, "paid_at": str(p.paid_at) if p.paid_at else None,

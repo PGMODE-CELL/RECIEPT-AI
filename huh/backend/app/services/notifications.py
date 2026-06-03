@@ -1,5 +1,6 @@
 from datetime import datetime, timezone, date
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import Notification
 from app.models.invoice import Invoice
@@ -7,8 +8,8 @@ from app.models.bill import Bill
 from app.models.budget import Budget
 
 
-def create_notification(
-    db: Session,
+async def create_notification(
+    db: AsyncSession,
     org_id: int,
     type: str,
     title: str,
@@ -29,29 +30,35 @@ def create_notification(
         created_at=datetime.now(timezone.utc),
     )
     db.add(n)
-    db.flush()
+    await db.flush()
     return n
 
 
-def generate_overdue_invoice_notifications(db: Session, org_id: int):
+async def generate_overdue_invoice_notifications(db: AsyncSession, org_id: int):
     today = date.today()
-    invoices = db.query(Invoice).filter(
-        Invoice.org_id == org_id,
-        Invoice.status.in_(["sent", "overdue"]),
-        Invoice.due_date < today,
-        Invoice.paid < Invoice.total,
-    ).all()
+    result = await db.execute(
+        select(Invoice).filter(
+            Invoice.org_id == org_id,
+            Invoice.status.in_(["sent", "overdue"]),
+            Invoice.due_date < today,
+            Invoice.paid < Invoice.total,
+        )
+    )
+    invoices = result.scalars().all()
     count = 0
     for inv in invoices:
-        existing = db.query(Notification).filter(
-            Notification.org_id == org_id,
-            Notification.type == "invoice_overdue",
-            Notification.reference_type == "invoice",
-            Notification.reference_id == inv.id,
-        ).first()
+        existing_result = await db.execute(
+            select(Notification).filter(
+                Notification.org_id == org_id,
+                Notification.type == "invoice_overdue",
+                Notification.reference_type == "invoice",
+                Notification.reference_id == inv.id,
+            )
+        )
+        existing = existing_result.scalars().first()
         if existing:
             continue
-        create_notification(
+        await create_notification(
             db, org_id,
             type="invoice_overdue",
             title=f"Invoice #{inv.number} overdue",
@@ -64,25 +71,31 @@ def generate_overdue_invoice_notifications(db: Session, org_id: int):
     return count
 
 
-def generate_due_bill_notifications(db: Session, org_id: int):
+async def generate_due_bill_notifications(db: AsyncSession, org_id: int):
     today = date.today()
-    bills = db.query(Bill).filter(
-        Bill.org_id == org_id,
-        Bill.status.in_(["open", "overdue"]),
-        Bill.due_date <= today,
-        Bill.paid < Bill.total,
-    ).all()
+    result = await db.execute(
+        select(Bill).filter(
+            Bill.org_id == org_id,
+            Bill.status.in_(["open", "overdue"]),
+            Bill.due_date <= today,
+            Bill.paid < Bill.total,
+        )
+    )
+    bills = result.scalars().all()
     count = 0
     for b in bills:
-        existing = db.query(Notification).filter(
-            Notification.org_id == org_id,
-            Notification.type == "bill_due",
-            Notification.reference_type == "bill",
-            Notification.reference_id == b.id,
-        ).first()
+        existing_result = await db.execute(
+            select(Notification).filter(
+                Notification.org_id == org_id,
+                Notification.type == "bill_due",
+                Notification.reference_type == "bill",
+                Notification.reference_id == b.id,
+            )
+        )
+        existing = existing_result.scalars().first()
         if existing:
             continue
-        create_notification(
+        await create_notification(
             db, org_id,
             type="bill_due",
             title=f"Bill #{b.number} due",
@@ -95,20 +108,26 @@ def generate_due_bill_notifications(db: Session, org_id: int):
     return count
 
 
-def generate_budget_notifications(db: Session, org_id: int):
-    budgets = db.query(Budget).filter(Budget.org_id == org_id).all()
+async def generate_budget_notifications(db: AsyncSession, org_id: int):
+    result = await db.execute(
+        select(Budget).filter(Budget.org_id == org_id)
+    )
+    budgets = result.scalars().all()
     count = 0
     for bg in budgets:
         if bg.spent and bg.amount and bg.spent >= bg.amount:
-            existing = db.query(Notification).filter(
-                Notification.org_id == org_id,
-                Notification.type == "budget_exceeded",
-                Notification.reference_type == "budget",
-                Notification.reference_id == bg.id,
-            ).first()
+            existing_result = await db.execute(
+                select(Notification).filter(
+                    Notification.org_id == org_id,
+                    Notification.type == "budget_exceeded",
+                    Notification.reference_type == "budget",
+                    Notification.reference_id == bg.id,
+                )
+            )
+            existing = existing_result.scalars().first()
             if existing:
                 continue
-            create_notification(
+            await create_notification(
                 db, org_id,
                 type="budget_exceeded",
                 title=f"Budget exceeded: {bg.category}",
@@ -121,9 +140,9 @@ def generate_budget_notifications(db: Session, org_id: int):
     return count
 
 
-def generate_all_notifications(db: Session, org_id: int):
+async def generate_all_notifications(db: AsyncSession, org_id: int):
     return {
-        "overdue_invoices": generate_overdue_invoice_notifications(db, org_id),
-        "due_bills": generate_due_bill_notifications(db, org_id),
-        "budget_exceeded": generate_budget_notifications(db, org_id),
+        "overdue_invoices": await generate_overdue_invoice_notifications(db, org_id),
+        "due_bills": await generate_due_bill_notifications(db, org_id),
+        "budget_exceeded": await generate_budget_notifications(db, org_id),
     }

@@ -63,3 +63,58 @@ def test_me(client, auth_headers):
 def test_me_no_token(client):
     res = client.get("/api/auth/me")
     assert res.status_code == 401 or res.status_code == 403
+
+
+def test_forgot_password_unknown_email(client):
+    res = client.post(
+        "/api/auth/forgot-password",
+        json={"email": "nonexistent@test.com"},
+    )
+    assert res.status_code == 200
+    assert "message" in res.json()
+
+
+def test_forgot_password_known_email(client, auth_headers):
+    res = client.post(
+        "/api/auth/forgot-password",
+        json={"email": "test@example.com"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert "reset_token" in data
+    assert len(data["reset_token"]) > 0
+
+
+def test_reset_password_success(client, auth_headers):
+    res = client.post(
+        "/api/auth/forgot-password",
+        json={"email": "test@example.com"},
+    )
+    token = res.json()["reset_token"]
+    res = client.post(
+        "/api/auth/reset-password",
+        json={"token": token, "password": "newpass123"},
+    )
+    assert res.status_code == 200
+    assert res.json()["message"] == "Password reset successfully"
+
+
+def test_reset_password_bad_token(client):
+    res = client.post(
+        "/api/auth/reset-password",
+        json={"token": "invalid-token", "password": "newpass123"},
+    )
+    assert res.status_code == 400
+
+
+def test_reset_password_short_password(client, auth_headers):
+    res = client.post(
+        "/api/auth/forgot-password",
+        json={"email": "test@example.com"},
+    )
+    token = res.json()["reset_token"]
+    res = client.post(
+        "/api/auth/reset-password",
+        json={"token": token, "password": "ab"},
+    )
+    assert res.status_code == 422

@@ -37,6 +37,22 @@ from app.models.api_token import ApiToken
 from app.models.estimate import Estimate
 from app.models.payment import Payment
 from app.models.purchase_order import PurchaseOrder
+from app.models.task import Task
+from app.models.crm_lead import CrmLead
+from app.models.crm_activity import CrmActivity
+from app.models.bom import Bom
+from app.models.bom_item import BomItem
+from app.models.work_order import WorkOrder
+from app.models.lease import Lease
+from app.models.bank_rule import BankRule
+from app.models.revenue_recognition import RevenueRecognition
+from app.models.cash_flow_forecast import CashFlowForecast
+from app.models.job_cost import JobCost
+from app.models.document_version import DocumentVersion
+from app.models.inventory_lot import InventoryLot
+from app.models.inventory_valuation import InventoryValuation
+from app.models.webhook import Webhook
+from app.models.webhook_log import WebhookLog
 
 __all__ = [
     "User",
@@ -96,4 +112,20 @@ __all__ = [
     "Estimate",
     "Payment",
     "PurchaseOrder",
+    "Task",
+    "CrmLead",
+    "CrmActivity",
+    "Bom",
+    "BomItem",
+    "WorkOrder",
+    "Lease",
+    "BankRule",
+    "RevenueRecognition",
+    "CashFlowForecast",
+    "JobCost",
+    "DocumentVersion",
+    "InventoryLot",
+    "InventoryValuation",
+    "Webhook",
+    "WebhookLog",
 ]

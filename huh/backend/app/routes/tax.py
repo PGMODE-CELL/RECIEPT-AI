@@ -1,10 +1,11 @@
 from datetime import date, timedelta, datetime
 from fastapi import APIRouter, HTTPException, Depends, Form
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 from decimal import Decimal
 import json
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 from app.models.tax import TaxRate, TaxReturn
 from app.models.invoice import Invoice
@@ -17,14 +18,15 @@ router = APIRouter(prefix="/api/tax", tags=["Tax"])
 # --- Tax Rate CRUD ---
 
 @router.get("/{org_id}/rates")
-def list_rates(org_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    rates = db.query(TaxRate).filter(TaxRate.org_id == org_id).order_by(TaxRate.name).all()
+async def list_rates(org_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(TaxRate).filter(TaxRate.org_id == org_id).order_by(TaxRate.name))
+    rates = result.scalars().all()
     return [{"id": r.id, "name": r.name, "rate": float(r.rate), "type": r.type,
              "category": r.category, "is_active": r.is_active, "applies_to": r.applies_to} for r in rates]
 
 
 @router.post("/{org_id}/rates")
-def create_rate(
+async def create_rate(
     org_id: int,
     name: str = Form(...),
     rate: float = Form(...),
@@ -32,34 +34,34 @@ def create_rate(
     category: str = Form("standard"),
     applies_to: str = Form("both"),
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     tr = TaxRate(org_id=org_id, name=name, rate=Decimal(str(rate)), type=type,
                  category=category, applies_to=applies_to)
     db.add(tr)
-    db.commit()
+    await db.commit()
     return {"id": tr.id, "name": tr.name, "message": f"Tax rate '{name}' created"}
 
 
 @router.delete("/{org_id}/rates/{rate_id}")
-def delete_rate(org_id: int, rate_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    tr = db.query(TaxRate).filter(TaxRate.id == rate_id, TaxRate.org_id == org_id).first()
+async def delete_rate(org_id: int, rate_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    tr = (await db.execute(select(TaxRate).filter(TaxRate.id == rate_id, TaxRate.org_id == org_id))).scalar_one_or_none()
     if not tr:
         raise HTTPException(404, "Tax rate not found")
-    db.delete(tr)
-    db.commit()
+    await db.delete(tr)
+    await db.commit()
     return {"message": "Tax rate deleted"}
 
 
 # --- Tax Computation on Invoices ---
 
 @router.post("/{org_id}/compute-invoice")
-def compute_tax(
+async def compute_tax(
     org_id: int,
     items_json: str = Form(...),
     tax_rate_ids: str = Form(""),
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     items = json.loads(items_json)
     rate_ids = [int(x) for x in tax_rate_ids.split(",") if x.strip()]
@@ -68,20 +70,20 @@ def compute_tax(
 
 
 @router.post("/{org_id}/create-tax-invoice")
-def create_tax_invoice(
+async def create_tax_invoice(
     org_id: int,
     contact_id: int = Form(...),
     items_json: str = Form(...),
     tax_rate_ids: str = Form(""),
     due_days: int = Form(30),
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     items = json.loads(items_json)
     rate_ids = [int(x) for x in tax_rate_ids.split(",") if x.strip()]
     tax_result = compute_invoice_tax(db, org_id, items, rate_ids if rate_ids else None)
 
-    count = db.query(Invoice).filter(Invoice.org_id == org_id).count()
+    count = (await db.execute(select(func.count()).select_from(Invoice).filter(Invoice.org_id == org_id))).scalar()
     invoice = Invoice(
         org_id=org_id,
         contact_id=contact_id,
@@ -91,8 +93,8 @@ def create_tax_invoice(
         items=tax_result["items"],
     )
     db.add(invoice)
-    db.commit()
-    db.refresh(invoice)
+    await db.commit()
+    await db.refresh(invoice)
 
     return {
         "invoice_id": invoice.id,
@@ -108,12 +110,12 @@ def create_tax_invoice(
 # --- Tax Return Summary ---
 
 @router.get("/{org_id}/return")
-def get_tax_return(
+async def get_tax_return(
     org_id: int,
     period_start: str = "",
     period_end: str = "",
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     start = datetime.strptime(period_start, "%Y-%m-%d").date() if period_start else date.today().replace(day=1)
     end = datetime.strptime(period_end, "%Y-%m-%d").date() if period_end else (date.today().replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
@@ -141,8 +143,9 @@ def get_tax_return(
 
 
 @router.get("/{org_id}/returns")
-def list_returns(org_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    returns = db.query(TaxReturn).filter(TaxReturn.org_id == org_id).order_by(TaxReturn.period_start.desc()).all()
+async def list_returns(org_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(TaxReturn).filter(TaxReturn.org_id == org_id).order_by(TaxReturn.period_start.desc()))
+    returns = result.scalars().all()
     return [{
         "id": r.id, "period_start": r.period_start.isoformat(), "period_end": r.period_end.isoformat(),
         "return_type": r.return_type, "status": r.status,
@@ -153,22 +156,24 @@ def list_returns(org_id: int, user: User = Depends(get_current_user), db: Sessio
 
 
 @router.post("/{org_id}/returns")
-def create_return(
+async def create_return(
     org_id: int,
     period_start: str = Form(...),
     period_end: str = Form(...),
     return_type: str = Form("monthly"),
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     start = datetime.strptime(period_start, "%Y-%m-%d").date()
     end = datetime.strptime(period_end, "%Y-%m-%d").date()
 
-    existing = db.query(TaxReturn).filter(
-        TaxReturn.org_id == org_id,
-        TaxReturn.period_start == start,
-        TaxReturn.period_end == end,
-    ).first()
+    existing = (await db.execute(
+        select(TaxReturn).filter(
+            TaxReturn.org_id == org_id,
+            TaxReturn.period_start == start,
+            TaxReturn.period_end == end,
+        )
+    )).scalar_one_or_none()
     if existing:
         raise HTTPException(400, "Return already exists for this period")
 
@@ -185,5 +190,5 @@ def create_return(
         data=json.dumps(breakdown),
     )
     db.add(tr)
-    db.commit()
+    await db.commit()
     return {"id": tr.id, "message": f"Tax return created for {period_start} to {period_end}"}

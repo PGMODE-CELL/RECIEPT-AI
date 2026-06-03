@@ -1,10 +1,10 @@
 from datetime import datetime, date, timezone
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
-from sqlalchemy.orm import Session, aliased
-from sqlalchemy import func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 from decimal import Decimal
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 from app.models.account import Account
 from app.models.transaction import Transaction, TransactionLine
@@ -15,18 +15,21 @@ router = APIRouter(prefix="/api/financials", tags=["Financials"])
 
 
 @router.get("/{org_id}/trial-balance")
-def trial_balance(org_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    accts = db.query(Account).filter(Account.org_id == org_id).order_by(Account.code).all()
+async def trial_balance(org_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Account).filter(Account.org_id == org_id).order_by(Account.code))
+    accts = result.scalars().all()
     rows = []
     total_dr = 0
     total_cr = 0
     for a in accts:
-        dr = db.query(func.coalesce(func.sum(TransactionLine.amount), 0)).filter(
-            TransactionLine.debit_account_id == a.id
-        ).scalar()
-        cr = db.query(func.coalesce(func.sum(TransactionLine.amount), 0)).filter(
-            TransactionLine.credit_account_id == a.id
-        ).scalar()
+        dr = (await db.execute(
+            select(func.coalesce(func.sum(TransactionLine.amount), 0))
+            .filter(TransactionLine.debit_account_id == a.id)
+        )).scalar()
+        cr = (await db.execute(
+            select(func.coalesce(func.sum(TransactionLine.amount), 0))
+            .filter(TransactionLine.credit_account_id == a.id)
+        )).scalar()
         bal = float(dr - cr) if a.type in ("asset", "expense") else float(cr - dr)
         r_dr = bal if bal > 0 else 0
         r_cr = -bal if bal < 0 else 0
@@ -44,18 +47,21 @@ def trial_balance(org_id: int, user: User = Depends(get_current_user), db: Sessi
 
 
 @router.get("/{org_id}/balance-sheet")
-def balance_sheet(org_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    accts = db.query(Account).filter(Account.org_id == org_id).all()
+async def balance_sheet(org_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Account).filter(Account.org_id == org_id))
+    accts = result.scalars().all()
     assets = []
     liabilities = []
     equity = []
     for a in accts:
-        dr = db.query(func.coalesce(func.sum(TransactionLine.amount), 0)).filter(
-            TransactionLine.debit_account_id == a.id
-        ).scalar() or 0
-        cr = db.query(func.coalesce(func.sum(TransactionLine.amount), 0)).filter(
-            TransactionLine.credit_account_id == a.id
-        ).scalar() or 0
+        dr = (await db.execute(
+            select(func.coalesce(func.sum(TransactionLine.amount), 0))
+            .filter(TransactionLine.debit_account_id == a.id)
+        )).scalar() or 0
+        cr = (await db.execute(
+            select(func.coalesce(func.sum(TransactionLine.amount), 0))
+            .filter(TransactionLine.credit_account_id == a.id)
+        )).scalar() or 0
         bal = float(dr - cr) if a.type == "asset" else float(cr - dr)
         entry = {"code": a.code or "", "name": a.name, "balance": round(bal, 2)}
         if a.type == "asset":
@@ -75,22 +81,26 @@ def balance_sheet(org_id: int, user: User = Depends(get_current_user), db: Sessi
 
 
 @router.get("/{org_id}/cash-flow")
-def cash_flow(org_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    income_accts = db.query(Account).filter(Account.org_id == org_id, Account.type == "income").all()
-    expense_accts = db.query(Account).filter(Account.org_id == org_id, Account.type == "expense").all()
+async def cash_flow(org_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    result_income = await db.execute(select(Account).filter(Account.org_id == org_id, Account.type == "income"))
+    income_accts = result_income.scalars().all()
+    result_expense = await db.execute(select(Account).filter(Account.org_id == org_id, Account.type == "expense"))
+    expense_accts = result_expense.scalars().all()
 
     operating = []
     op_total = 0
     for a in income_accts:
-        cr = db.query(func.coalesce(func.sum(TransactionLine.amount), 0)).filter(
-            TransactionLine.credit_account_id == a.id
-        ).scalar() or 0
+        cr = (await db.execute(
+            select(func.coalesce(func.sum(TransactionLine.amount), 0))
+            .filter(TransactionLine.credit_account_id == a.id)
+        )).scalar() or 0
         operating.append({"category": a.name, "amount": round(float(cr), 2), "description": "Income"})
         op_total += float(cr)
     for a in expense_accts:
-        dr = db.query(func.coalesce(func.sum(TransactionLine.amount), 0)).filter(
-            TransactionLine.debit_account_id == a.id
-        ).scalar() or 0
+        dr = (await db.execute(
+            select(func.coalesce(func.sum(TransactionLine.amount), 0))
+            .filter(TransactionLine.debit_account_id == a.id)
+        )).scalar() or 0
         operating.append({"category": a.name, "amount": round(-float(dr), 2), "description": "Expense"})
         op_total -= float(dr)
 
@@ -106,33 +116,38 @@ def cash_flow(org_id: int, user: User = Depends(get_current_user), db: Session =
 
 
 @router.get("/{org_id}/ledger/{account_id}")
-def ledger(org_id: int, account_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    acct = db.query(Account).filter(Account.id == account_id, Account.org_id == org_id).first()
+async def ledger(org_id: int, account_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    acct = (await db.execute(select(Account).filter(Account.id == account_id, Account.org_id == org_id))).scalar_one_or_none()
     if not acct:
         raise HTTPException(404, "Account not found")
 
-    DrLine = aliased(TransactionLine)
-    CrLine = aliased(TransactionLine)
-
-    dr_txns = db.query(Transaction).join(DrLine, DrLine.transaction_id == Transaction.id).filter(
-        DrLine.debit_account_id == account_id, Transaction.org_id == org_id
-    ).all()
-    cr_txns = db.query(Transaction).join(CrLine, CrLine.transaction_id == Transaction.id).filter(
-        CrLine.credit_account_id == account_id, Transaction.org_id == org_id
-    ).all()
+    dr_txns_result = await db.execute(
+        select(Transaction)
+        .join(TransactionLine, TransactionLine.transaction_id == Transaction.id)
+        .filter(TransactionLine.debit_account_id == account_id, Transaction.org_id == org_id)
+    )
+    dr_txns = dr_txns_result.scalars().all()
+    cr_txns_result = await db.execute(
+        select(Transaction)
+        .join(TransactionLine, TransactionLine.transaction_id == Transaction.id)
+        .filter(TransactionLine.credit_account_id == account_id, Transaction.org_id == org_id)
+    )
+    cr_txns = cr_txns_result.scalars().all()
 
     txn_ids = set()
     entries = []
-    for t in dr_txns + cr_txns:
+    for t in list(dr_txns) + list(cr_txns):
         if t.id in txn_ids:
             continue
         txn_ids.add(t.id)
-        dr_amt = db.query(func.coalesce(func.sum(TransactionLine.amount), 0)).filter(
-            TransactionLine.transaction_id == t.id, TransactionLine.debit_account_id == account_id
-        ).scalar() or 0
-        cr_amt = db.query(func.coalesce(func.sum(TransactionLine.amount), 0)).filter(
-            TransactionLine.transaction_id == t.id, TransactionLine.credit_account_id == account_id
-        ).scalar() or 0
+        dr_amt = (await db.execute(
+            select(func.coalesce(func.sum(TransactionLine.amount), 0))
+            .filter(TransactionLine.transaction_id == t.id, TransactionLine.debit_account_id == account_id)
+        )).scalar() or 0
+        cr_amt = (await db.execute(
+            select(func.coalesce(func.sum(TransactionLine.amount), 0))
+            .filter(TransactionLine.transaction_id == t.id, TransactionLine.credit_account_id == account_id)
+        )).scalar() or 0
         entries.append({
             "id": t.id,
             "date": t.date.isoformat(),
@@ -158,13 +173,13 @@ def ledger(org_id: int, account_id: int, user: User = Depends(get_current_user),
 
 
 @router.post("/journal")
-def create_journal(
+async def create_journal(
     org_id: int = Form(...),
     date: str = Form(...),
     description: str = Form(...),
     lines_json: str = Form(...),
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     import json
     lines = json.loads(lines_json)
@@ -183,7 +198,7 @@ def create_journal(
         date=datetime.strptime(date, "%Y-%m-%d").date() if date else date.today(),
     )
     db.add(txn)
-    db.flush()
+    await db.flush()
 
     for line in lines:
         if line.get("debit", 0) > 0:
@@ -202,22 +217,22 @@ def create_journal(
             ))
         from app.services.ledger import update_account_balance
         if line.get("debit", 0) > 0:
-            update_account_balance(db, line["account_id"], Decimal(str(line["debit"])), is_debit=True)
+            await update_account_balance(db, line["account_id"], Decimal(str(line["debit"])), is_debit=True)
         if line.get("credit", 0) > 0:
-            update_account_balance(db, line["account_id"], Decimal(str(line["credit"])), is_debit=False)
+            await update_account_balance(db, line["account_id"], Decimal(str(line["credit"])), is_debit=False)
 
-    db.commit()
+    await db.commit()
     return {"message": "Journal entry created", "transaction_id": txn.id}
 
 
 # --- Bank Reconciliation ---
 
 @router.post("/{org_id}/statement/upload")
-def upload_statement(
+async def upload_statement(
     org_id: int,
     file: UploadFile = File(...),
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     import csv
     import io
@@ -225,7 +240,7 @@ def upload_statement(
     reader = csv.DictReader(io.StringIO(content))
     stmt = StatementImport(org_id=org_id, filename=file.filename, status="pending")
     db.add(stmt)
-    db.flush()
+    await db.flush()
 
     count = 0
     for row in reader:
@@ -264,16 +279,17 @@ def upload_statement(
         count += 1
 
     stmt.total_lines = count
-    db.commit()
+    await db.commit()
     return {"import_id": stmt.id, "total_lines": count, "message": f"Imported {count} lines"}
 
 
 @router.get("/{org_id}/statement/{import_id}")
-def get_statement(org_id: int, import_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    stmt = db.query(StatementImport).filter(StatementImport.id == import_id, StatementImport.org_id == org_id).first()
+async def get_statement(org_id: int, import_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    stmt = (await db.execute(select(StatementImport).filter(StatementImport.id == import_id, StatementImport.org_id == org_id))).scalar_one_or_none()
     if not stmt:
         raise HTTPException(404, "Statement not found")
-    lines = db.query(StatementLine).filter(StatementLine.import_id == import_id).order_by(StatementLine.date).all()
+    lines_result = await db.execute(select(StatementLine).filter(StatementLine.import_id == import_id).order_by(StatementLine.date))
+    lines = lines_result.scalars().all()
     return {
         "import": {"id": stmt.id, "filename": stmt.filename, "total_lines": stmt.total_lines, "matched_lines": stmt.matched_lines, "status": stmt.status},
         "lines": [{
@@ -285,11 +301,11 @@ def get_statement(org_id: int, import_id: int, user: User = Depends(get_current_
 
 
 @router.post("/{org_id}/statement/{line_id}/match")
-def match_line(org_id: int, line_id: int, transaction_id: int = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    line = db.query(StatementLine).filter(StatementLine.id == line_id).first()
+async def match_line(org_id: int, line_id: int, transaction_id: int = Form(...), user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    line = (await db.execute(select(StatementLine).filter(StatementLine.id == line_id))).scalar_one_or_none()
     if not line:
         raise HTTPException(404, "Statement line not found")
-    txn = db.query(Transaction).filter(Transaction.id == transaction_id, Transaction.org_id == org_id).first()
+    txn = (await db.execute(select(Transaction).filter(Transaction.id == transaction_id, Transaction.org_id == org_id))).scalar_one_or_none()
     if not txn:
         raise HTTPException(404, "Transaction not found")
 
@@ -297,25 +313,29 @@ def match_line(org_id: int, line_id: int, transaction_id: int = Form(...), user:
     line.matched_transaction_id = txn.id
     line.matched_at = datetime.now(timezone.utc)
 
-    stmt = db.query(StatementImport).filter(StatementImport.id == line.import_id).first()
-    matched = db.query(func.count(StatementLine.id)).filter(
-        StatementLine.import_id == line.import_id, StatementLine.status == "matched"
-    ).scalar() or 0
+    stmt = (await db.execute(select(StatementImport).filter(StatementImport.id == line.import_id))).scalar_one_or_none()
+    matched = (await db.execute(
+        select(func.count(StatementLine.id))
+        .filter(StatementLine.import_id == line.import_id, StatementLine.status == "matched")
+    )).scalar() or 0
     stmt.matched_lines = matched
     if matched == stmt.total_lines:
         stmt.status = "done"
-    db.commit()
+    await db.commit()
     return {"message": "Line matched", "line_id": line_id, "transaction_id": transaction_id}
 
 
 @router.get("/{org_id}/statement/{import_id}/suggestions")
-def get_suggestions(org_id: int, import_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    lines = db.query(StatementLine).filter(
+async def get_suggestions(org_id: int, import_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    lines_result = await db.execute(select(StatementLine).filter(
         StatementLine.import_id == import_id, StatementLine.status == "unmatched"
-    ).all()
-    txns = db.query(Transaction).filter(
-        Transaction.org_id == org_id
-    ).order_by(Transaction.date.desc()).limit(50).all()
+    ))
+    lines = lines_result.scalars().all()
+    txns_result = await db.execute(
+        select(Transaction).filter(Transaction.org_id == org_id)
+        .order_by(Transaction.date.desc()).limit(50)
+    )
+    txns = txns_result.scalars().all()
 
     suggestions = []
     for line in lines:
@@ -348,6 +368,144 @@ def get_suggestions(org_id: int, import_id: int, user: User = Depends(get_curren
 
 
 @router.get("/{org_id}/accounts")
-def list_accounts(org_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    accts = db.query(Account).filter(Account.org_id == org_id).order_by(Account.code).all()
+async def list_accounts(org_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Account).filter(Account.org_id == org_id).order_by(Account.code))
+    accts = result.scalars().all()
     return [{"id": a.id, "code": a.code or "", "name": a.name, "type": a.type, "balance": float(a.balance)} for a in accts]
+
+
+@router.post("/{org_id}/accounts")
+async def create_account(
+    org_id: int,
+    name: str = Form(...),
+    type: str = Form(...),
+    code: str = Form(""),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    acct = Account(org_id=org_id, name=name, type=type, code=code)
+    db.add(acct)
+    await db.commit()
+    await db.refresh(acct)
+    return {"id": acct.id, "name": acct.name, "type": acct.type, "message": f"Account '{name}' created"}
+
+
+@router.get("/{org_id}/accounts/{account_id}")
+async def get_account(
+    org_id: int,
+    account_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    acct = (await db.execute(select(Account).filter(Account.id == account_id, Account.org_id == org_id))).scalar_one_or_none()
+    if not acct:
+        raise HTTPException(404, "Account not found")
+    return {"id": acct.id, "code": acct.code or "", "name": acct.name, "type": acct.type, "balance": float(acct.balance)}
+
+
+@router.put("/{org_id}/accounts/{account_id}")
+async def update_account(
+    org_id: int,
+    account_id: int,
+    name: str = Form(None),
+    type: str = Form(None),
+    code: str = Form(None),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    acct = (await db.execute(select(Account).filter(Account.id == account_id, Account.org_id == org_id))).scalar_one_or_none()
+    if not acct:
+        raise HTTPException(404, "Account not found")
+    if name is not None:
+        acct.name = name
+    if type is not None:
+        acct.type = type
+    if code is not None:
+        acct.code = code
+    await db.commit()
+    return {"message": "Account updated"}
+
+
+@router.delete("/{org_id}/accounts/{account_id}")
+async def delete_account(
+    org_id: int,
+    account_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    acct = (await db.execute(select(Account).filter(Account.id == account_id, Account.org_id == org_id))).scalar_one_or_none()
+    if not acct:
+        raise HTTPException(404, "Account not found")
+    await db.delete(acct)
+    await db.commit()
+    return {"message": "Account deleted"}
+
+
+@router.get("/{org_id}/journal")
+async def list_journal(
+    org_id: int,
+    page: int = 1,
+    per_page: int = 50,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    total = (await db.execute(
+        select(func.count()).select_from(Transaction)
+        .filter(Transaction.org_id == org_id, Transaction.type == "journal")
+    )).scalar()
+    result = await db.execute(
+        select(Transaction)
+        .filter(Transaction.org_id == org_id, Transaction.type == "journal")
+        .order_by(Transaction.date.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+    )
+    txns = result.scalars().all()
+    return {
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "items": [{
+            "id": t.id, "date": t.date.isoformat(), "description": t.description,
+            "amount": float(t.amount),
+        } for t in txns],
+    }
+
+
+@router.get("/{org_id}/journal/{entry_id}")
+async def get_journal_entry(
+    org_id: int,
+    entry_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    txn = (await db.execute(select(Transaction).filter(Transaction.id == entry_id, Transaction.org_id == org_id, Transaction.type == "journal"))).scalar_one_or_none()
+    if not txn:
+        raise HTTPException(404, "Journal entry not found")
+    lines_result = await db.execute(select(TransactionLine).filter(TransactionLine.transaction_id == txn.id))
+    lines = lines_result.scalars().all()
+    return {
+        "id": txn.id, "date": txn.date.isoformat(), "description": txn.description,
+        "amount": float(txn.amount),
+        "lines": [{
+            "id": l.id, "debit_account_id": l.debit_account_id,
+            "credit_account_id": l.credit_account_id, "amount": float(l.amount),
+        } for l in lines],
+    }
+
+
+@router.delete("/{org_id}/journal/{entry_id}")
+async def delete_journal_entry(
+    org_id: int,
+    entry_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy import delete
+    txn = (await db.execute(select(Transaction).filter(Transaction.id == entry_id, Transaction.org_id == org_id, Transaction.type == "journal"))).scalar_one_or_none()
+    if not txn:
+        raise HTTPException(404, "Journal entry not found")
+    await db.execute(delete(TransactionLine).where(TransactionLine.transaction_id == txn.id))
+    await db.delete(txn)
+    await db.commit()
+    return {"message": "Journal entry deleted"}

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, UTC
 from app.database import Base
 
 
@@ -16,7 +16,7 @@ class Warehouse(Base):
     country = Column(String, nullable=True)
     is_default = Column(Boolean, default=False)
     active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     organization = relationship("Organization")
 
@@ -28,7 +28,7 @@ class WarehouseStock(Base):
     warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
     item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=False)
     quantity = Column(Float, default=0.0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     warehouse = relationship("Warehouse")
     item = relationship("InventoryItem")

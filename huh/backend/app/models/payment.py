@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, DateTime
-from datetime import datetime
+from datetime import datetime, UTC
 
 from app.database import Base
 
@@ -21,4 +21,4 @@ class Payment(Base):
     payment_method = Column(String(50))
     status = Column(String(20), default="pending")  # pending, completed, failed, refunded
     paid_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))

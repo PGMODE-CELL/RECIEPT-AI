@@ -1,8 +1,9 @@
 from datetime import date, datetime
 from fastapi import APIRouter, Depends, UploadFile, File, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 from app.models.receipt import Receipt
 from app.models.transaction import Transaction
@@ -19,7 +20,7 @@ async def scan_receipt(
     org_id: int,
     file: UploadFile = File(...),
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     content = await file.read()
 
@@ -44,8 +45,8 @@ async def scan_receipt(
         extracted_data=extracted,
     )
     db.add(receipt)
-    db.commit()
-    db.refresh(receipt)
+    await db.commit()
+    await db.refresh(receipt)
 
     return {
         "receipt_id": receipt.id,
@@ -60,15 +61,15 @@ async def scan_receipt(
 
 
 @router.get("/nlp-query/{org_id}")
-def nlp_query(
+async def nlp_query(
     org_id: int,
     q: str = Query(..., description="Natural language query"),
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     parsed = parse_query(q)
 
-    query = db.query(Transaction).filter(Transaction.org_id == org_id)
+    query = select(Transaction).filter(Transaction.org_id == org_id)
 
     if parsed["start"]:
         query = query.filter(Transaction.date >= parsed["start"])
@@ -77,7 +78,7 @@ def nlp_query(
     if parsed["direction"]:
         query = query.filter(Transaction.type == parsed["direction"])
 
-    transactions = query.order_by(Transaction.date.desc()).all()
+    transactions = (await db.execute(query.order_by(Transaction.date.desc()))).scalars().all()
 
     if parsed["category"]:
         transactions = [

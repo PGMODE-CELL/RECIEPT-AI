@@ -1,0 +1,65 @@
+# Receipt AI — Caddyfile
+# Automatic HTTPS via Let's Encrypt
+# Replace app.receiptai.com with your actual domain
+
+app.receiptai.com {
+    # Security headers
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    }
+
+    # Gzip
+    encode gzip
+
+    # SPA — serve static files
+    root * /usr/share/caddy
+    try_files {path} /index.html
+
+    # API proxy
+    handle /api/* {
+        reverse_proxy backend:5000 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Storage proxy
+    handle /storage/* {
+        reverse_proxy backend:5000
+    }
+
+    # Static file caching
+    handle {
+        header Cache-Control "public, immutable, max-age=31536000"
+        file_server
+    }
+
+    # Logs
+    log {
+        output file /var/log/caddy/access.log
+        format json
+    }
+}
+
+# Dev fallback — HTTP only for localhost
+:80 {
+    header Access-Control-Allow-Origin *
+    root * /usr/share/caddy
+    try_files {path} /index.html
+
+    handle /api/* {
+        reverse_proxy backend:5000
+    }
+    handle /storage/* {
+        reverse_proxy backend:5000
+    }
+    handle {
+        file_server
+    }
+}

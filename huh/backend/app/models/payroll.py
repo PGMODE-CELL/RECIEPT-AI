@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, Date, DateTime, JSON
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, UTC
 
 from app.database import Base
 
@@ -22,7 +22,7 @@ class Employee(Base):
     bank_account = Column(String(50))
     ifsc = Column(String(50))
     status = Column(String(20), default="active")  # active, resigned, terminated
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     org = relationship("Organization")
     salary_components = relationship("SalaryComponent", back_populates="employee", cascade="all, delete-orphan")
@@ -57,7 +57,7 @@ class Payslip(Base):
     deductions = Column(JSON, default=dict)  # {"PF": 6000, "PT": 200}
     employer_contributions = Column(JSON, default=dict)  # {"PF": 6000, "ESI": 2000}
     status = Column(String(20), default="draft")  # draft, paid
-    generated_at = Column(DateTime, default=datetime.utcnow)
+    generated_at = Column(DateTime, default=lambda: datetime.now(UTC))
     paid_at = Column(DateTime, nullable=True)
 
     employee = relationship("Employee", back_populates="payslips")

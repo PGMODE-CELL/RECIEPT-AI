@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, Boolean, DateTime, Date
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, UTC
 
 from app.database import Base
 
@@ -16,7 +16,7 @@ class TaxRate(Base):
     category = Column(String(20), default="standard")  # standard, reduced, zero, exempt
     is_active = Column(Boolean, default=True)
     applies_to = Column(String(20), default="both")  # sale, purchase, both
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     org = relationship("Organization")
 
@@ -35,7 +35,7 @@ class TaxReturn(Base):
     total_credit = Column(Numeric(15, 2), default=0)
     total_payable = Column(Numeric(15, 2), default=0)
     data = Column(String, default="{}")  # JSON breakdown
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     filed_at = Column(DateTime, nullable=True)
 
     org = relationship("Organization")

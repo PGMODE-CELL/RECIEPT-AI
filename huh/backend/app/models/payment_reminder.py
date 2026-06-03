@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, UTC
 from app.database import Base
 
 
@@ -20,7 +20,7 @@ class PaymentReminder(Base):
     max_reminders = Column(Integer, default=5)
     template_id = Column(Integer, ForeignKey("email_templates.id"), nullable=True)
     active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     organization = relationship("Organization")
     invoice = relationship("Invoice")
@@ -35,10 +35,10 @@ class ReminderLog(Base):
     reminder_id = Column(Integer, ForeignKey("payment_reminders.id"), nullable=False)
     invoice_id = Column(Integer, ForeignKey("invoices.id"), nullable=True)
     contact_id = Column(Integer, ForeignKey("contacts.id"), nullable=True)
-    sent_at = Column(DateTime, default=datetime.utcnow)
+    sent_at = Column(DateTime, default=lambda: datetime.now(UTC))
     status = Column(String, default="sent")
     response = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     reminder = relationship("PaymentReminder")
     invoice = relationship("Invoice")

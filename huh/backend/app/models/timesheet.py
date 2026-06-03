@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, UTC
 from app.database import Base
 
 
@@ -21,7 +21,7 @@ class TimesheetEntry(Base):
     billable = Column(String, default="yes")
     hourly_rate = Column(Float, default=0.0)
     status = Column(String, default="draft")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     organization = relationship("Organization")
     user = relationship("User")

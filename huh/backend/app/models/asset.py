@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, Date, DateTime, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, UTC
 
 from app.database import Base
 
@@ -22,7 +22,7 @@ class Asset(Base):
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True)
     status = Column(String(20), default="active")  # active, disposed, sold
     notes = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     org = relationship("Organization")
     account = relationship("Account")
@@ -38,7 +38,7 @@ class DepreciationEntry(Base):
     amount = Column(Numeric(15, 2))
     period = Column(String(20))  # e.g., "2024-01", "FY2024"
     transaction_id = Column(Integer, ForeignKey("transactions.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     asset = relationship("Asset")
     transaction = relationship("Transaction")

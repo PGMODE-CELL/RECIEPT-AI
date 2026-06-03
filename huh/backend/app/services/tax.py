@@ -1,14 +1,18 @@
 from decimal import Decimal, ROUND_HALF_UP
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.models.tax import TaxRate
 from app.models.invoice import Invoice
 from app.models.bill import Bill
 
 
-def get_tax_rate(db: Session, org_id: int, rate_id: int) -> Optional[TaxRate]:
-    return db.query(TaxRate).filter(TaxRate.id == rate_id, TaxRate.org_id == org_id).first()
+async def get_tax_rate(db: AsyncSession, org_id: int, rate_id: int) -> Optional[TaxRate]:
+    result = await db.execute(
+        select(TaxRate).filter(TaxRate.id == rate_id, TaxRate.org_id == org_id)
+    )
+    return result.scalars().first()
 
 
 def compute_item_tax(price: Decimal, quantity: int, tax_rate: Decimal) -> dict:
@@ -23,7 +27,7 @@ def compute_item_tax(price: Decimal, quantity: int, tax_rate: Decimal) -> dict:
     }
 
 
-def compute_invoice_tax(db: Session, org_id: int, items: list, tax_rate_ids: List[int] = None) -> dict:
+async def compute_invoice_tax(db: AsyncSession, org_id: int, items: list, tax_rate_ids: List[int] = None) -> dict:
     total_taxable = Decimal("0")
     total_tax = Decimal("0")
     computed_items = []
@@ -36,7 +40,7 @@ def compute_invoice_tax(db: Session, org_id: int, items: list, tax_rate_ids: Lis
 
         if tax_rate_ids:
             for rid in tax_rate_ids:
-                rate = get_tax_rate(db, org_id, rid)
+                rate = await get_tax_rate(db, org_id, rid)
                 if rate and rate.is_active:
                     result = compute_item_tax(price, qty, Decimal(str(rate.rate)))
                     item_tax += Decimal(str(result["tax_amount"]))
@@ -61,18 +65,24 @@ def compute_invoice_tax(db: Session, org_id: int, items: list, tax_rate_ids: Lis
     }
 
 
-def get_tax_breakdown(db: Session, org_id: int, start_date, end_date) -> dict:
-    invoices = db.query(Invoice).filter(
-        Invoice.org_id == org_id,
-        Invoice.date >= start_date,
-        Invoice.date <= end_date,
-    ).all()
+async def get_tax_breakdown(db: AsyncSession, org_id: int, start_date, end_date) -> dict:
+    invoices_result = await db.execute(
+        select(Invoice).filter(
+            Invoice.org_id == org_id,
+            Invoice.date >= start_date,
+            Invoice.date <= end_date,
+        )
+    )
+    invoices = invoices_result.scalars().all()
 
-    bills = db.query(Bill).filter(
-        Bill.org_id == org_id,
-        Bill.date >= start_date,
-        Bill.date <= end_date,
-    ).all()
+    bills_result = await db.execute(
+        select(Bill).filter(
+            Bill.org_id == org_id,
+            Bill.date >= start_date,
+            Bill.date <= end_date,
+        )
+    )
+    bills = bills_result.scalars().all()
 
     sales_by_rate = {}
     purchase_by_rate = {}

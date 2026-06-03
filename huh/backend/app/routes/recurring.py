@@ -1,8 +1,9 @@
 from datetime import date, timedelta
 from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 from app.models.recurring import RecurringTransaction
 from app.auth import get_current_user
@@ -21,7 +22,7 @@ FREQUENCY_MAP = {
 
 
 @router.post("/{org_id}")
-def create_recurring(
+async def create_recurring(
     org_id: int,
     description: str,
     amount: float,
@@ -29,7 +30,7 @@ def create_recurring(
     category: str = None,
     transaction_type: str = "money_out",
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     interval = FREQUENCY_MAP.get(frequency)
     if not interval:
@@ -46,8 +47,8 @@ def create_recurring(
         transaction_type=transaction_type,
     )
     db.add(recurring)
-    db.commit()
-    db.refresh(recurring)
+    await db.commit()
+    await db.refresh(recurring)
     return {
         "id": recurring.id,
         "description": description,
@@ -58,16 +59,16 @@ def create_recurring(
 
 
 @router.get("/{org_id}")
-def list_recurring(
+async def list_recurring(
     org_id: int,
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
-    items = (
-        db.query(RecurringTransaction)
+    result = await db.execute(
+        select(RecurringTransaction)
         .filter(RecurringTransaction.org_id == org_id, RecurringTransaction.active)
-        .all()
     )
+    items = result.scalars().all()
     return [
         {
             "id": r.id,
@@ -83,19 +84,62 @@ def list_recurring(
 
 
 @router.put("/{org_id}/{recurring_id}/toggle")
-def toggle_recurring(
+async def toggle_recurring(
     org_id: int,
     recurring_id: int,
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     item = (
-        db.query(RecurringTransaction)
-        .filter(RecurringTransaction.id == recurring_id, RecurringTransaction.org_id == org_id)
-        .first()
-    )
+        await db.execute(
+            select(RecurringTransaction)
+            .filter(RecurringTransaction.id == recurring_id, RecurringTransaction.org_id == org_id)
+        )
+    ).scalar_one_or_none()
     if not item:
         raise HTTPException(404, "Recurring transaction not found")
     item.active = not item.active
-    db.commit()
+    await db.commit()
     return {"active": item.active}
+
+
+@router.get("/{org_id}/{recurring_id}")
+async def get_recurring(
+    org_id: int,
+    recurring_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    item = (
+        await db.execute(
+            select(RecurringTransaction)
+            .filter(RecurringTransaction.id == recurring_id, RecurringTransaction.org_id == org_id)
+        )
+    ).scalar_one_or_none()
+    if not item:
+        raise HTTPException(404, "Recurring transaction not found")
+    return {
+        "id": item.id, "description": item.description, "amount": float(item.amount),
+        "frequency": item.frequency, "next_date": str(item.next_date),
+        "category": item.category, "transaction_type": item.transaction_type, "active": item.active,
+    }
+
+
+@router.delete("/{org_id}/{recurring_id}")
+async def delete_recurring(
+    org_id: int,
+    recurring_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    item = (
+        await db.execute(
+            select(RecurringTransaction)
+            .filter(RecurringTransaction.id == recurring_id, RecurringTransaction.org_id == org_id)
+        )
+    ).scalar_one_or_none()
+    if not item:
+        raise HTTPException(404, "Recurring transaction not found")
+    await db.delete(item)
+    await db.commit()
+    return {"message": "Recurring transaction deleted"}

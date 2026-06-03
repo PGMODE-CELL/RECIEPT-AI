@@ -1,7 +1,7 @@
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-const TOKEN_KEY = "ledgerai_jwt_token";
-const ORG_KEY = "ledgerai_active_org";
+const TOKEN_KEY = "receiptai_jwt_token";
+const ORG_KEY = "receiptai_active_org";
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -98,6 +98,10 @@ export const api = {
       ),
     me: () =>
       request<{ id: number; email: string; name: string }>("GET", "/api/auth/me"),
+    forgotPassword: (email: string) =>
+      request<{ message: string; reset_token?: string }>("POST", "/api/auth/forgot-password", { email }),
+    resetPassword: (token: string, password: string) =>
+      request<{ message: string }>("POST", "/api/auth/reset-password", { token, password }),
   },
 
   // Organizations

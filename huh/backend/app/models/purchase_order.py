@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, DateTime, Date, Text, JSON
-from datetime import datetime, date
+from datetime import datetime, date, UTC
 
 from app.database import Base
 
@@ -18,4 +18,4 @@ class PurchaseOrder(Base):
     items = Column(JSON)
     notes = Column(Text)
     bill_id = Column(Integer, ForeignKey("bills.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))

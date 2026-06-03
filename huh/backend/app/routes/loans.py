@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 from datetime import datetime, timezone
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.loan import Loan, LoanRepayment
 from app.auth import get_current_user
 
@@ -9,33 +10,33 @@ router = APIRouter(prefix="/api/loans", tags=["Loans"])
 
 
 @router.post("/{org_id}")
-def create_loan(org_id: int, type: str = "borrowing", name: str = "", lender_name: str = "", principal: float = 0, interest_rate: float = 0, interest_type: str = "simple", tenure_months: int = 0, start_date: str = None, contact_id: int = None, account_id: int = None, notes: str = "", db: Session = Depends(get_db), user=Depends(get_current_user)):
+async def create_loan(org_id: int, type: str = "borrowing", name: str = "", lender_name: str = "", principal: float = 0, interest_rate: float = 0, interest_type: str = "simple", tenure_months: int = 0, start_date: str = None, contact_id: int = None, account_id: int = None, notes: str = "", db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     sd = datetime.strptime(start_date, "%Y-%m-%d") if start_date else datetime.now(timezone.utc)
     loan = Loan(org_id=org_id, type=type, name=name, lender_name=lender_name, principal=principal, outstanding=principal, interest_rate=interest_rate, interest_type=interest_type, tenure_months=tenure_months, start_date=sd, contact_id=contact_id, account_id=account_id, notes=notes)
     db.add(loan)
-    db.commit()
-    db.refresh(loan)
+    await db.commit()
+    await db.refresh(loan)
     return {"success": True, "loan": {"id": loan.id, "name": loan.name, "principal": loan.principal, "outstanding": loan.outstanding, "status": loan.status}}
 
 
 @router.get("/{org_id}")
-def list_loans(org_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    loans = db.query(Loan).filter(Loan.org_id == org_id).order_by(Loan.created_at.desc()).all()
+async def list_loans(org_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+    loans = (await db.execute(select(Loan).filter(Loan.org_id == org_id).order_by(Loan.created_at.desc()))).scalars().all()
     return {"loans": [{"id": loan.id, "name": loan.name, "type": loan.type, "principal": loan.principal, "outstanding": loan.outstanding, "interest_rate": loan.interest_rate, "status": loan.status} for loan in loans]}
 
 
 @router.get("/{org_id}/{loan_id}")
-def get_loan(org_id: int, loan_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    loan = db.query(Loan).filter(Loan.id == loan_id, Loan.org_id == org_id).first()
+async def get_loan(org_id: int, loan_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+    loan = (await db.execute(select(Loan).filter(Loan.id == loan_id, Loan.org_id == org_id))).scalar_one_or_none()
     if not loan:
         raise HTTPException(404, "Loan not found")
-    repayments = db.query(LoanRepayment).filter(LoanRepayment.loan_id == loan_id).order_by(LoanRepayment.date).all()
+    repayments = (await db.execute(select(LoanRepayment).filter(LoanRepayment.loan_id == loan_id).order_by(LoanRepayment.date))).scalars().all()
     return {"loan": {"id": loan.id, "name": loan.name, "type": loan.type, "principal": loan.principal, "outstanding": loan.outstanding, "interest_rate": loan.interest_rate, "interest_type": loan.interest_type, "tenure_months": loan.tenure_months, "start_date": str(loan.start_date), "end_date": str(loan.end_date) if loan.end_date else None, "status": loan.status, "notes": loan.notes}, "repayments": [{"id": r.id, "date": str(r.date), "amount": r.amount, "principal_part": r.principal_part, "interest_part": r.interest_part, "status": r.status} for r in repayments]}
 
 
 @router.post("/{org_id}/{loan_id}/repay")
-def record_repayment(org_id: int, loan_id: int, date: str = None, amount: float = 0, principal_part: float = 0, interest_part: float = 0, notes: str = "", db: Session = Depends(get_db), user=Depends(get_current_user)):
-    loan = db.query(Loan).filter(Loan.id == loan_id, Loan.org_id == org_id).first()
+async def record_repayment(org_id: int, loan_id: int, date: str = None, amount: float = 0, principal_part: float = 0, interest_part: float = 0, notes: str = "", db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+    loan = (await db.execute(select(Loan).filter(Loan.id == loan_id, Loan.org_id == org_id))).scalar_one_or_none()
     if not loan:
         raise HTTPException(404, "Loan not found")
     rd = datetime.strptime(date, "%Y-%m-%d") if date else datetime.now(timezone.utc)
@@ -45,17 +46,17 @@ def record_repayment(org_id: int, loan_id: int, date: str = None, amount: float 
     if loan.outstanding <= 0:
         loan.outstanding = 0
         loan.status = "closed"
-    db.commit()
+    await db.commit()
     return {"success": True, "repayment": {"id": repayment.id, "amount": amount, "principal_part": principal_part, "interest_part": interest_part}}
 
 
 @router.post("/{org_id}/{loan_id}/schedule")
-def generate_schedule(org_id: int, loan_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
+async def generate_schedule(org_id: int, loan_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     from datetime import timedelta
-    loan = db.query(Loan).filter(Loan.id == loan_id, Loan.org_id == org_id).first()
+    loan = (await db.execute(select(Loan).filter(Loan.id == loan_id, Loan.org_id == org_id))).scalar_one_or_none()
     if not loan:
         raise HTTPException(404, "Loan not found")
-    existing = db.query(LoanRepayment).filter(LoanRepayment.loan_id == loan_id).count()
+    existing = (await db.execute(select(func.count()).select_from(LoanRepayment).filter(LoanRepayment.loan_id == loan_id))).scalar()
     if existing > 0:
         raise HTTPException(400, "Schedule already generated")
     monthly_rate = loan.interest_rate / 100 / 12
@@ -79,5 +80,5 @@ def generate_schedule(org_id: int, loan_id: int, db: Session = Depends(get_db), 
         db.add(rep)
         schedule.append({"installment": i + 1, "date": str(rd.date()), "amount": round(emi, 2), "principal": round(principal_part, 2), "interest": round(interest, 2), "balance": round(balance, 2)})
     loan.end_date = loan.start_date + timedelta(days=30 * n)
-    db.commit()
+    await db.commit()
     return {"success": True, "schedule": schedule}

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, Date, DateTime, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, UTC
 
 from app.database import Base
 
@@ -16,7 +16,7 @@ class StatementImport(Base):
     total_lines = Column(Integer, default=0)
     matched_lines = Column(Integer, default=0)
     status = Column(String(20), default="pending")  # pending, reconciling, done
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     org = relationship("Organization", back_populates="statement_imports")
     lines = relationship("StatementLine", back_populates="import_", cascade="all, delete-orphan")

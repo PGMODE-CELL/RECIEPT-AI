@@ -58,6 +58,36 @@ class Settings:
     HSTS_MAX_AGE: int = int(os.getenv("HSTS_MAX_AGE", "31536000"))
 
 
+    # --- SCALING INFRASTRUCTURE ---
+    # Redis
+    REDIS_URL: str = os.getenv("REDIS_URL", "")
+    REDIS_CACHE_TTL: int = int(os.getenv("REDIS_CACHE_TTL", "300"))
+
+    # S3 / Object Storage
+    S3_ENDPOINT: str = os.getenv("S3_ENDPOINT", "")
+    S3_ACCESS_KEY: str = os.getenv("S3_ACCESS_KEY", "")
+    S3_SECRET_KEY: str = os.getenv("S3_SECRET_KEY", "")
+    S3_BUCKET: str = os.getenv("S3_BUCKET", "")
+    S3_REGION: str = os.getenv("S3_REGION", "")
+    S3_PUBLIC_URL: str = os.getenv("S3_PUBLIC_URL", "")
+    LOCAL_STORAGE_DIR: str = os.getenv("LOCAL_STORAGE_DIR", "")
+
+    # Async DB
+    DATABASE_READ_URL: str = os.getenv("DATABASE_READ_URL", "")
+
+    # Background tasks
+    CELERY_BROKER_URL: str = os.getenv("CELERY_BROKER_URL", "")
+    CELERY_RESULT_BACKEND: str = os.getenv("CELERY_RESULT_BACKEND", "")
+
+    # Horizontal scaling
+    INSTANCE_ID: str = os.getenv("INSTANCE_ID", "default")
+    MAX_WORKERS: int = int(os.getenv("MAX_WORKERS", "4"))
+
+    # Distributed tracing
+    OTEL_SERVICE_NAME: str = os.getenv("OTEL_SERVICE_NAME", "receipt-ai")
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+
+
 settings = Settings()
 
 # Ensure backup dir exists

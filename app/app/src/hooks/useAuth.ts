@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { LOGIN_PATH } from "@/const";
 import { useApi } from "@/providers/ApiProvider";
 
-const DEMO_USER_KEY = "ledgerai_demo_user";
+const DEMO_USER_KEY = "receiptai_demo_user";
 
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;

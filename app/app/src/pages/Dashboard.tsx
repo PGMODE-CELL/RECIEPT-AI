@@ -10,22 +10,14 @@ import {
   Clock, DollarSign, Activity
 } from "lucide-react";
 import { useApi } from "@/providers/ApiProvider";
-import { api } from "@/lib/api";
-import { useApiQuery } from "@/hooks/useApiQuery";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { orgId, isAuthenticated } = useApi();
-  const isReal = isAuthenticated && !!orgId;
+  const enabled = isAuthenticated && !!orgId;
 
-  const { data: stats, isLoading } = isReal
-    ? useApiQuery<any>(["dashboard", "stats"], () => api.dashboard.stats(orgId!))
-    : trpc.dashboard.stats.useQuery();
-  const { data: recent } = isReal
-    ? useApiQuery<any[]>(["dashboard", "recent"], () =>
-        api.transactions.list(orgId!).then(txs => (txs || []).slice(0, 10))
-      )
-    : trpc.dashboard.recentActivity.useQuery();
+  const { data: stats, isLoading } = trpc.dashboard.stats.useQuery(undefined, { enabled });
+  const { data: recent } = trpc.dashboard.recentActivity.useQuery(undefined, { enabled });
 
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);

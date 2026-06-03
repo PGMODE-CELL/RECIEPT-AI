@@ -2,9 +2,11 @@ import csv
 import io
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 from app.models.transaction import Transaction
 from app.models.invoice import Invoice
@@ -29,8 +31,9 @@ def csv_response(rows: list[dict], filename: str):
 
 
 @router.get("/{org_id}/transactions")
-def export_transactions(org_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    txs = db.query(Transaction).filter(Transaction.org_id == org_id).order_by(Transaction.date.desc()).all()
+async def export_transactions(org_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Transaction).filter(Transaction.org_id == org_id).order_by(Transaction.date.desc()))
+    txs = result.scalars().all()
     rows = [{
         "Date": t.date.isoformat(), "Description": t.description,
         "Amount": float(t.amount), "Type": t.type,
@@ -40,8 +43,9 @@ def export_transactions(org_id: int, user: User = Depends(get_current_user), db:
 
 
 @router.get("/{org_id}/invoices")
-def export_invoices(org_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    invs = db.query(Invoice).filter(Invoice.org_id == org_id).order_by(Invoice.date.desc()).all()
+async def export_invoices(org_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Invoice).filter(Invoice.org_id == org_id).options(selectinload(Invoice.contact)).order_by(Invoice.date.desc()))
+    invs = result.scalars().all()
     rows = [{
         "Number": i.number or f"INV-{i.id}", "Date": i.date.isoformat(),
         "Due Date": i.due_date.isoformat() if i.due_date else "",
@@ -54,8 +58,9 @@ def export_invoices(org_id: int, user: User = Depends(get_current_user), db: Ses
 
 
 @router.get("/{org_id}/bills")
-def export_bills(org_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    bs = db.query(Bill).filter(Bill.org_id == org_id).order_by(Bill.date.desc()).all()
+async def export_bills(org_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Bill).filter(Bill.org_id == org_id).options(selectinload(Bill.contact)).order_by(Bill.date.desc()))
+    bs = result.scalars().all()
     rows = [{
         "Number": b.number or f"BILL-{b.id}", "Date": b.date.isoformat(),
         "Due Date": b.due_date.isoformat() if b.due_date else "",

@@ -2,10 +2,11 @@ from datetime import datetime, timedelta, UTC
 from jose import JWTError, jwt
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.config import settings
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 
 security = HTTPBearer()
@@ -27,9 +28,9 @@ def decode_token(token: str) -> dict:
         raise HTTPException(401, "Invalid token")
 
 
-def get_current_user(
+async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> User:
     try:
         payload = jwt.decode(
@@ -37,7 +38,8 @@ def get_current_user(
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
         )
-        user = db.query(User).filter(User.id == int(payload.get("sub"))).first()
+        result = await db.execute(select(User).filter(User.id == int(payload.get("sub"))))
+        user = result.scalar_one_or_none()
         if not user or not user.is_active:
             raise HTTPException(401, "Invalid user")
         return user

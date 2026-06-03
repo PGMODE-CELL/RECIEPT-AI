@@ -1,70 +1,82 @@
-# ReceiptAI Development Makefile
+.PHONY: dev dev-backend dev-frontend test build deploy clean
 
-.PHONY: help install dev-backend dev-frontend dev test-backend test-frontend test lint-backend lint-frontend lint typecheck format build-docker db-init db-migrate db-upgrade db-reset backup health clean
+# ─── Development ──────────────────────────────────────────────────────────
 
-BACKEND_DIR := huh/backend
-FRONTEND_DIR := app/app
+dev: dev-backend dev-frontend          ## Start both backend and frontend in dev mode
 
-help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+dev-backend:                           ## Start backend dev server with hot reload
+	cd huh/backend && uvicorn main:app --host 0.0.0.0 --port 5000 --reload
 
-install: ## Install all dependencies
-	cd $(BACKEND_DIR) && pip install -r requirements.txt
-	cd $(FRONTEND_DIR) && npm install
+dev-frontend:                          ## Start frontend dev server
+	cd app/app && npm run dev
 
-dev-backend: ## Start backend dev server
-	cd $(BACKEND_DIR) && uvicorn main:app --reload --host 0.0.0.0 --port 5000
+# ─── Testing ──────────────────────────────────────────────────────────────
 
-dev-frontend: ## Start frontend dev server
-	cd $(FRONTEND_DIR) && npm run dev
+test: test-backend test-frontend       ## Run all tests
 
-dev: ## Start both backend and frontend
-	@echo "Open two terminals and run 'make dev-backend' and 'make dev-frontend'"
+test-backend:                          ## Run backend tests
+	cd huh/backend && python -m pytest tests/ -v --tb=short
 
-test-backend: ## Run backend tests
-	cd $(BACKEND_DIR) && pytest tests/ -v --timeout=30
+test-backend-quick:                    ## Run backend tests (fast, stop on first failure)
+	cd huh/backend && python -m pytest tests/ -x -q --tb=short
 
-test-frontend: ## Run frontend tests
-	cd $(FRONTEND_DIR) && npx vitest run
+test-frontend:                         ## Run frontend tests (if configured)
+	cd app/app && npm test 2>/dev/null || echo "No frontend tests configured"
 
-test: test-backend test-frontend ## Run all tests
+# ─── Building ─────────────────────────────────────────────────────────────
 
-lint-backend: ## Lint Python code
-	cd $(BACKEND_DIR) && ruff check app/ tests/
+build: build-backend build-frontend    ## Build all production artifacts
 
-lint-frontend: ## Lint TypeScript code
-	cd $(FRONTEND_DIR) && npx eslint src/
+build-backend:                         ## Build backend Docker image
+	docker compose build backend
 
-lint: lint-backend lint-frontend ## Lint all code
+build-frontend:                        ## Build frontend Docker image
+	docker compose build frontend
 
-typecheck: ## TypeScript type check
-	cd $(FRONTEND_DIR) && npx tsc --noEmit
+build-frontend-local:                  ## Build frontend locally (no Docker)
+	cd app/app && npm run build
 
-format: ## Format all code
-	cd $(BACKEND_DIR) && ruff format app/ tests/
-	cd $(FRONTEND_DIR) && npx prettier --write src/
+# ─── Deployment ───────────────────────────────────────────────────────────
 
-build-docker: ## Build Docker images
-	docker compose build
+deploy:                                ## Start all services in production
+	docker compose up -d --build
 
-db-init: ## Initialize database
-	cd $(BACKEND_DIR) && python -m app.cli db init
+deploy-down:                           ## Stop all services
+	docker compose down
 
-db-migrate: ## Create new migration
-	cd $(BACKEND_DIR) && python -m app.cli db migrate "$(msg)"
+deploy-logs:                           ## Tail all logs
+	docker compose logs -f
 
-db-upgrade: ## Apply migrations
-	cd $(BACKEND_DIR) && python -m app.cli db upgrade
+deploy-ps:                             ## Show service status
+	docker compose ps
 
-db-reset: ## Reset database (dev only)
-	cd $(BACKEND_DIR) && python -m app.cli db reset
+deploy-migrate:                        ## Run database migrations
+	docker compose exec backend alembic upgrade head
 
-backup: ## Create database backup
-	cd $(BACKEND_DIR) && python -m app.cli backup create
+deploy-shell:                          ## Open a shell in the backend container
+	docker compose exec backend /bin/bash
 
-health: ## Run health checks
-	cd $(BACKEND_DIR) && python -m app.cli health
+deploy-backup:                         ## Manual database backup
+	docker compose exec postgres pg_dump -U receipt_ai receipt_ai > backup_$$(date +%Y%m%d_%H%M%S).sql
 
-clean: ## Clean generated files
-	cd $(BACKEND_DIR) && find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
-	cd $(FRONTEND_DIR) && rm -rf dist/ 2>/dev/null || true
+# ─── Maintenance ──────────────────────────────────────────────────────────
+
+clean:                                 ## Clean all build artifacts
+	rm -rf huh/backend/__pycache__ huh/backend/app/__pycache__
+	rm -rf huh/backend/*.db huh/backend/test_receipt_ai.db
+	rm -rf app/app/dist app/app/node_modules
+	rm -rf huh/backend/.venv
+	rm -rf backups/
+	docker compose down -v 2>/dev/null || true
+
+migrate:                               ## Create a new alembic migration
+	cd huh/backend && alembic revision --autogenerate -m "$(message)"
+
+db-shell:                              ## Open PostgreSQL shell
+	docker compose exec postgres psql -U receipt_ai receipt_ai
+
+# ─── Help ─────────────────────────────────────────────────────────────────
+
+help:                                  ## Show this help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'

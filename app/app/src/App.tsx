@@ -52,6 +52,11 @@ import APIDocumentation from "./pages/APIDocumentation";
 import SecurityCenter from "./pages/SecurityCenter";
 import LanguageSettings from "./pages/LanguageSettings";
 import Login from "./pages/Login";
+import Landing from "./pages/Landing";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import OrgSetup from "./pages/OrgSetup";
 import NotFound from "./pages/NotFound";
 
@@ -125,7 +130,12 @@ function PageLoader() {
 export default function App() {
   return (
     <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/org-setup" element={<OrgSetup />} />
       <Route
         path="/*"

@@ -1,20 +1,18 @@
 import { useState } from "react";
-import { trpc } from "@/providers/trpc";
 import { useNavigate } from "react-router";
+import { trpc } from "@/providers/trpc";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Eye, Trash, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Trash, FileText, Search, Download, Eye, CreditCard, X, Edit, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useApi } from "@/providers/ApiProvider";
-import { api } from "@/lib/api";
-import { useApiQuery } from "@/hooks/useApiQuery";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const statusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-700",
@@ -38,8 +36,6 @@ type LineItem = {
 
 export default function Invoices() {
   const navigate = useNavigate();
-  const { orgId, isAuthenticated } = useApi();
-  const isReal = isAuthenticated && !!orgId;
 
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
@@ -50,73 +46,35 @@ export default function Invoices() {
     { description: "", quantity: "1", unitPrice: "0", discount: "0", taxRate: "0", amount: "0" },
   ]);
 
-  const { data, isLoading, refetch } = isReal
-    ? useApiQuery<any>(["invoices", "list", status, search, String(page)], () =>
-        api.invoices.list(orgId!, { status: status !== "all" ? status : undefined, search: search || undefined, page, limit: 20 })
-      )
-    : trpc.invoice.list.useQuery({
-        status: status === "all" ? undefined : status,
-        search: search || undefined,
-        page,
-        limit: 20,
-      });
-  const invoices = data?.invoices || (Array.isArray(data) ? data : []) || [];
-  const totalPages = Math.ceil(((data?.total || (Array.isArray(data) ? data.length : 0)) || 0) / 20);
+  const { data, isLoading, refetch } = trpc.invoice.list.useQuery({
+    status: status === "all" ? undefined : status,
+    search: search || undefined,
+    page,
+    limit: 20,
+  });
+  const invoices = data?.invoices || [];
+  const totalPages = Math.ceil((data?.total || 0) / 20);
 
-  const { data: contacts } = isReal
-    ? useApiQuery<any[]>(["contacts", "list"], () => api.contacts.list(orgId!))
-    : trpc.contact.list.useQuery();
-  const { data: products } = isReal
-    ? useApiQuery<any[]>(["inventory", "items"], () => api.inventory.items(orgId!))
-    : trpc.product.list.useQuery();
-  const { data: nextNumber } = isReal
-    ? useApiQuery<string>(["invoices", "nextNumber"], () =>
-        api.invoices.list(orgId!, { limit: 1 }).then(r => {
-          const num = (r.total || 0) + 1;
-          return `INV-${String(num).padStart(4, "0")}`;
-        })
-      )
-    : trpc.invoice.nextNumber.useQuery();
+  const { data: contacts } = trpc.contact.list.useQuery();
+  const { data: products } = trpc.product.list.useQuery();
+  const { data: nextNumber } = trpc.invoice.nextNumber.useQuery();
 
-  const queryClient = useQueryClient();
-
-  const createInvoice = isReal
-    ? useMutation({
-        mutationFn: (vars: any) => api.invoices.create(orgId!, vars),
-        onSuccess: () => {
-          setOpen(false);
-          queryClient.invalidateQueries({ queryKey: ["invoices"] });
-          setLineItems([{ description: "", quantity: "1", unitPrice: "0", discount: "0", taxRate: "0", amount: "0" }]);
-          toast.success("Invoice created");
-        },
-        onError: (err: Error) => toast.error(err.message),
-      })
-    : trpc.invoice.create.useMutation({
-        onSuccess: () => {
-          setOpen(false);
-          refetch();
-          setLineItems([{ description: "", quantity: "1", unitPrice: "0", discount: "0", taxRate: "0", amount: "0" }]);
-          toast.success("Invoice created");
-        },
-        onError: (error) => toast.error(error.message),
-      });
-  const deleteInvoice = isReal
-    ? useMutation({
-        mutationFn: (vars: { id: number }) => api.delete(`/api/invoices/${orgId}/${vars.id}`),
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["invoices"] });
-          setDeleteId(null);
-          toast.success("Invoice deleted");
-        },
-        onError: (err: Error) => toast.error(err.message),
-      })
-    : trpc.invoice.delete.useMutation({
-        onSuccess: () => {
-          refetch();
-          setDeleteId(null);
-          toast.success("Invoice deleted");
-        },
-      });
+  const createInvoice = trpc.invoice.create.useMutation({
+    onSuccess: () => {
+      setOpen(false);
+      refetch();
+      setLineItems([{ description: "", quantity: "1", unitPrice: "0", discount: "0", taxRate: "0", amount: "0" }]);
+      toast.success("Invoice created");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const deleteInvoice = trpc.invoice.delete.useMutation({
+    onSuccess: () => {
+      refetch();
+      setDeleteId(null);
+      toast.success("Invoice deleted");
+    },
+  });
 
   const formatCurrency = (v: string | number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(v));

@@ -1,9 +1,10 @@
 from datetime import date, datetime
 from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 from decimal import Decimal
 
-from app.database import get_db
+from app.database_async import get_async_db as get_db
 from app.models.user import User
 from app.models.organization import Organization
 from app.models.account import Account
@@ -16,61 +17,71 @@ router = APIRouter(prefix="/api/transactions", tags=["Transactions"])
 
 
 @router.post("/simple")
-def add_transaction(
+async def add_transaction(
     data: SimpleTransactionRequest,
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     org = (
-        db.query(Organization)
-        .filter(
-            Organization.id == data.org_id, Organization.owner_id == user.id
+        await db.execute(
+            select(Organization).filter(
+                Organization.id == data.org_id, Organization.owner_id == user.id
+            )
         )
-        .first()
-    )
+    ).scalar_one_or_none()
     if not org:
         raise HTTPException(404, "Organization not found")
 
     if data.type == "money_in":
         debit_acc = (
-            db.query(Account)
-            .filter(Account.org_id == data.org_id, Account.type == "asset")
-            .first()
-        )
-        credit_acc = (
-            db.query(Account)
-            .filter(
-                Account.org_id == data.org_id,
-                Account.name.ilike(f"%{data.category}%"),
+            await db.execute(
+                select(Account)
+                .filter(Account.org_id == data.org_id, Account.type == "asset")
+                .limit(1)
             )
-            .first()
-        )
+        ).scalars().first()
+        credit_acc = (
+            await db.execute(
+                select(Account)
+                .filter(
+                    Account.org_id == data.org_id,
+                    Account.name.ilike(f"%{data.category}%"),
+                ).limit(1)
+            )
+        ).scalars().first()
         if not credit_acc:
             credit_acc = (
-                db.query(Account)
-                .filter(Account.org_id == data.org_id, Account.type == "income")
-                .first()
-            )
+                await db.execute(
+                    select(Account)
+                    .filter(Account.org_id == data.org_id, Account.type == "income")
+                    .limit(1)
+                )
+            ).scalars().first()
     else:
         debit_acc = (
-            db.query(Account)
-            .filter(
-                Account.org_id == data.org_id,
-                Account.name.ilike(f"%{data.category}%"),
+            await db.execute(
+                select(Account)
+                .filter(
+                    Account.org_id == data.org_id,
+                    Account.name.ilike(f"%{data.category}%"),
+                ).limit(1)
             )
-            .first()
-        )
+        ).scalars().first()
         if not debit_acc:
             debit_acc = (
-                db.query(Account)
-                .filter(Account.org_id == data.org_id, Account.type == "expense")
-                .first()
-            )
+                await db.execute(
+                    select(Account)
+                    .filter(Account.org_id == data.org_id, Account.type == "expense")
+                    .limit(1)
+                )
+            ).scalars().first()
         credit_acc = (
-            db.query(Account)
-            .filter(Account.org_id == data.org_id, Account.type == "asset")
-            .first()
-        )
+            await db.execute(
+                select(Account)
+                .filter(Account.org_id == data.org_id, Account.type == "asset")
+                .limit(1)
+            )
+        ).scalars().first()
 
     if not debit_acc or not credit_acc:
         raise HTTPException(400, "Could not find matching accounts")
@@ -90,7 +101,7 @@ def add_transaction(
         ),
     )
     db.add(trans)
-    db.flush()
+    await db.flush()
 
     db.add(
         TransactionLine(
@@ -102,10 +113,10 @@ def add_transaction(
     )
 
     amount_dec = Decimal(str(data.amount))
-    update_account_balance(db, debit_acc.id, amount_dec, is_debit=True)
-    update_account_balance(db, credit_acc.id, amount_dec, is_debit=False)
+    await update_account_balance(db, debit_acc.id, amount_dec, is_debit=True)
+    await update_account_balance(db, credit_acc.id, amount_dec, is_debit=False)
 
-    db.commit()
+    await db.commit()
 
     return {
         "message": "Recorded!",
@@ -115,23 +126,23 @@ def add_transaction(
 
 
 @router.get("/{org_id}")
-def get_transactions(
+async def get_transactions(
     org_id: int,
     page: int = 1,
     per_page: int = 25,
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     offset = (page - 1) * per_page
-    total = db.query(Transaction).filter(Transaction.org_id == org_id).count()
-    txs = (
-        db.query(Transaction)
+    total = (await db.execute(select(func.count()).select_from(Transaction).filter(Transaction.org_id == org_id))).scalar()
+    result = await db.execute(
+        select(Transaction)
         .filter(Transaction.org_id == org_id)
         .order_by(Transaction.date.desc())
         .offset(offset)
         .limit(per_page)
-        .all()
     )
+    txs = result.scalars().all()
     return {
         "total": total,
         "page": page,

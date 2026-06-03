@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, UTC
 
 from app.database import Base
 
@@ -15,7 +15,7 @@ class Organization(Base):
     currency = Column(String(3), default="USD")
     tax_id = Column(String(100))
     address = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     owner = relationship("User", back_populates="orgs")
     accounts = relationship("Account", back_populates="org", cascade="all, delete-orphan")

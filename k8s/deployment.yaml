@@ -1,0 +1,223 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: receipt-ai-backend
+  namespace: receipt-ai
+  labels:
+    app: receipt-ai
+    tier: backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: receipt-ai
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: receipt-ai
+        tier: backend
+    spec:
+      containers:
+        - name: backend
+          image: ${DOCKER_USERNAME}/receipt-ai-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+            - name: ENVIRONMENT
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: receipt-ai-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: receipt-ai-secrets
+                  key: redis-url
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: receipt-ai-secrets
+                  key: secret-key
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: receipt-ai-secrets
+                  key: encryption-key
+            - name: CORS_ORIGINS
+              value: "https://app.receiptai.com"
+            - name: S3_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: receipt-ai-secrets
+                  key: s3-endpoint
+            - name: S3_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: receipt-ai-secrets
+                  key: s3-bucket
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: receipt-ai-secrets
+                  key: s3-access-key
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: receipt-ai-secrets
+                  key: s3-secret-key
+            - name: UVICORN_WORKERS
+              value: "4"
+            - name: UVICORN_CONCURRENCY
+              value: "1000"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: receipt-ai-frontend
+  namespace: receipt-ai
+  labels:
+    app: receipt-ai
+    tier: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: receipt-ai
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: receipt-ai
+        tier: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: ${DOCKER_USERNAME}/receipt-ai-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: receipt-ai-backend
+  namespace: receipt-ai
+spec:
+  ports:
+    - port: 5000
+      targetPort: http
+      name: http
+  selector:
+    app: receipt-ai
+    tier: backend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: receipt-ai-frontend
+  namespace: receipt-ai
+spec:
+  ports:
+    - port: 80
+      targetPort: http
+      name: http
+  selector:
+    app: receipt-ai
+    tier: frontend
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: receipt-ai-ingress
+  namespace: receipt-ai
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+spec:
+  tls:
+    - hosts:
+        - app.receiptai.com
+      secretName: receipt-ai-tls
+  rules:
+    - host: app.receiptai.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: receipt-ai-backend
+                port:
+                  name: http
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: receipt-ai-frontend
+                port:
+                  name: http
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: receipt-ai-backend-hpa
+  namespace: receipt-ai
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: receipt-ai-backend
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

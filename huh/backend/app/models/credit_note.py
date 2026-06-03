@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, JSON, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, UTC
 from app.database import Base
 
 
@@ -12,13 +12,13 @@ class CreditNote(Base):
     invoice_id = Column(Integer, ForeignKey("invoices.id"), nullable=True)
     contact_id = Column(Integer, ForeignKey("contacts.id"), nullable=False)
     number = Column(String, nullable=False)
-    date = Column(DateTime, default=datetime.utcnow)
+    date = Column(DateTime, default=lambda: datetime.now(UTC))
     total = Column(Float, default=0.0)
     remaining = Column(Float, default=0.0)
     reason = Column(Text, nullable=True)
     status = Column(String, default="draft")
     items = Column(JSON, default=list)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     organization = relationship("Organization")
     invoice = relationship("Invoice")
@@ -33,13 +33,13 @@ class DebitNote(Base):
     bill_id = Column(Integer, ForeignKey("bills.id"), nullable=True)
     contact_id = Column(Integer, ForeignKey("contacts.id"), nullable=False)
     number = Column(String, nullable=False)
-    date = Column(DateTime, default=datetime.utcnow)
+    date = Column(DateTime, default=lambda: datetime.now(UTC))
     total = Column(Float, default=0.0)
     remaining = Column(Float, default=0.0)
     reason = Column(Text, nullable=True)
     status = Column(String, default="draft")
     items = Column(JSON, default=list)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     organization = relationship("Organization")
     bill = relationship("Bill")

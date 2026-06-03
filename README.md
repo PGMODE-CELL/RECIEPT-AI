@@ -9,6 +9,8 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 [![CI](https://github.com/lokeshgoyal/receiptai/actions/workflows/ci.yml/badge.svg)](https://github.com/lokeshgoyal/receiptai/actions/workflows/ci.yml)
 [![Docker](https://img.shields.io/badge/docker-ready-blue?logo=docker)](https://github.com/lokeshgoyal/receiptai/pkgs/container/receiptai)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 ---
 
@@ -145,6 +147,8 @@ When the backend is running, interactive API docs are available at:
 |---|---|---|
 | POST | `/api/auth/register` | Register a new user |
 | POST | `/api/auth/login` | Login |
+| POST | `/api/auth/forgot-password` | Request password reset |
+| POST | `/api/auth/reset-password` | Reset password with token |
 | GET | `/api/setup/countries` | List supported countries |
 | POST | `/api/setup/create` | Create an organization |
 | GET | `/api/contacts` | List contacts |
@@ -217,7 +221,7 @@ Every commit is automatically:
 
 - ✅ **Linted** — Ruff (Python), ESLint (TypeScript)
 - ✅ **Type-checked** — `tsc --noEmit`
-- ✅ **Tested** — 30+ backend tests with pytest
+- ✅ **Tested** — 52+ backend tests with pytest
 - ✅ **Security-scanned** — Bandit (Python), Gitleaks (secrets)
 - ✅ **Docker-built** — Compose build verified
 

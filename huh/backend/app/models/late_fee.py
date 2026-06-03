@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, UTC
 from app.database import Base
 
 
@@ -17,7 +17,7 @@ class LateFeeRule(Base):
     recurring = Column(String, default="once")
     applies_to = Column(String, default="all")
     active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     organization = relationship("Organization")
 
@@ -31,9 +31,9 @@ class LateFeeApplied(Base):
     rule_id = Column(Integer, ForeignKey("late_fee_rules.id"), nullable=True)
     amount = Column(Float, default=0.0)
     days_overdue = Column(Integer, default=0)
-    applied_at = Column(DateTime, default=datetime.utcnow)
+    applied_at = Column(DateTime, default=lambda: datetime.now(UTC))
     invoice_line_item_id = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     organization = relationship("Organization")
     invoice = relationship("Invoice")

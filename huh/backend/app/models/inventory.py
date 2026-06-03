@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, DateTime, Text, Boolean
-from datetime import datetime
+from datetime import datetime, UTC
 
 from app.database import Base
 
@@ -21,7 +21,7 @@ class InventoryItem(Base):
     tax_rate_id = Column(Integer, ForeignKey("tax_rates.id"), nullable=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True)
     active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
 
 class InventoryMovement(Base):
@@ -35,4 +35,4 @@ class InventoryMovement(Base):
     reference_type = Column(String(50), nullable=True)  # purchase_order, invoice, adjustment
     reference_id = Column(Integer, nullable=True)
     notes = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
