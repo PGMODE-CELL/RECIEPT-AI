@@ -7,7 +7,7 @@ python-multipart==0.0.6
 pydantic==2.5.3
 reportlab==4.0.9
 pytest==8.0.0
-httpx==0.26.0
+httpx==0.28.1
 # Production hardening
 python-dotenv==1.0.0
 slowapi==0.1.9
