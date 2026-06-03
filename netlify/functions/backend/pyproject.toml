@@ -1,0 +1,3 @@
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "__pycache__", "alembic"]
+skips = ["B101", "B303", "B311", "B403", "B404"]

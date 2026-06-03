@@ -1,10 +1,9 @@
-﻿import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "huh", "backend"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-
-import warnings
+﻿import sys, os, warnings
+sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "backend"))
 warnings.filterwarnings("ignore")
 
 from mangum import Mangum
-from huh.backend.main import app
+from backend.main import app
+
 handler = Mangum(app, lifespan="off")
