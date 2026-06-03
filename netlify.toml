@@ -1,5 +1,5 @@
 [build]
-  command = "bash scripts/netlify-build.sh"
+  command = "cd app/app && npm run build"
   publish = "app/app/dist/public/"
   functions = "netlify/functions/"
 
@@ -12,7 +12,7 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/api"
+  to = "/.netlify/functions/health"
   status = 200
 
 [[redirects]]
