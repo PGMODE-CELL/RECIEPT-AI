@@ -1,12 +1,10 @@
 services:
   - type: web
     name: receipt-ai-backend
-    runtime: python
+    env: docker
     repo: https://github.com/PGMODE-CELL/RECIEPT-AI
     branch: main
-    rootDir: huh/backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 4 --proxy-headers --forwarded-allow-ips "*"
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
     envVars:
       - key: ENVIRONMENT
