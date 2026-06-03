@@ -1,11 +1,7 @@
 [build]
-  base = "app/app/"
-  command = "npm run build"
-  publish = "dist/public/"
-  functions = "../../netlify/functions/"
-
-[functions]
-  node_bundler = "esbuild"
+  command = "cd app/app && npm run build"
+  publish = "app/app/dist/public/"
+  functions = "netlify/functions/"
 
 [[headers]]
   for = "/*"
