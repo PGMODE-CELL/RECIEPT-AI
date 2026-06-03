@@ -41,6 +41,9 @@ backups/
 *.zip
 *.tar.gz
 
+# - Netlify function backend copy ----
+netlify/functions/backend/
+
 # - Uploads ----
 uploads/
 huh/backend/app/uploads/

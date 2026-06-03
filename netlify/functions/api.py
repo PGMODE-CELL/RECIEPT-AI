@@ -1,5 +1,5 @@
 ﻿import sys, os, warnings
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "huh", "backend"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "backend"))
 warnings.filterwarnings("ignore")
 
 from mangum import Mangum

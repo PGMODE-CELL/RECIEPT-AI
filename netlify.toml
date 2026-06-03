@@ -1,5 +1,5 @@
 [build]
-  command = "cd app/app && npm run build"
+  command = """mkdir -p netlify/functions/backend && cp -r huh/backend/* netlify/functions/backend/ && cd app/app && npm run build"""
   publish = "app/app/dist/public/"
   functions = "netlify/functions/"
 
