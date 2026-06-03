@@ -1,6 +1,5 @@
 import logging
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import declarative_base
 from sqlalchemy.exc import OperationalError
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from app.config import settings
@@ -17,13 +16,13 @@ def _get_async_url(url: str) -> str:
 
 ASYNC_DATABASE_URL = _get_async_url(settings.DATABASE_URL)
 
-async_engine = create_async_engine(
-    ASYNC_DATABASE_URL,
-    echo=settings.DEBUG,
-    pool_size=20 if "postgresql" in ASYNC_DATABASE_URL else 5,
-    max_overflow=40 if "postgresql" in ASYNC_DATABASE_URL else 10,
-    pool_pre_ping=True,
-)
+engine_kwargs = {"echo": settings.DEBUG}
+if "postgresql" in ASYNC_DATABASE_URL:
+    engine_kwargs["pool_size"] = 20
+    engine_kwargs["max_overflow"] = 40
+    engine_kwargs["pool_pre_ping"] = True
+
+async_engine = create_async_engine(ASYNC_DATABASE_URL, **engine_kwargs)
 
 AsyncSessionLocal = async_sessionmaker(
     async_engine,
