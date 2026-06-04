@@ -35,11 +35,26 @@ async function request<T>(
   params?: Record<string, string>,
   isForm = false,
 ): Promise<T> {
-  const url = new URL(`${API_BASE}${path}`);
-  if (params) {
-    Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null) url.searchParams.set(k, v);
-    });
+  const base = API_BASE || "";
+  const isRelative = base.startsWith("/") || base === "";
+
+  let url: URL | string;
+  if (isRelative) {
+    let urlStr = `${base}${path}`;
+    if (params) {
+      const qs = new URLSearchParams(
+        Object.fromEntries(Object.entries(params).filter(([_, v]) => v != null)),
+      ).toString();
+      if (qs) urlStr += `?${qs}`;
+    }
+    url = urlStr;
+  } else {
+    url = new URL(`${base}${path}`);
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) url.searchParams.set(k, v);
+      });
+    }
   }
 
   const headers: Record<string, string> = {};
@@ -49,7 +64,6 @@ async function request<T>(
   let fetchBody: string | FormData | undefined;
 
   if (body && isForm) {
-    // FastAPI Form() endpoints require x-www-form-urlencoded
     headers["Content-Type"] = "application/x-www-form-urlencoded";
     fetchBody = new URLSearchParams(
       Object.entries(body).reduce((acc, [k, v]) => {
