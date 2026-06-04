@@ -1,4 +1,3 @@
-import { Link } from "react-router";
 import { Wallet, Receipt, BarChart3, Shield, Users, Brain, FileText, Landmark, Package, Clock, ArrowRight, Github, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -38,22 +37,22 @@ export default function Landing() {
       {/* Nav */}
       <header className="border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
+          <a href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
               <Wallet className="w-5 h-5 text-white" />
             </div>
             <span className="font-bold text-xl text-gray-900 dark:text-white">ReceiptAI</span>
-          </Link>
+          </a>
           <div className="flex items-center gap-4">
             <a href="https://github.com/PGMODE-CELL/RECIEPT-AI" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
               <Github className="w-5 h-5" />
             </a>
-            <Link to="/login">
+            <a href="/login">
               <Button variant="outline" size="sm">Sign In</Button>
-            </Link>
-            <Link to="/login">
+            </a>
+            <a href="/login">
               <Button size="sm">Get Started</Button>
-            </Link>
+            </a>
           </div>
         </div>
       </header>
@@ -76,12 +75,12 @@ export default function Landing() {
               AI-powered receipt scanning, invoicing, payroll, CRM, inventory, and more — no license fees, no hidden costs.
             </p>
             <div className="mt-10 flex items-center justify-center gap-4">
-              <Link to="/login">
+              <a href="/login">
                 <Button size="lg" className="text-base">
                   Get Started Free
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
-              </Link>
+              </a>
               <a href="https://github.com/PGMODE-CELL/RECIEPT-AI" target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="lg" className="text-base">
                   <Github className="mr-2 w-5 h-5" />
@@ -153,12 +152,12 @@ export default function Landing() {
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Ready to Simplify Your Finances?</h2>
           <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">No credit card. No trial period. Just free, powerful accounting software.</p>
           <div className="mt-10">
-            <Link to="/login">
+            <a href="/login">
               <Button size="lg" className="text-base">
                 Get Started Free
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
-            </Link>
+            </a>
           </div>
         </div>
       </section>
@@ -174,8 +173,8 @@ export default function Landing() {
               <span className="font-semibold text-gray-900 dark:text-white">ReceiptAI</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-gray-500">
-              <Link to="/terms" className="hover:text-gray-700 dark:hover:text-gray-300">Terms</Link>
-              <Link to="/privacy" className="hover:text-gray-700 dark:hover:text-gray-300">Privacy</Link>
+              <a href="/terms" className="hover:text-gray-700 dark:hover:text-gray-300">Terms</a>
+              <a href="/privacy" className="hover:text-gray-700 dark:hover:text-gray-300">Privacy</a>
               <a href="https://github.com/PGMODE-CELL/RECIEPT-AI" target="_blank" rel="noopener noreferrer" className="hover:text-gray-700 dark:hover:text-gray-300">GitHub</a>
             </div>
             <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()} ReceiptAI. Free & open-source.</p>
