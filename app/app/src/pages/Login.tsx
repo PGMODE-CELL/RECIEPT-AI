@@ -80,14 +80,14 @@ export default function Login() {
                     <Label htmlFor="email">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <Input id="email" type="email" autocomplete="email" placeholder="you@company.com" className="pl-9" value={email} onChange={e => setEmail(e.target.value)} required />
+                      <Input id="email" type="email" autoComplete="email" placeholder="you@company.com" className="pl-9" value={email} onChange={e => setEmail(e.target.value)} required />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <Input id="password" type="password" autocomplete="current-password" placeholder="••••••••" className="pl-9" value={password} onChange={e => setPassword(e.target.value)} required />
+                      <Input id="password" type="password" autoComplete="current-password" placeholder="••••••••" className="pl-9" value={password} onChange={e => setPassword(e.target.value)} required />
                     </div>
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
@@ -108,21 +108,21 @@ export default function Login() {
                     <Label htmlFor="name">Full Name</Label>
                     <div className="relative">
                       <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <Input id="name" autocomplete="name" placeholder="John Doe" className="pl-9" value={fullName} onChange={e => setFullName(e.target.value)} required />
+                      <Input id="name" autoComplete="name" placeholder="John Doe" className="pl-9" value={fullName} onChange={e => setFullName(e.target.value)} required />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="reg-email">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <Input id="reg-email" type="email" autocomplete="email" placeholder="you@company.com" className="pl-9" value={email} onChange={e => setEmail(e.target.value)} required />
+                      <Input id="reg-email" type="email" autoComplete="email" placeholder="you@company.com" className="pl-9" value={email} onChange={e => setEmail(e.target.value)} required />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="reg-password">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <Input id="reg-password" type="password" autocomplete="new-password" placeholder="Min 6 characters" className="pl-9" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
+                      <Input id="reg-password" type="password" autoComplete="new-password" placeholder="Min 6 characters" className="pl-9" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
                     </div>
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
