@@ -47,12 +47,8 @@ export default function Landing() {
             <a href="https://github.com/PGMODE-CELL/RECIEPT-AI" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
               <Github className="w-5 h-5" />
             </a>
-            <a href="/login">
-              <Button variant="outline" size="sm">Sign In</Button>
-            </a>
-            <a href="/login">
-              <Button size="sm">Get Started</Button>
-            </a>
+            <Button variant="outline" size="sm" onClick={() => window.location.href = "/login"}>Sign In</Button>
+            <Button size="sm" onClick={() => window.location.href = "/login"}>Get Started</Button>
           </div>
         </div>
       </header>
@@ -75,12 +71,10 @@ export default function Landing() {
               AI-powered receipt scanning, invoicing, payroll, CRM, inventory, and more — no license fees, no hidden costs.
             </p>
             <div className="mt-10 flex items-center justify-center gap-4">
-              <a href="/login">
-                <Button size="lg" className="text-base">
-                  Get Started Free
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </a>
+              <Button size="lg" className="text-base" onClick={() => window.location.href = "/login"}>
+                Get Started Free
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
               <a href="https://github.com/PGMODE-CELL/RECIEPT-AI" target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="lg" className="text-base">
                   <Github className="mr-2 w-5 h-5" />
@@ -152,12 +146,10 @@ export default function Landing() {
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Ready to Simplify Your Finances?</h2>
           <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">No credit card. No trial period. Just free, powerful accounting software.</p>
           <div className="mt-10">
-            <a href="/login">
-              <Button size="lg" className="text-base">
-                Get Started Free
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </a>
+            <Button size="lg" className="text-base" onClick={() => window.location.href = "/login"}>
+              Get Started Free
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </Button>
           </div>
         </div>
       </section>
