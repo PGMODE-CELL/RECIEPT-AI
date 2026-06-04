@@ -1,5 +1,5 @@
 [build]
-  command = "cd app/app && npm run build"
+  command = "cd app/app && npx vite build"
   publish = "app/app/dist/public/"
 
 [[headers]]
