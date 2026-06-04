@@ -32,7 +32,7 @@ export default function OrgSetup() {
   }, [api, navigate]);
 
   useEffect(() => {
-    if (orgId) navigate("/");
+    if (orgId) navigate("/dashboard");
   }, [orgId, navigate]);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -42,7 +42,7 @@ export default function OrgSetup() {
       const result = await api.setup.create({ name, country, tax_id: taxId || undefined });
       setOrg(result.org_id);
       toast.success(result.message);
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to create organization");
     } finally {

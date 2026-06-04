@@ -11,13 +11,13 @@ import { toast } from "sonner";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, register, isAuthenticated, isLoading } = useApi();
+  const { login, register, isAuthenticated, isLoading, orgId } = useApi();
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      navigate("/org-setup");
+      navigate(orgId ? "/dashboard" : "/org-setup");
     }
-  }, [isAuthenticated, isLoading, navigate]);
+  }, [isAuthenticated, isLoading, navigate, orgId]);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
