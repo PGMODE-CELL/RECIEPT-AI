@@ -1,4 +1,5 @@
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const envUrl = import.meta.env.VITE_API_URL;
+const API_BASE = envUrl || envUrl === "" ? envUrl : "http://localhost:5000";
 
 const TOKEN_KEY = "receiptai_jwt_token";
 const ORG_KEY = "receiptai_active_org";
