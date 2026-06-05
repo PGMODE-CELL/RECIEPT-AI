@@ -72,37 +72,7 @@ interface TimeEntry {
   type: "time" | "expense";
 }
 
-const mockJobs: Job[] = [
-  {
-    id: 1, jobCode: "JOB-001", projectName: "Website Redesign", description: "Full website redesign project",
-    estimatedCost: 45000, actualCost: 28000, wipAmount: 17000, status: "active", progressPct: 62,
-    startDate: "2026-01-15", endDate: "2026-06-30",
-    entries: [
-      { id: 1, date: "2026-05-01", description: "UI/UX Design", hours: 16, rate: 125, amount: 2000, type: "time" },
-      { id: 2, date: "2026-05-03", description: "Development Sprint", hours: 24, rate: 125, amount: 3000, type: "time" },
-    ],
-  },
-  {
-    id: 2, jobCode: "JOB-002", projectName: "Mobile App", description: "Cross-platform mobile app",
-    estimatedCost: 120000, actualCost: 85000, wipAmount: 35000, status: "active", progressPct: 71,
-    startDate: "2026-02-01", endDate: "2026-09-30",
-    entries: [
-      { id: 3, date: "2026-05-02", description: "API Integration", hours: 20, rate: 150, amount: 3000, type: "time" },
-    ],
-  },
-  {
-    id: 3, jobCode: "JOB-003", projectName: "Office Renovation", description: "Main office space renovation",
-    estimatedCost: 80000, actualCost: 82000, wipAmount: 0, status: "completed", progressPct: 100,
-    startDate: "2025-10-01", endDate: "2026-03-31",
-    entries: [],
-  },
-  {
-    id: 4, jobCode: "JOB-004", projectName: "Data Migration", description: "Legacy system data migration",
-    estimatedCost: 35000, actualCost: 12000, wipAmount: 23000, status: "on_hold", progressPct: 34,
-    startDate: "2026-04-01", endDate: "2026-08-31",
-    entries: [],
-  },
-];
+const mockJobs: Job[] = []
 
 export default function JobCosting() {
   const [jobs] = useState<Job[]>(mockJobs);

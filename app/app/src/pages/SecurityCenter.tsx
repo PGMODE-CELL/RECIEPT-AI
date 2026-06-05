@@ -73,118 +73,11 @@ interface ApiKey {
   active: boolean;
 }
 
-const mockSessions: Session[] = [
-  {
-    id: "1",
-    device: "MacBook Pro",
-    ip: "192.168.1.100",
-    browser: "Chrome 124",
-    lastActive: "2 minutes ago",
-    current: true,
-  },
-  {
-    id: "2",
-    device: "iPhone 15 Pro",
-    ip: "192.168.1.101",
-    browser: "Safari Mobile",
-    lastActive: "1 hour ago",
-    current: false,
-  },
-  {
-    id: "3",
-    device: "Windows Desktop",
-    ip: "10.0.0.55",
-    browser: "Firefox 128",
-    lastActive: "3 hours ago",
-    current: false,
-  },
-  {
-    id: "4",
-    device: "iPad Air",
-    ip: "192.168.1.102",
-    browser: "Safari",
-    lastActive: "1 day ago",
-    current: false,
-  },
-];
+const mockSessions: Session[] = []
 
-const mockLoginHistory: LoginRecord[] = [
-  {
-    id: "1",
-    ip: "192.168.1.100",
-    device: "MacBook Pro - Chrome",
-    location: "New York, US",
-    time: "2026-05-31 10:30:00",
-    status: "success",
-  },
-  {
-    id: "2",
-    ip: "192.168.1.101",
-    device: "iPhone 15 Pro - Safari",
-    location: "New York, US",
-    time: "2026-05-31 09:15:00",
-    status: "success",
-  },
-  {
-    id: "3",
-    ip: "45.33.32.156",
-    device: "Unknown - Chrome",
-    location: "San Francisco, US",
-    time: "2026-05-30 22:45:00",
-    status: "failed",
-  },
-  {
-    id: "4",
-    ip: "10.0.0.55",
-    device: "Windows Desktop - Firefox",
-    location: "New York, US",
-    time: "2026-05-30 18:00:00",
-    status: "success",
-  },
-  {
-    id: "5",
-    ip: "203.0.113.42",
-    device: "Unknown - Edge",
-    location: "London, UK",
-    time: "2026-05-30 14:20:00",
-    status: "failed",
-  },
-  {
-    id: "6",
-    ip: "192.168.1.100",
-    device: "MacBook Pro - Chrome",
-    location: "New York, US",
-    time: "2026-05-30 08:00:00",
-    status: "success",
-  },
-];
+const mockLoginHistory: LoginRecord[] = []
 
-const mockApiKeys: ApiKey[] = [
-  {
-    id: "1",
-    name: "Production API",
-    key: "sk_live_abc...xyz123",
-    createdAt: "2026-01-15",
-    lastUsed: "2026-05-31",
-    active: true,
-  },
-  {
-    id: "2",
-    name: "Development",
-    key: "sk_test_def...uvw456",
-    createdAt: "2026-03-01",
-    lastUsed: "2026-05-28",
-    active: true,
-  },
-  {
-    id: "3",
-    name: "CI/CD Pipeline",
-    key: "sk_live_ghi...rst789",
-    createdAt: "2026-04-10",
-    lastUsed: "2026-05-29",
-    active: false,
-  },
-];
+const mockApiKeys: ApiKey[] = []
 
 export default function SecurityCenter() {
   const [sessions, setSessions] = useState<Session[]>(mockSessions);
@@ -673,7 +566,7 @@ export default function SecurityCenter() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockLoginHistory.map((record) => (
+              {[].map((record) => (
                 <TableRow key={record.id}>
                   <TableCell>
                     <code className="rounded bg-muted px-1.5 py-0.5 text-xs">

@@ -51,15 +51,7 @@ interface DocumentVersion {
   isCurrent: boolean;
 }
 
-const mockVersions: DocumentVersion[] = [
-  { id: 1, documentName: "Business Plan 2026", versionNumber: 4, fileName: "business_plan_2026_v4.pdf", fileSize: "2.4 MB", uploadedBy: "Admin", uploadedAt: "2026-05-30 14:00", changes: "Updated financial projections", isCurrent: true },
-  { id: 2, documentName: "Business Plan 2026", versionNumber: 3, fileName: "business_plan_2026_v3.pdf", fileSize: "2.1 MB", uploadedBy: "Admin", uploadedAt: "2026-05-20 09:30", changes: "Added market analysis section", isCurrent: false },
-  { id: 3, documentName: "Business Plan 2026", versionNumber: 2, fileName: "business_plan_2026_v2.pdf", fileSize: "1.8 MB", uploadedBy: "John Doe", uploadedAt: "2026-05-10 16:15", changes: "Initial draft with team bios", isCurrent: false },
-  { id: 4, documentName: "Business Plan 2026", versionNumber: 1, fileName: "business_plan_2026_v1.pdf", fileSize: "1.2 MB", uploadedBy: "John Doe", uploadedAt: "2026-05-01 11:00", changes: "First version", isCurrent: false },
-  { id: 5, documentName: "Vendor Contract - Acme", versionNumber: 2, fileName: "vendor_contract_acme_v2.docx", fileSize: "450 KB", uploadedBy: "Jane Smith", uploadedAt: "2026-05-25 10:00", changes: "Updated payment terms to Net 30", isCurrent: true },
-  { id: 6, documentName: "Vendor Contract - Acme", versionNumber: 1, fileName: "vendor_contract_acme_v1.docx", fileSize: "420 KB", uploadedBy: "Jane Smith", uploadedAt: "2026-05-15 14:30", changes: "Original contract", isCurrent: false },
-  { id: 7, documentName: "Privacy Policy", versionNumber: 1, fileName: "privacy_policy_v1.pdf", fileSize: "180 KB", uploadedBy: "Admin", uploadedAt: "2026-04-01 09:00", changes: "Initial privacy policy", isCurrent: true },
-];
+const mockVersions: DocumentVersion[] = []
 
 export default function DocumentVersions() {
   const [versions] = useState<DocumentVersion[]>(mockVersions);

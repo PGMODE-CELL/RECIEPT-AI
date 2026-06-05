@@ -59,13 +59,7 @@ interface BankRule {
   matchCount: number;
 }
 
-const mockRules: BankRule[] = [
-  { id: 1, name: "Uber Charges", matchType: "contains", matchValue: "uber", action: "categorize", actionValue: "Travel - Transportation", priority: 1, enabled: true, lastTriggered: "2026-05-30", matchCount: 45 },
-  { id: 2, name: "Office Rent", matchType: "amount", matchValue: "25000.00", action: "assign_account", actionValue: "Rent Expense", priority: 2, enabled: true, lastTriggered: "2026-05-01", matchCount: 12 },
-  { id: 3, name: "Payroll Transfers", matchType: "regex", matchValue: "PAYROLL\\s+\\w+", action: "assign_account", actionValue: "Salaries & Wages", priority: 3, enabled: true, lastTriggered: "2026-05-15", matchCount: 24 },
-  { id: 4, name: "Starbucks", matchType: "contains", matchValue: "STARBUCKS", action: "categorize", actionValue: "Meals & Entertainment", priority: 4, enabled: true, lastTriggered: "2026-05-29", matchCount: 18 },
-  { id: 5, name: "Bank Fees", matchType: "exact", matchValue: "MONTHLY SERVICE FEE", action: "categorize", actionValue: "Bank Charges", priority: 5, enabled: false, lastTriggered: "2026-04-30", matchCount: 6 },
-];
+const mockRules: BankRule[] = []
 
 export default function BankRules() {
   const [rules] = useState<BankRule[]>(mockRules);

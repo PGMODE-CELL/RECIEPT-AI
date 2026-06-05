@@ -59,13 +59,7 @@ interface Lease {
   status: "active" | "expired" | "terminated";
 }
 
-const mockLeases: Lease[] = [
-  { id: 1, name: "Office HQ - Manhattan", type: "finance", startDate: "2024-01-01", endDate: "2029-12-31", monthlyPayment: 25000, discountRate: 5.5, rouAsset: 1320000, leaseLiability: 1350000, status: "active" },
-  { id: 2, name: "Warehouse - New Jersey", type: "operating", startDate: "2025-06-01", endDate: "2028-05-31", monthlyPayment: 8500, discountRate: 4.8, rouAsset: 278000, leaseLiability: 280000, status: "active" },
-  { id: 3, name: "Branch Office - Chicago", type: "operating", startDate: "2023-03-01", endDate: "2026-02-28", monthlyPayment: 6000, discountRate: 5.0, rouAsset: 195000, leaseLiability: 198000, status: "expired" },
-  { id: 4, name: "Data Center - Virginia", type: "finance", startDate: "2025-01-01", endDate: "2032-12-31", monthlyPayment: 42000, discountRate: 6.2, rouAsset: 2680000, leaseLiability: 2750000, status: "active" },
-  { id: 5, name: "Parking Garage - Boston", type: "operating", startDate: "2026-01-01", endDate: "2028-12-31", monthlyPayment: 3200, discountRate: 4.5, rouAsset: 106000, leaseLiability: 107500, status: "active" },
-];
+const mockLeases: Lease[] = []
 
 export default function LeaseAccounting() {
   const [leases] = useState<Lease[]>(mockLeases);

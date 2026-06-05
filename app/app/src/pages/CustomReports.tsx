@@ -156,24 +156,7 @@ const sampleData: Record<DataSource, Record<string, string>[]> = {
   ],
 };
 
-const mockTemplates: SavedTemplate[] = [
-  {
-    id: "1",
-    name: "Monthly Revenue Report",
-    source: "invoices",
-    columns: ["number", "client", "date", "amount", "status"],
-    filters: [{ id: "1", field: "status", operator: "equals", value: "Paid" }],
-    createdAt: "2026-05-01",
-  },
-  {
-    id: "2",
-    name: "Expense Breakdown",
-    source: "transactions",
-    columns: ["date", "description", "amount", "category"],
-    filters: [{ id: "2", field: "type", operator: "equals", value: "Expense" }],
-    createdAt: "2026-05-15",
-  },
-];
+const mockTemplates: SavedTemplate[] = []
 
 const filterOperators = [
   { value: "equals", label: "Equals" },

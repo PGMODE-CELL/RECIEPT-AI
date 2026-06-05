@@ -59,14 +59,7 @@ interface InventoryLot {
   receivedDate: string;
 }
 
-const mockLots: InventoryLot[] = [
-  { id: 1, productName: "Widget A", lotNumber: "LOT-2026-001", serialNumber: "SN-WA-001-100", quantity: 500, unitCost: 12.5, totalCost: 6250, status: "available", expiryDate: "2027-06-30", receivedDate: "2026-01-15" },
-  { id: 2, productName: "Widget A", lotNumber: "LOT-2026-002", serialNumber: "SN-WA-101-200", quantity: 300, unitCost: 12.75, totalCost: 3825, status: "available", expiryDate: "2027-09-15", receivedDate: "2026-03-20" },
-  { id: 3, productName: "Component B", lotNumber: "LOT-2026-003", serialNumber: "SN-CB-001-050", quantity: 0, unitCost: 45.0, totalCost: 0, status: "depleted", expiryDate: "2027-03-01", receivedDate: "2026-02-10" },
-  { id: 4, productName: "Sensor Module", lotNumber: "LOT-2026-004", serialNumber: "SN-SM-001-025", quantity: 25, unitCost: 120.0, totalCost: 3000, status: "reserved", expiryDate: "2028-12-31", receivedDate: "2026-04-01" },
-  { id: 5, productName: "Fastener Kit", lotNumber: "LOT-2025-010", serialNumber: "SN-FK-001-500", quantity: 100, unitCost: 3.25, totalCost: 325, status: "expired", expiryDate: "2026-05-01", receivedDate: "2025-06-15" },
-  { id: 6, productName: "Power Supply Unit", lotNumber: "LOT-2026-005", serialNumber: "SN-PS-001-010", quantity: 10, unitCost: 85.0, totalCost: 850, status: "available", expiryDate: null, receivedDate: "2026-05-10" },
-];
+const mockLots: InventoryLot[] = []
 
 export default function InventoryLots() {
   const [lots] = useState<InventoryLot[]>(mockLots);

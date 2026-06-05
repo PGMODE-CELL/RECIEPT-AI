@@ -21,37 +21,7 @@ interface ReportRow {
   tdsRate?: number;
 }
 
-const mockData: Record<string, ReportRow[]> = {
-  "gstr-1": [
-    { id: "1", date: "2026-04-05", description: "Invoice to Acme Corp", hsn: "998311", taxableAmount: 50000, taxAmount: 9000, totalAmount: 59000, placeOfSupply: "Maharashtra", gstRate: 18 },
-    { id: "2", date: "2026-04-12", description: "Invoice to Beta Inc", hsn: "998312", taxableAmount: 25000, taxAmount: 4500, totalAmount: 29500, placeOfSupply: "Karnataka", gstRate: 18 },
-    { id: "3", date: "2026-04-20", description: "Invoice to Gamma Ltd", hsn: "998311", taxableAmount: 75000, taxAmount: 13500, totalAmount: 88500, placeOfSupply: "Delhi", gstRate: 18 },
-    { id: "4", date: "2026-04-28", description: "Invoice to Delta Corp", hsn: "998313", taxableAmount: 12000, taxAmount: 2160, totalAmount: 14160, placeOfSupply: "Tamil Nadu", gstRate: 18 },
-  ],
-  "gstr-3b": [
-    { id: "1", date: "2026-04-30", description: "Outward taxable supplies", taxableAmount: 162000, taxAmount: 29160, totalAmount: 191160 },
-    { id: "2", date: "2026-04-30", description: "Inward supplies (reverse charge)", taxableAmount: 10000, taxAmount: 1800, totalAmount: 11800 },
-    { id: "3", date: "2026-04-30", description: "ITC available", taxableAmount: 0, taxAmount: 5400, totalAmount: 5400 },
-  ],
-  "vat": [
-    { id: "1", date: "2026-04-01", description: "Sales - Domestic", taxableAmount: 80000, taxAmount: 6400, totalAmount: 86400 },
-    { id: "2", date: "2026-04-15", description: "Sales - Export", taxableAmount: 45000, taxAmount: 0, totalAmount: 45000 },
-    { id: "3", date: "2026-04-30", description: "Purchase - Input VAT", taxableAmount: 30000, taxAmount: 2400, totalAmount: 32400 },
-  ],
-  "sales-tax": [
-    { id: "1", date: "2026-04-05", description: "Retail Sales", taxableAmount: 120000, taxAmount: 8400, totalAmount: 128400 },
-    { id: "2", date: "2026-04-18", description: "Wholesale Sales", taxableAmount: 200000, taxAmount: 14000, totalAmount: 214000 },
-  ],
-  "withholding-tax": [
-    { id: "1", date: "2026-04-10", description: "Contractor Payment - ABC Services", taxableAmount: 50000, taxAmount: 5000, totalAmount: 45000, tdsRate: 10 },
-    { id: "2", date: "2026-04-22", description: "Freight Payment - XYZ Logistics", taxableAmount: 30000, taxAmount: 3000, totalAmount: 27000, tdsRate: 10 },
-  ],
-  "tds": [
-    { id: "1", date: "2026-04-08", description: "Salary - Employee A", taxableAmount: 80000, taxAmount: 8000, totalAmount: 72000, tdsRate: 10 },
-    { id: "2", date: "2026-04-15", description: "Professional Fees - Consultant B", taxableAmount: 40000, taxAmount: 4000, totalAmount: 36000, tdsRate: 10 },
-    { id: "3", date: "2026-04-25", description: "Commission - Agent C", taxableAmount: 25000, taxAmount: 2500, totalAmount: 22500, tdsRate: 10 },
-  ],
-};
+const mockData: Record<string, ReportRow[]> = {}
 
 const reportLabels: Record<string, string> = {
   "gstr-1": "GSTR-1 (Outward Supplies)",

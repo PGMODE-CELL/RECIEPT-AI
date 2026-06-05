@@ -35,16 +35,7 @@ const initialCostCenters: CostCenter[] = [
   { id: "6", name: "Customer Support", code: "SUP-001", budget: 400000, spent: 310000, department: "Operations" },
 ];
 
-const mockTransactions: Transaction[] = [
-  { id: "1", date: "2026-05-01", description: "Google Ads Campaign", amount: 45000, category: "Advertising", costCenterId: "1" },
-  { id: "2", date: "2026-05-03", description: "Social Media Management Tool", amount: 12000, category: "Software", costCenterId: "1" },
-  { id: "3", date: "2026-05-05", description: "AWS Cloud Services", amount: 85000, category: "Infrastructure", costCenterId: "2" },
-  { id: "4", date: "2026-05-07", description: "Developer Conference", amount: 25000, category: "Events", costCenterId: "2" },
-  { id: "5", date: "2026-05-10", description: "Sales Team Travel", amount: 35000, category: "Travel", costCenterId: "3" },
-  { id: "6", date: "2026-05-12", description: "Employee Training Program", amount: 48000, category: "Training", costCenterId: "4" },
-  { id: "7", date: "2026-05-15", description: "Lab Equipment Purchase", amount: 120000, category: "Equipment", costCenterId: "5" },
-  { id: "8", date: "2026-05-18", description: "Helpdesk Software License", amount: 18000, category: "Software", costCenterId: "6" },
-];
+const mockTransactions: Transaction[] = []
 
 export default function CostCenters() {
   const [costCenters, setCostCenters] = useState<CostCenter[]>(initialCostCenters);

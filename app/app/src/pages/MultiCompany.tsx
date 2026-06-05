@@ -56,12 +56,7 @@ interface Company {
   status: string;
 }
 
-const mockCompanies: Company[] = [
-  { id: 1, name: "Acme Corp", code: "ACME", currency: "USD", parentId: null, parentName: null, status: "active" },
-  { id: 2, name: "Acme UK Ltd", code: "ACME-UK", currency: "GBP", parentId: 1, parentName: "Acme Corp", status: "active" },
-  { id: 3, name: "Acme Germany GmbH", code: "ACME-DE", currency: "EUR", parentId: 1, parentName: "Acme Corp", status: "active" },
-  { id: 4, name: "Acme India Pvt Ltd", code: "ACME-IN", currency: "INR", parentId: 1, parentName: "Acme Corp", status: "inactive" },
-];
+const mockCompanies: Company[] = []
 
 export default function MultiCompany() {
   const [companies] = useState<Company[]>(mockCompanies);

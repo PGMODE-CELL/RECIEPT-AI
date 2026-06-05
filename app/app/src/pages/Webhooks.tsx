@@ -59,12 +59,7 @@ interface WebhookEntry {
   createdAt: string;
 }
 
-const mockWebhooks: WebhookEntry[] = [
-  { id: 1, name: "Slack Notifications", url: "https://hooks.slack.com/services/T00/B00/xxx", events: ["invoice.created", "bill.created", "payment.received"], enabled: true, lastTriggered: "2026-05-31 14:30:00", lastStatus: "success", createdAt: "2026-01-10" },
-  { id: 2, name: "ERP Integration", url: "https://api.erp.example.com/webhook", events: ["journal.created", "period.closed"], enabled: true, lastTriggered: "2026-05-30 09:15:00", lastStatus: "success", createdAt: "2026-02-01" },
-  { id: 3, name: "Email Service", url: "https://api.emailservice.io/hooks", events: ["invoice.sent", "payment.overdue"], enabled: false, lastTriggered: "2026-04-15 11:00:00", lastStatus: "failed", createdAt: "2026-03-01" },
-  { id: 4, name: "Backup Trigger", url: "https://backup.example.com/api/trigger", events: ["export.completed"], enabled: true, lastTriggered: "2026-05-31 00:00:00", lastStatus: "success", createdAt: "2026-01-15" },
-];
+const mockWebhooks: WebhookEntry[] = []
 
 const availableEvents = [
   "invoice.created",

@@ -60,13 +60,7 @@ interface Period {
   closedBy: string | null;
 }
 
-const mockPeriods: Period[] = [
-  { id: 1, name: "January 2026", startDate: "2026-01-01", endDate: "2026-01-31", status: "closed", transactionCount: 245, totalDebits: 125000, totalCredits: 125000, closedAt: "2026-02-05", closedBy: "Admin" },
-  { id: 2, name: "February 2026", startDate: "2026-02-01", endDate: "2026-02-28", status: "closed", transactionCount: 312, totalDebits: 198000, totalCredits: 198000, closedAt: "2026-03-03", closedBy: "Admin" },
-  { id: 3, name: "March 2026", startDate: "2026-03-01", endDate: "2026-03-31", status: "closed", transactionCount: 287, totalDebits: 176000, totalCredits: 176000, closedAt: "2026-04-02", closedBy: "Admin" },
-  { id: 4, name: "April 2026", startDate: "2026-04-01", endDate: "2026-04-30", status: "reopened", transactionCount: 298, totalDebits: 182000, totalCredits: 182000, closedAt: null, closedBy: null },
-  { id: 5, name: "May 2026", startDate: "2026-05-01", endDate: "2026-05-31", status: "open", transactionCount: 215, totalDebits: 156000, totalCredits: 156000, closedAt: null, closedBy: null },
-];
+const mockPeriods: Period[] = []
 
 export default function PeriodClose() {
   const [periods] = useState<Period[]>(mockPeriods);

@@ -58,16 +58,7 @@ interface TaxRule {
   isActive: boolean;
 }
 
-const mockRules: TaxRule[] = [
-  { id: 1, jurisdiction: "United States", jurisdictionType: "country", taxType: "sales", rate: 0, appliesTo: "All goods and services", effectiveFrom: "2020-01-01", effectiveTo: null, isActive: true },
-  { id: 2, jurisdiction: "California", jurisdictionType: "state", taxType: "sales", rate: 7.25, appliesTo: "Tangible personal property", effectiveFrom: "2024-01-01", effectiveTo: null, isActive: true },
-  { id: 3, jurisdiction: "New York", jurisdictionType: "state", taxType: "sales", rate: 8.0, appliesTo: "All taxable goods", effectiveFrom: "2024-07-01", effectiveTo: null, isActive: true },
-  { id: 4, jurisdiction: "New York City", jurisdictionType: "city", taxType: "sales", rate: 4.5, appliesTo: "Clothing under $110", effectiveFrom: "2025-01-01", effectiveTo: null, isActive: true },
-  { id: 5, jurisdiction: "European Union", jurisdictionType: "country", taxType: "vat", rate: 20, appliesTo: "Digital services", effectiveFrom: "2025-01-01", effectiveTo: null, isActive: true },
-  { id: 6, jurisdiction: "United Kingdom", jurisdictionType: "country", taxType: "vat", rate: 20, appliesTo: "Standard-rated supplies", effectiveFrom: "2025-04-01", effectiveTo: null, isActive: true },
-  { id: 7, jurisdiction: "India", jurisdictionType: "country", taxType: "gst", rate: 18, appliesTo: "IT services", effectiveFrom: "2024-07-01", effectiveTo: null, isActive: true },
-  { id: 8, jurisdiction: "Texas", jurisdictionType: "state", taxType: "sales", rate: 6.25, appliesTo: "Taxable goods", effectiveFrom: "2024-01-01", effectiveTo: null, isActive: false },
-];
+const mockRules: TaxRule[] = []
 
 export default function TaxRules() {
   const [rules] = useState<TaxRule[]>(mockRules);

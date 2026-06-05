@@ -51,20 +51,7 @@ export default function CashBook() {
 
     // Add mock transactions if none exist
     if (txns.length === 0) {
-      const mockTxns = [
-        { date: "2026-01-15", type: "income", reference: "INV-001", description: "Payment from Acme Corp", amount: 5000, source: "invoice" },
-        { date: "2026-01-20", type: "expense", reference: "BILL-001", description: "Office rent payment", amount: 2000, source: "bill" },
-        { date: "2026-02-05", type: "income", reference: "INV-002", description: "Payment from TechStart Inc", amount: 8500, source: "invoice" },
-        { date: "2026-02-12", type: "expense", reference: "BILL-002", description: "Software subscription", amount: 500, source: "bill" },
-        { date: "2026-02-28", type: "income", reference: "INV-003", description: "Payment from GlobalTech", amount: 3200, source: "invoice" },
-        { date: "2026-03-01", type: "expense", reference: "BILL-003", description: "Marketing expenses", amount: 1800, source: "bill" },
-        { date: "2026-03-15", type: "income", reference: "INV-004", description: "Payment from DataFlow", amount: 12000, source: "invoice" },
-        { date: "2026-03-20", type: "expense", reference: "BILL-004", description: "Cloud hosting", amount: 750, source: "bill" },
-        { date: "2026-04-10", type: "income", reference: "INV-005", description: "Payment from Bright Solutions", amount: 6700, source: "invoice" },
-        { date: "2026-04-18", type: "expense", reference: "BILL-005", description: "Insurance premium", amount: 1200, source: "bill" },
-        { date: "2026-05-05", type: "income", reference: "INV-006", description: "Payment from CloudNine", amount: 9800, source: "invoice" },
-        { date: "2026-05-15", type: "expense", reference: "BILL-006", description: "Employee salaries", amount: 15000, source: "bill" },
-      ];
+      const mockTxns: any[] = []
       txns.push(...mockTxns);
     }
 

@@ -50,20 +50,7 @@ interface Currency {
   lastUpdated: string;
 }
 
-const mockCurrencies: Currency[] = [
-  { code: "USD", name: "US Dollar", symbol: "$", rate: 1.0, change24h: 0, lastUpdated: "2026-05-31 12:00" },
-  { code: "EUR", name: "Euro", symbol: "€", rate: 0.923, change24h: -0.15, lastUpdated: "2026-05-31 12:00" },
-  { code: "GBP", name: "British Pound", symbol: "£", rate: 0.791, change24h: 0.22, lastUpdated: "2026-05-31 12:00" },
-  { code: "JPY", name: "Japanese Yen", symbol: "¥", rate: 157.23, change24h: -0.45, lastUpdated: "2026-05-31 12:00" },
-  { code: "CAD", name: "Canadian Dollar", symbol: "C$", rate: 1.368, change24h: 0.08, lastUpdated: "2026-05-31 12:00" },
-  { code: "AUD", name: "Australian Dollar", symbol: "A$", rate: 1.512, change24h: -0.32, lastUpdated: "2026-05-31 12:00" },
-  { code: "CHF", name: "Swiss Franc", symbol: "Fr", rate: 0.887, change24h: 0.11, lastUpdated: "2026-05-31 12:00" },
-  { code: "CNY", name: "Chinese Yuan", symbol: "¥", rate: 7.245, change24h: -0.07, lastUpdated: "2026-05-31 12:00" },
-  { code: "INR", name: "Indian Rupee", symbol: "₹", rate: 83.42, change24h: 0.19, lastUpdated: "2026-05-31 12:00" },
-  { code: "BRL", name: "Brazilian Real", symbol: "R$", rate: 4.97, change24h: -0.55, lastUpdated: "2026-05-31 12:00" },
-  { code: "MXN", name: "Mexican Peso", symbol: "MX$", rate: 17.15, change24h: 0.34, lastUpdated: "2026-05-31 12:00" },
-  { code: "KRW", name: "South Korean Won", symbol: "₩", rate: 1368.5, change24h: -0.21, lastUpdated: "2026-05-31 12:00" },
-];
+const mockCurrencies: Currency[] = []
 
 const historicalData = [
   { date: "May 25", EUR: 0.921, GBP: 0.789, JPY: 156.8, CAD: 1.371 },

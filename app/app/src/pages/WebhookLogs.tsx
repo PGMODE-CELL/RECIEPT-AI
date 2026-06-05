@@ -27,64 +27,7 @@ interface WebhookLog {
   retryCount: number;
 }
 
-const mockLogs: WebhookLog[] = [
-  {
-    id: 1, webhookName: "Invoice Created", event: "invoice.created", url: "https://api.example.com/webhooks/invoice",
-    method: "POST", statusCode: 200, responseTime: 245, timestamp: "2026-05-31 14:30:15", status: "success",
-    requestBody: '{"event":"invoice.created","data":{"id":1234,"amount":1500.00}}',
-    responseBody: '{"received":true,"processed":true}',
-    headers: { "Content-Type": "application/json", "X-Webhook-Id": "wh_001" }, retryCount: 0,
-  },
-  {
-    id: 2, webhookName: "Payment Received", event: "payment.received", url: "https://slack.com/api/chat.postMessage",
-    method: "POST", statusCode: 200, responseTime: 892, timestamp: "2026-05-31 13:15:42", status: "success",
-    requestBody: '{"channel":"#accounting","text":"Payment of $2,500 received"}',
-    responseBody: '{"ok":true,"channel":"#accounting"}',
-    headers: { "Content-Type": "application/json", "Authorization": "Bearer xoxb-***" }, retryCount: 0,
-  },
-  {
-    id: 3, webhookName: "Bill Overdue", event: "bill.overdue", url: "https://api.example.com/notifications",
-    method: "POST", statusCode: 500, responseTime: 1200, timestamp: "2026-05-31 12:00:00", status: "failed",
-    requestBody: '{"event":"bill.overdue","data":{"id":5678,"dueDate":"2026-05-15"}}',
-    responseBody: '{"error":"Internal server error","message":"Service unavailable"}',
-    headers: { "Content-Type": "application/json" }, retryCount: 3,
-  },
-  {
-    id: 4, webhookName: "Contact Created", event: "contact.created", url: "https://crm.example.com/api/contacts",
-    method: "POST", statusCode: 201, responseTime: 334, timestamp: "2026-05-31 11:45:30", status: "success",
-    requestBody: '{"event":"contact.created","data":{"name":"John Doe","email":"john@example.com"}}',
-    responseBody: '{"id":"crm_9876","created":true}',
-    headers: { "Content-Type": "application/json", "X-API-Key": "crm_***" }, retryCount: 0,
-  },
-  {
-    id: 5, webhookName: "Invoice Created", event: "invoice.created", url: "https://old-service.example.com/hook",
-    method: "POST", statusCode: 0, responseTime: 30000, timestamp: "2026-05-31 10:20:18", status: "timeout",
-    requestBody: '{"event":"invoice.created","data":{"id":1235,"amount":850.00}}',
-    responseBody: "",
-    headers: { "Content-Type": "application/json" }, retryCount: 2,
-  },
-  {
-    id: 6, webhookName: "Journal Entry Posted", event: "journal.posted", url: "https://accounting.example.com/sync",
-    method: "POST", statusCode: 401, responseTime: 156, timestamp: "2026-05-31 09:10:05", status: "failed",
-    requestBody: '{"event":"journal.posted","data":{"id":9012,"debit":5000}}',
-    responseBody: '{"error":"Unauthorized","message":"Invalid API key"}',
-    headers: { "Content-Type": "application/json" }, retryCount: 1,
-  },
-  {
-    id: 7, webhookName: "Payment Received", event: "payment.received", url: "https://api.example.com/webhooks/payment",
-    method: "POST", statusCode: 200, responseTime: 178, timestamp: "2026-05-30 16:30:00", status: "success",
-    requestBody: '{"event":"payment.received","data":{"id":3456,"amount":3200.00}}',
-    responseBody: '{"received":true}',
-    headers: { "Content-Type": "application/json" }, retryCount: 0,
-  },
-  {
-    id: 8, webhookName: "Report Generated", event: "report.generated", url: "https://storage.example.com/reports",
-    method: "POST", statusCode: 200, responseTime: 567, timestamp: "2026-05-30 14:00:00", status: "success",
-    requestBody: '{"event":"report.generated","data":{"type":"balance_sheet","period":"2026-Q1"}}',
-    responseBody: '{"stored":true,"url":"https://storage.example.com/reports/bs_q1.pdf"}',
-    headers: { "Content-Type": "application/json" }, retryCount: 0,
-  },
-];
+const mockLogs: WebhookLog[] = []
 
 export default function WebhookLogs() {
   const [search, setSearch] = useState("");

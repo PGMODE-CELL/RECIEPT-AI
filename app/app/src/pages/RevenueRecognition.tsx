@@ -61,13 +61,7 @@ interface RecognitionSchedule {
   status: "active" | "completed" | "pending";
 }
 
-const mockSchedules: RecognitionSchedule[] = [
-  { id: 1, invoiceRef: "INV-2026-001", customerName: "Acme Corp", totalAmount: 120000, recognizedAmount: 60000, remainingAmount: 60000, method: "straight_line", startDate: "2026-01-01", endDate: "2026-06-30", progressPct: 50, status: "active" },
-  { id: 2, invoiceRef: "INV-2026-002", customerName: "TechStart Inc", totalAmount: 85000, recognizedAmount: 51000, remainingAmount: 34000, method: "percentage_completion", startDate: "2026-02-01", endDate: "2026-08-31", progressPct: 60, status: "active" },
-  { id: 3, invoiceRef: "INV-2026-003", customerName: "Global Manufacturing", totalAmount: 250000, recognizedAmount: 250000, remainingAmount: 0, method: "milestone", startDate: "2026-01-15", endDate: "2026-04-15", progressPct: 100, status: "completed" },
-  { id: 4, invoiceRef: "INV-2026-004", customerName: "Digital Agency", totalAmount: 36000, recognizedAmount: 9000, remainingAmount: 27000, method: "straight_line", startDate: "2026-04-01", endDate: "2026-12-31", progressPct: 25, status: "active" },
-  { id: 5, invoiceRef: "INV-2026-005", customerName: "StartupXYZ", totalAmount: 50000, recognizedAmount: 0, remainingAmount: 50000, method: "percentage_completion", startDate: "2026-06-01", endDate: "2026-11-30", progressPct: 0, status: "pending" },
-];
+const mockSchedules: RecognitionSchedule[] = []
 
 export default function RevenueRecognition() {
   const [schedules] = useState<RecognitionSchedule[]>(mockSchedules);
