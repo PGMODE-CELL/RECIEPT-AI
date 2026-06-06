@@ -56,10 +56,9 @@ interface Company {
   status: string;
 }
 
-const mockCompanies: Company[] = []
 
 export default function MultiCompany() {
-  const [companies] = useState<Company[]>(mockCompanies);
+  const { data: companies = [], isLoading, refetch } = trpc.multiCompany.list.useQuery();
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [activeCompanyId, setActiveCompanyId] = useState(1);
@@ -80,26 +79,41 @@ export default function MultiCompany() {
       c.code.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleCreate = () => {
+  const createMutation = trpc.multiCompany.create.useMutation();
+  const updateMutation = trpc.multiCompany.update.useMutation();
+  const deleteMutation = trpc.multiCompany.delete.useMutation();
+
+  const handleCreate = async () => {
     if (!newCompany.name || !newCompany.code) {
       toast.error("Name and code are required");
       return;
     }
+    await createMutation.mutateAsync({
+      name: newCompany.name,
+      code: newCompany.code,
+      currency: newCompany.currency,
+      parentId: newCompany.parentId ? parseInt(newCompany.parentId) : null,
+    });
     toast.success("Company created successfully");
     setOpen(false);
     setNewCompany({ name: "", code: "", currency: "USD", parentId: "" });
+    refetch();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteId) {
+      await deleteMutation.mutateAsync(deleteId);
       toast.success("Company deleted");
       setDeleteId(null);
+      refetch();
     }
   };
 
-  const handleSwitch = (id: number) => {
+  const handleSwitch = async (id: number) => {
     setActiveCompanyId(id);
+    await updateMutation.mutateAsync({ id, status: "active" });
     toast.success(`Switched to ${companies.find((c) => c.id === id)?.name}`);
+    refetch();
   };
 
   const totalCompanies = companies.length;
@@ -300,6 +314,14 @@ export default function MultiCompany() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : (
+                <>
               {filtered.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">{c.name}</TableCell>
@@ -338,6 +360,8 @@ export default function MultiCompany() {
                     No companies found
                   </TableCell>
                 </TableRow>
+              )}
+                </>
               )}
             </TableBody>
           </Table>

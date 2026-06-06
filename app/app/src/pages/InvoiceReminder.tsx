@@ -48,16 +48,12 @@ interface OverdueInvoice {
   status: "active" | "escalated" | "legal";
 }
 
-const defaultTemplates: ReminderTemplate[] = [
-  { id: 1, name: "Friendly Reminder", subject: "Payment Reminder - Invoice {{invoiceNumber}}", body: "Dear {{customer}},\n\nThis is a friendly reminder that invoice {{invoiceNumber}} for {{amount}} is now {{daysOverdue}} days past due.\n\nPlease arrange payment at your earliest convenience.\n\nBest regards,\nAccounts Team", daysAfterDue: 3, escalationLevel: "Level 1", enabled: true },
-  { id: 2, name: "Second Notice", subject: "Second Notice - Invoice {{invoiceNumber}} Overdue", body: "Dear {{customer}},\n\nWe notice that invoice {{invoiceNumber}} for {{amount}} is now {{daysOverdue}} days overdue.\n\nPlease remit payment immediately to avoid late fees.\n\nRegards,\nFinance Department", daysAfterDue: 7, escalationLevel: "Level 2", enabled: true },
-  { id: 3, name: "Urgent Escalation", subject: "URGENT: Invoice {{invoiceNumber}} - Immediate Action Required", body: "Dear {{customer}},\n\nInvoice {{invoiceNumber}} for {{amount}} is now {{daysOverdue}} days overdue.\n\nFailure to pay within 48 hours will result in account suspension.\n\nAccounts Receivable", daysAfterDue: 14, escalationLevel: "Level 3", enabled: true },
-  { id: 4, name: "Final Notice", subject: "FINAL NOTICE - Invoice {{invoiceNumber}}", body: "Dear {{customer}},\n\nThis is your final notice regarding invoice {{invoiceNumber}} for {{amount}}.\n\nImmediate payment is required to avoid further collection action.\n\nLegal Department", daysAfterDue: 30, escalationLevel: "Level 4", enabled: true },
-];
+
 
 export default function InvoiceReminder() {
-  const { data: invoiceData } = trpc.invoice.list.useQuery({ status: "overdue", limit: 100 });
-  const [templates, setTemplates] = useState<ReminderTemplate[]>(defaultTemplates);
+  const { data: invoiceData, isLoading: invoicesLoading } = trpc.invoice.list.useQuery({ status: "overdue", limit: 100 });
+  // TODO: replace with trpc.notification.list when template endpoint is available
+  const [templates, setTemplates] = useState<ReminderTemplate[]>([]);
   const [logs, setLogs] = useState<ReminderLog[]>([]);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<ReminderTemplate | null>(null);
@@ -66,12 +62,6 @@ export default function InvoiceReminder() {
 
   const overdueInvoices: OverdueInvoice[] = useMemo(() => {
     const invoices = invoiceData?.invoices || [];
-    if (invoices.length === 0) {
-      return [
-        { id: 1, invoiceNumber: "INV-2026-0142", customer: "Acme Corp", amount: 2450.00, dueDate: "2026-05-20", daysOverdue: 11, lastReminder: "2026-05-28", reminderCount: 2, status: "active" },
-        { id: 2, invoiceNumber: "INV-2026-0138", customer: "TechStart Inc", amount: 8750.50, dueDate: "2026-05-15", daysOverdue: 16, lastReminder: "2026-05-27", reminderCount: 3, status: "escalated" },
-      ];
-    }
     return invoices.map((inv: any) => {
       const dueDate = inv.dueDate ? new Date(inv.dueDate) : new Date();
       const today = new Date();
@@ -89,6 +79,15 @@ export default function InvoiceReminder() {
       };
     });
   }, [invoiceData]);
+
+  if (invoicesLoading) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto space-y-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Smart Invoice Reminders</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Loading overdue invoices...</p>
+      </div>
+    );
+  }
 
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);

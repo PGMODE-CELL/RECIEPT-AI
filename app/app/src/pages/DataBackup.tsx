@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { trpc } from "@/providers/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,7 @@ interface BackupSchedule {
   nextRun: string;
 }
 
+// TODO: Replace with trpc.notification.list.useQuery() or backup-specific endpoint when available
 const defaultBackups: BackupRecord[] = [
   { id: 1, name: "Daily Full Backup", type: "full", size: "2.4 GB", createdAt: "2026-05-31 02:00", duration: "12m 34s", status: "completed", encrypted: true, checksum: "sha256:a1b2c3d4e5f6", location: "AWS S3 (us-east-1)" },
   { id: 2, name: "Incremental - May 30", type: "incremental", size: "340 MB", createdAt: "2026-05-30 02:00", duration: "3m 12s", status: "completed", encrypted: true, checksum: "sha256:f6e5d4c3b2a1", location: "AWS S3 (us-east-1)" },
@@ -48,6 +50,7 @@ const defaultBackups: BackupRecord[] = [
   { id: 5, name: "Manual Export", type: "full", size: "2.4 GB", createdAt: "2026-05-25 15:30", duration: "13m 02s", status: "completed", encrypted: false, checksum: "sha256:d4e5f6a1b2c3", location: "Local Download" },
 ];
 
+// TODO: Replace with trpc endpoint when available
 const defaultSchedules: BackupSchedule[] = [
   { id: 1, name: "Daily Nightly Backup", frequency: "Daily", time: "02:00", type: "full", retention: 30, encrypted: true, enabled: true, lastRun: "2026-05-31 02:00", nextRun: "2026-06-01 02:00" },
   { id: 2, name: "Hourly Incremental", frequency: "Hourly", time: "Every hour", type: "incremental", retention: 7, encrypted: true, enabled: true, lastRun: "2026-05-31 08:00", nextRun: "2026-05-31 09:00" },

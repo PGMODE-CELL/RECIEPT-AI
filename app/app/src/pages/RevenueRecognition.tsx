@@ -61,10 +61,9 @@ interface RecognitionSchedule {
   status: "active" | "completed" | "pending";
 }
 
-const mockSchedules: RecognitionSchedule[] = []
 
 export default function RevenueRecognition() {
-  const [schedules] = useState<RecognitionSchedule[]>(mockSchedules);
+  const { data: schedules = [], isLoading, refetch } = trpc.revenueRecognition.list.useQuery();
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -87,11 +86,22 @@ export default function RevenueRecognition() {
       (filterMethod === "all" || s.method === filterMethod)
   );
 
-  const handleCreate = () => {
+  const createMutation = trpc.revenueRecognition.create.useMutation();
+  const deleteMutation = trpc.revenueRecognition.delete.useMutation();
+
+  const handleCreate = async () => {
     if (!newSchedule.invoiceRef || !newSchedule.totalAmount) {
       toast.error("Invoice reference and amount are required");
       return;
     }
+    await createMutation.mutateAsync({
+      invoiceRef: newSchedule.invoiceRef,
+      customerName: newSchedule.customerName,
+      totalAmount: parseFloat(newSchedule.totalAmount),
+      method: newSchedule.method,
+      startDate: newSchedule.startDate,
+      endDate: newSchedule.endDate,
+    });
     toast.success("Recognition schedule created");
     setOpen(false);
     setNewSchedule({
@@ -102,12 +112,15 @@ export default function RevenueRecognition() {
       startDate: "",
       endDate: "",
     });
+    refetch();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteId) {
+      await deleteMutation.mutateAsync(deleteId);
       toast.success("Schedule deleted");
       setDeleteId(null);
+      refetch();
     }
   };
 
@@ -367,6 +380,14 @@ export default function RevenueRecognition() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : (
+                <>
               {filtered.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell className="font-medium">{s.invoiceRef}</TableCell>
@@ -418,6 +439,8 @@ export default function RevenueRecognition() {
                     No schedules found
                   </TableCell>
                 </TableRow>
+              )}
+                </>
               )}
             </TableBody>
           </Table>

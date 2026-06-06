@@ -9,10 +9,10 @@ import { toast } from "sonner";
 export default function NotificationCenter() {
   const { data: notifications, isLoading, refetch } = trpc.notification.list.useQuery();
 
-  const markAsRead = trpc.notification.markAsRead.useMutation({
+  const markAsRead = trpc.notification.markRead.useMutation({
     onSuccess: () => refetch(),
   });
-  const markAllAsRead = trpc.notification.markAllAsRead.useMutation({
+  const markAllAsRead = trpc.notification.markAllRead.useMutation({
     onSuccess: () => { refetch(); toast.success("All notifications marked as read"); },
   });
 

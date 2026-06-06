@@ -12,7 +12,7 @@ declare global {
   var __originalFetch: typeof fetch | undefined;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
 
 function getDemoUser() {
   try { const stored = localStorage.getItem("receiptai_demo_user"); return stored ? JSON.parse(stored) : null; } catch { return null; }
@@ -262,12 +262,14 @@ const ROUTE_MAP: Record<string, { method: string; path: string; needsOrg: boolea
   "generalLedger.list": { method: "GET", path: "/api/financials/{orgId}/ledger/{accountId}", needsOrg: true },
   // Payment Gateway
   "paymentGateway.createIntent": { method: "POST", path: "/api/payments/{orgId}/stripe/create-payment-intent", needsOrg: true },
+  "invoice.createFromTimeEntries": { method: "POST", path: "/api/projects/{orgId}/time-entries/invoice", needsOrg: true },
   // Attachment
   "attachment.list": { method: "GET", path: "/api/attachments/{orgId}/list", needsOrg: true },
   "attachment.upload": { method: "POST", path: "/api/attachments/{orgId}/upload", needsOrg: true },
   "attachment.delete": { method: "DELETE", path: "/api/attachments/{orgId}/{id}", needsOrg: true },
   // Time Tracking
   "timeTracking.list": { method: "GET", path: "/api/timesheets/{orgId}", needsOrg: true },
+  "timeEntry.list": { method: "GET", path: "/api/timesheets/{orgId}", needsOrg: true },
   "timeTracking.getById": { method: "GET", path: "/api/timesheets/{orgId}/{id}", needsOrg: true },
   "timeTracking.create": { method: "POST", path: "/api/timesheets/{orgId}", needsOrg: true },
   "timeTracking.update": { method: "PUT", path: "/api/timesheets/{orgId}/{id}", needsOrg: true },
@@ -363,6 +365,7 @@ const ROUTE_MAP: Record<string, { method: string; path: string; needsOrg: boolea
   "inventoryValuation.update": { method: "PUT", path: "/api/inventory-valuation/{orgId}/{id}", needsOrg: true },
   "inventoryValuation.delete": { method: "DELETE", path: "/api/inventory-valuation/{orgId}/{id}", needsOrg: true },
   "inventoryValuation.calculateValues": { method: "GET", path: "/api/inventory-valuation/{orgId}/calculate", needsOrg: true },
+  "inventoryValuation.updateMethod": { method: "PUT", path: "/api/inventory-valuation/{orgId}/method", needsOrg: true },
   // Fiscal Period
   "fiscalPeriod.list": { method: "GET", path: "/api/accounting-periods/{orgId}", needsOrg: true },
   "fiscalPeriod.getById": { method: "GET", path: "/api/accounting-periods/{orgId}/{id}", needsOrg: true },
@@ -370,6 +373,8 @@ const ROUTE_MAP: Record<string, { method: string; path: string; needsOrg: boolea
   "fiscalPeriod.update": { method: "PUT", path: "/api/accounting-periods/{orgId}/{id}", needsOrg: true },
   "fiscalPeriod.delete": { method: "DELETE", path: "/api/accounting-periods/{orgId}/{id}", needsOrg: true },
   "fiscalPeriod.closePeriod": { method: "POST", path: "/api/accounting-periods/{orgId}/{id}/close", needsOrg: true },
+  "fiscalPeriod.get": { method: "GET", path: "/api/accounting-periods/{orgId}/current", needsOrg: true },
+  "fiscalPeriod.yearEndClose": { method: "POST", path: "/api/accounting-periods/{orgId}/year-end-close", needsOrg: true },
   // Tax Rule
   "taxRule.list": { method: "GET", path: "/api/tax/{orgId}/rates", needsOrg: true },
   "taxRule.getById": { method: "GET", path: "/api/tax/{orgId}/rates/{id}", needsOrg: true },
@@ -382,7 +387,7 @@ const ROUTE_MAP: Record<string, { method: string; path: string; needsOrg: boolea
 function resolvePath(route: typeof ROUTE_MAP[string], input: any): { url: string; queryParams: Record<string, string> } {
   const orgId = getOrgId();
   let path = route.path;
-  const pathParams: Record<string, string> = { orgId: String(orgId || ""), id: "", accountId: "", empId: "", itemId: "" };
+  const pathParams: Record<string, string> = { orgId: String(orgId || ""), id: "", accountId: "", empId: "", itemId: "", importId: "" };
 
   // Extract IDs from input
   if (input?.id !== undefined) pathParams.id = String(input.id);
@@ -393,6 +398,7 @@ function resolvePath(route: typeof ROUTE_MAP[string], input: any): { url: string
   if (input?.budgetId !== undefined) pathParams.id = String(input.budgetId);
   if (input?.estimateId !== undefined) pathParams.id = String(input.estimateId);
   if (input?.poId !== undefined) pathParams.id = String(input.poId);
+  if (input?.importId !== undefined) pathParams.importId = String(input.importId);
 
   // Replace path params
   Object.entries(pathParams).forEach(([k, v]) => {
@@ -409,13 +415,15 @@ function resolvePath(route: typeof ROUTE_MAP[string], input: any): { url: string
         if (k === "from") queryParams["period_start"] = String(v);
         else if (k === "to") queryParams["period_end"] = String(v);
         else if (k === "asOf") queryParams["as_of"] = String(v);
+        else if (k === "limit") queryParams["per_page"] = String(v);
         else queryParams[k] = String(v);
       }
     });
   }
 
   // For nextNumber queries without input, add limit=1
-  if ((input === null || input === undefined) && route.path.endsWith("/{orgId}")) {
+  const procName = Object.entries(ROUTE_MAP).find(([, r]) => r === route)?.[0] || "";
+  if (procName.includes("nextNumber") && (input === null || input === undefined)) {
     queryParams.limit = "1";
   }
 
@@ -493,7 +501,7 @@ function normalizeResponse(procedure: string, data: any): any {
 
   // Pages that expect the items array directly (contact.list, product.list, transaction.list, receipt.list, journalEntry.list)
   // These pages do: const { data: items } = proc.useQuery() and use items as array
-  if (["contact.list", "product.list", "transaction.list", "receipt.list"].includes(procedure)) {
+  if (["contact.list", "product.list", "transaction.list", "receipt.list", "journalEntry.list"].includes(procedure)) {
     if (Array.isArray(data)) return data;
     if (data.items && Array.isArray(data.items)) return data.items;
     return [];
@@ -502,6 +510,13 @@ function normalizeResponse(procedure: string, data: any): any {
   // Generic .list procedures: try to extract items array
   if (procedure.endsWith(".list") && data.items && Array.isArray(data.items)) {
     return data.items;
+  }
+
+  // Dashboard recent activity - backend returns { total, page, per_page, items: [...] }
+  if (procedure === "dashboard.recentActivity") {
+    if (Array.isArray(data)) return data;
+    if (data.items && Array.isArray(data.items)) return data.items;
+    return [];
   }
 
   // Dashboard stats - FastAPI returns { plain_english, numbers: { total_income, ... }, recent_transactions }
@@ -581,6 +596,14 @@ function normalizeResponse(procedure: string, data: any): any {
         totalPurchases: data.total_purchases || 0,
       };
     }
+  }
+
+  // Contact statement - backend returns { invoices: [], bills: [], ... }
+  if (procedure === "contact.statement") {
+    if (!data) return { invoices: [], bills: [] };
+    if (!data.invoices) data.invoices = [];
+    if (!data.bills) data.bills = [];
+    return data;
   }
 
   // Next number queries

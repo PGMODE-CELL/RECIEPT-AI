@@ -59,10 +59,8 @@ interface BankRule {
   matchCount: number;
 }
 
-const mockRules: BankRule[] = []
-
 export default function BankRules() {
-  const [rules] = useState<BankRule[]>(mockRules);
+  const { data: rules = [], isLoading, refetch } = trpc.bankRule.list.useQuery();
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -73,6 +71,24 @@ export default function BankRules() {
     matchValue: "",
     action: "categorize",
     actionValue: "",
+  });
+
+  const createRule = trpc.bankRule.create.useMutation({
+    onSuccess: () => {
+      setOpen(false);
+      refetch();
+      toast.success("Rule created");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deleteRule = trpc.bankRule.delete.useMutation({
+    onSuccess: () => {
+      setDeleteId(null);
+      refetch();
+      toast.success("Rule deleted");
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   const filtered = rules.filter(
@@ -87,8 +103,7 @@ export default function BankRules() {
       toast.error("Name and match value are required");
       return;
     }
-    toast.success("Bank rule created");
-    setOpen(false);
+    createRule.mutate(newRule as any);
     setNewRule({
       name: "",
       matchType: "contains",
@@ -100,8 +115,7 @@ export default function BankRules() {
 
   const handleDelete = () => {
     if (deleteId) {
-      toast.success("Rule deleted");
-      setDeleteId(null);
+      deleteRule.mutate({ id: deleteId });
     }
   };
 
@@ -309,6 +323,7 @@ export default function BankRules() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {isLoading && <TableRow><TableCell colSpan={9} className="text-center py-8">Loading...</TableCell></TableRow>}
               {filtered.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-mono text-sm text-gray-400">

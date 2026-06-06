@@ -59,10 +59,32 @@ interface Lease {
   status: "active" | "expired" | "terminated";
 }
 
-const mockLeases: Lease[] = []
-
 export default function LeaseAccounting() {
-  const [leases] = useState<Lease[]>(mockLeases);
+  const { data: leases, isLoading, refetch } = trpc.lease.list.useQuery();
+  const createMutation = trpc.lease.create.useMutation({
+    onSuccess: () => {
+      toast.success("Lease created successfully");
+      refetch();
+      setOpen(false);
+      setNewLease({
+        name: "",
+        type: "operating",
+        startDate: "",
+        endDate: "",
+        monthlyPayment: "",
+        discountRate: "5.0",
+      });
+    },
+    onError: (err) => toast.error(err.message),
+  });
+  const deleteMutation = trpc.lease.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Lease deleted");
+      refetch();
+      setDeleteId(null);
+    },
+    onError: (err) => toast.error(err.message),
+  });
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -77,7 +99,7 @@ export default function LeaseAccounting() {
     discountRate: "5.0",
   });
 
-  const filtered = leases.filter(
+  const filtered = (leases ?? []).filter(
     (l) =>
       (!search || l.name.toLowerCase().includes(search.toLowerCase())) &&
       (filterType === "all" || l.type === filterType)
@@ -88,31 +110,28 @@ export default function LeaseAccounting() {
       toast.error("Name, start date, and end date are required");
       return;
     }
-    toast.success("Lease created successfully");
-    setOpen(false);
-    setNewLease({
-      name: "",
-      type: "operating",
-      startDate: "",
-      endDate: "",
-      monthlyPayment: "",
-      discountRate: "5.0",
+    createMutation.mutate({
+      name: newLease.name,
+      type: newLease.type as "operating" | "finance",
+      startDate: newLease.startDate,
+      endDate: newLease.endDate,
+      monthlyPayment: parseFloat(newLease.monthlyPayment) || 0,
+      discountRate: parseFloat(newLease.discountRate) || 0,
     });
   };
 
   const handleDelete = () => {
     if (deleteId) {
-      toast.success("Lease deleted");
-      setDeleteId(null);
+      deleteMutation.mutate(deleteId);
     }
   };
 
-  const totalRou = leases.reduce((s, l) => s + l.rouAsset, 0);
-  const totalLiability = leases.reduce((s, l) => s + l.leaseLiability, 0);
-  const monthlyPayments = leases
+  const totalRou = (leases ?? []).reduce((s, l) => s + l.rouAsset, 0);
+  const totalLiability = (leases ?? []).reduce((s, l) => s + l.leaseLiability, 0);
+  const monthlyPayments = (leases ?? [])
     .filter((l) => l.status === "active")
     .reduce((s, l) => s + l.monthlyPayment, 0);
-  const activeCount = leases.filter((l) => l.status === "active").length;
+  const activeCount = (leases ?? []).filter((l) => l.status === "active").length;
 
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
@@ -332,7 +351,13 @@ export default function LeaseAccounting() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((l) => (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : filtered.map((l) => (
                 <TableRow key={l.id}>
                   <TableCell className="font-medium">{l.name}</TableCell>
                   <TableCell>
@@ -376,7 +401,7 @@ export default function LeaseAccounting() {
                   </TableCell>
                 </TableRow>
               ))}
-              {filtered.length === 0 && (
+              {!isLoading && filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                     No leases found

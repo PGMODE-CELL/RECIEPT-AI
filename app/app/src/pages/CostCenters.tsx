@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { trpc } from "@/providers/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,20 +27,13 @@ interface Transaction {
   costCenterId: string;
 }
 
-const initialCostCenters: CostCenter[] = [
-  { id: "1", name: "Marketing", code: "MKT-001", budget: 500000, spent: 325000, department: "Marketing" },
-  { id: "2", name: "Engineering", code: "ENG-001", budget: 1200000, spent: 980000, department: "Technology" },
-  { id: "3", name: "Sales Operations", code: "SAL-001", budget: 800000, spent: 650000, department: "Sales" },
-  { id: "4", name: "HR & Admin", code: "HRA-001", budget: 300000, spent: 275000, department: "Human Resources" },
-  { id: "5", name: "R&D", code: "RND-001", budget: 2000000, spent: 1450000, department: "Technology" },
-  { id: "6", name: "Customer Support", code: "SUP-001", budget: 400000, spent: 310000, department: "Operations" },
-];
-
-const mockTransactions: Transaction[] = []
+// TODO: Replace with backend endpoint when available
 
 export default function CostCenters() {
-  const [costCenters, setCostCenters] = useState<CostCenter[]>(initialCostCenters);
-  const [transactions] = useState<Transaction[]>(mockTransactions);
+  // TODO: Replace with backend endpoint when available
+  const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
+  // TODO: Replace with backend endpoint when available
+  const [transactions] = useState<Transaction[]>([]);
   const [selectedCenter, setSelectedCenter] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCenter, setEditingCenter] = useState<CostCenter | null>(null);

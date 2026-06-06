@@ -55,23 +55,7 @@ interface WorkflowExecution {
   totalSteps: number;
 }
 
-const DEFAULT_WORKFLOWS: WorkflowDefinition[] = [
-  {
-    id: "wf1",
-    name: "Invoice Approval Pipeline",
-    description: "Auto-route invoices based on amount thresholds",
-    enabled: true,
-    createdBy: "System",
-    lastRun: "Never",
-    runCount: 0,
-    successRate: 0,
-    nodes: [
-      { id: "n1", type: "trigger", label: "New Invoice", description: "When invoice is submitted", config: { source: "Invoice Module" } },
-      { id: "n2", type: "condition", label: "Amount > $5000?", description: "Check invoice amount", config: { field: "amount", operator: ">", value: "5000" } },
-      { id: "n3", type: "action", label: "Manager Approval", description: "Send to department manager", config: { assignee: "Department Manager", deadline: "24h" } },
-    ],
-  },
-];
+
 
 function WorkflowNodeCard({ node, index, total }: { node: WorkflowNode; index: number; total: number }) {
   const typeConfig = {
@@ -100,7 +84,8 @@ function WorkflowNodeCard({ node, index, total }: { node: WorkflowNode; index: n
 }
 
 export default function WorkflowDesigner() {
-  const [workflows, setWorkflows] = useState<WorkflowDefinition[]>(DEFAULT_WORKFLOWS);
+  // TODO: replace with trpc.audit.list when workflow definitions endpoint exists
+  const [workflows, setWorkflows] = useState<WorkflowDefinition[]>([]);
   const [executions] = useState<WorkflowExecution[]>([]);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newWorkflowName, setNewWorkflowName] = useState("");

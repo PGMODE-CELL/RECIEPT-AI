@@ -10,8 +10,8 @@ import { Download, Printer, Wallet, TrendingUp, TrendingDown, ArrowUpRight, Arro
 import { toast } from "sonner";
 
 export default function CashBook() {
-  const { data: invoices } = trpc.invoice.list.useQuery();
-  const { data: bills } = trpc.bill.list.useQuery();
+  const { data: invoices, isLoading: invoicesLoading } = trpc.invoice.list.useQuery();
+  const { data: bills, isLoading: billsLoading } = trpc.bill.list.useQuery();
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     to: new Date().toISOString().split("T")[0],
@@ -48,12 +48,6 @@ export default function CashBook() {
         });
       }
     });
-
-    // Add mock transactions if none exist
-    if (txns.length === 0) {
-      const mockTxns: any[] = []
-      txns.push(...mockTxns);
-    }
 
     return txns
       .filter((t) => t.date >= dateRange.from && t.date <= dateRange.to)
@@ -107,6 +101,17 @@ export default function CashBook() {
     URL.revokeObjectURL(url);
     toast.success("Cash book exported");
   };
+
+  if (invoicesLoading || billsLoading) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto space-y-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <Wallet className="w-6 h-6 text-blue-600" /> Cash Book
+        </h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Loading transactions...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">

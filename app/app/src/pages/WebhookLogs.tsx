@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { trpc } from "@/providers/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,9 +28,9 @@ interface WebhookLog {
   retryCount: number;
 }
 
-const mockLogs: WebhookLog[] = []
-
 export default function WebhookLogs() {
+  const { data: logsRaw = [], isLoading } = trpc.webhook.list.useQuery();
+  const mockLogs = logsRaw as WebhookLog[];
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterWebhook, setFilterWebhook] = useState("all");

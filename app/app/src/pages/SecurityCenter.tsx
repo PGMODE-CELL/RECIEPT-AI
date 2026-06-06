@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { trpc } from "@/providers/trpc";
 import {
   Card,
   CardContent,
@@ -73,15 +74,14 @@ interface ApiKey {
   active: boolean;
 }
 
-const mockSessions: Session[] = []
-
-const mockLoginHistory: LoginRecord[] = []
-
-const mockApiKeys: ApiKey[] = []
+// TODO: Replace with backend endpoint when available
 
 export default function SecurityCenter() {
-  const [sessions, setSessions] = useState<Session[]>(mockSessions);
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>(mockApiKeys);
+  // TODO: Replace with backend endpoint when available
+  const [sessions, setSessions] = useState<Session[]>([]);
+  // TODO: Replace with backend endpoint when available
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const { data: loginRecordsData = [] } = trpc.audit.list.useQuery();
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [ipWhitelistEnabled, setIpWhitelistEnabled] = useState(false);
   const [ipWhitelist, setIpWhitelist] = useState(
@@ -566,7 +566,7 @@ export default function SecurityCenter() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {[].map((record) => (
+              {(loginRecordsData as LoginRecord[]).map((record) => (
                 <TableRow key={record.id}>
                   <TableCell>
                     <code className="rounded bg-muted px-1.5 py-0.5 text-xs">

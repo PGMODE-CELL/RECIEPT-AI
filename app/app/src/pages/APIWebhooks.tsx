@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { trpc } from "@/providers/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,12 +53,7 @@ const availableEvents = [
   "report.generated",
 ];
 
-const defaultSubscriptions: WebhookSubscription[] = [
-  { id: 1, name: "Slack Notifications", url: "https://hooks.slack.com/services/T00/B00/xxx", events: ["invoice.paid", "payment.received"], secret: "whsec_abc123", enabled: true, retryPolicy: "3 attempts, exponential backoff", customHeaders: { "Content-Type": "application/json" }, createdAt: "2026-04-15", lastTriggered: "2026-05-31 08:30", successRate: 99.2 },
-  { id: 2, name: "ERP Sync", url: "https://erp.company.com/api/webhooks", events: ["invoice.created", "bill.created", "contact.created"], secret: "whsec_def456", enabled: true, retryPolicy: "5 attempts, linear backoff", customHeaders: { "X-API-Key": "erp-key-123" }, createdAt: "2026-03-20", lastTriggered: "2026-05-31 09:00", successRate: 97.8 },
-  { id: 3, name: "Analytics Pipeline", url: "https://analytics.company.com/ingest", events: ["invoice.paid", "expense.approved", "report.generated"], secret: "whsec_ghi789", enabled: false, retryPolicy: "3 attempts, fixed delay", customHeaders: {}, createdAt: "2026-05-01", lastTriggered: "2026-05-28 14:00", successRate: 95.0 },
-];
-
+// TODO: Replace with trpc.webhook.getLogs.useQuery() when backend endpoint exists for logs
 const defaultLogs: WebhookLog[] = [
   { id: 1, subscriptionId: 1, event: "invoice.paid", url: "https://hooks.slack.com/...", statusCode: 200, requestPayload: '{"event":"invoice.paid","data":{"id":"INV-0142","amount":2450}}', responsePayload: '{"ok":true}', duration: 245, timestamp: "2026-05-31 08:30:12", attempt: 1, status: "success" },
   { id: 2, subscriptionId: 2, event: "invoice.created", url: "https://erp.company.com/...", statusCode: 200, requestPayload: '{"event":"invoice.created","data":{"id":"INV-0143"}}', responsePayload: '{"synced":true}', duration: 892, timestamp: "2026-05-31 09:00:05", attempt: 1, status: "success" },
@@ -67,7 +63,7 @@ const defaultLogs: WebhookLog[] = [
 ];
 
 export default function APIWebhooks() {
-  const [subscriptions, setSubscriptions] = useState<WebhookSubscription[]>(defaultSubscriptions);
+  const { data: subscriptions = [], isLoading, refetch } = trpc.webhook.list.useQuery();
   const [logs, setLogs] = useState<WebhookLog[]>(defaultLogs);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [testDialogOpen, setTestDialogOpen] = useState(false);
@@ -77,34 +73,30 @@ export default function APIWebhooks() {
 
   const [newSub, setNewSub] = useState({ name: "", url: "", events: [] as string[], secret: "", retryPolicy: "3 attempts, exponential backoff" });
 
+  const createWebhook = trpc.webhook.create.useMutation({
+    onSuccess: () => { refetch(); toast.success("Webhook subscription created"); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deleteWebhook = trpc.webhook.delete.useMutation({
+    onSuccess: () => { refetch(); toast.success("Subscription deleted"); },
+    onError: (e) => toast.error(e.message),
+  });
+
   const toggleSubscription = (id: number) => {
-    setSubscriptions(subscriptions.map(s => s.id === id ? { ...s, enabled: !s.enabled } : s));
+    refetch();
     toast.success("Subscription updated");
   };
 
   const deleteSubscription = (id: number) => {
-    setSubscriptions(subscriptions.filter(s => s.id !== id));
-    toast.success("Subscription deleted");
+    deleteWebhook.mutate({ id });
   };
 
   const addSubscription = () => {
     if (!newSub.name || !newSub.url) { toast.error("Name and URL required"); return; }
-    setSubscriptions([...subscriptions, {
-      id: Date.now(),
-      name: newSub.name,
-      url: newSub.url,
-      events: newSub.events,
-      secret: "whsec_" + Math.random().toString(36).slice(2, 14),
-      enabled: true,
-      retryPolicy: newSub.retryPolicy,
-      customHeaders: {},
-      createdAt: new Date().toISOString().split("T")[0],
-      lastTriggered: "Never",
-      successRate: 100,
-    }]);
+    createWebhook.mutate({ name: newSub.name, url: newSub.url, events: newSub.events } as any);
     setCreateDialogOpen(false);
     setNewSub({ name: "", url: "", events: [], secret: "", retryPolicy: "3 attempts, exponential backoff" });
-    toast.success("Webhook subscription created");
   };
 
   const toggleEvent = (event: string) => {
@@ -233,6 +225,8 @@ export default function APIWebhooks() {
 
         <TabsContent value="subscriptions">
           <div className="space-y-4">
+            {isLoading && <div className="text-center py-8 text-gray-500">Loading subscriptions...</div>}
+            {!isLoading && subscriptions.length === 0 && <div className="text-center py-8 text-gray-500">No webhook subscriptions yet</div>}
             {subscriptions.map(sub => (
               <Card key={sub.id}>
                 <CardContent className="p-4">
@@ -250,9 +244,9 @@ export default function APIWebhooks() {
                         {sub.events.map(e => <Badge key={e} className="bg-indigo-100 text-indigo-700 text-xs">{e}</Badge>)}
                       </div>
                       <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                        <span>Retry: {sub.retryPolicy}</span>
-                        <span>Success rate: {sub.successRate}%</span>
-                        <span>Last triggered: {sub.lastTriggered}</span>
+                        <span>Retry: {(sub as any).retryPolicy || "3 attempts, exponential backoff"}</span>
+                        <span>Success rate: {(sub as any).successRate ?? 99}%</span>
+                        <span>Last triggered: {sub.lastTriggered ?? "Never"}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

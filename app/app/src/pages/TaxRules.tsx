@@ -58,10 +58,8 @@ interface TaxRule {
   isActive: boolean;
 }
 
-const mockRules: TaxRule[] = []
-
 export default function TaxRules() {
-  const [rules] = useState<TaxRule[]>(mockRules);
+  const { data: rules = [], isLoading, refetch } = trpc.taxRule.list.useQuery();
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -75,6 +73,24 @@ export default function TaxRules() {
     rate: "",
     appliesTo: "",
     effectiveFrom: "",
+  });
+
+  const createRule = trpc.taxRule.create.useMutation({
+    onSuccess: () => {
+      setOpen(false);
+      refetch();
+      toast.success("Tax rule created");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deleteRule = trpc.taxRule.delete.useMutation({
+    onSuccess: () => {
+      setDeleteId(null);
+      refetch();
+      toast.success("Tax rule deleted");
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   const filtered = rules.filter(
@@ -91,8 +107,7 @@ export default function TaxRules() {
       toast.error("Jurisdiction and rate are required");
       return;
     }
-    toast.success("Tax rule created");
-    setOpen(false);
+    createRule.mutate(newRule as any);
     setNewRule({
       jurisdiction: "",
       jurisdictionType: "state",
@@ -105,8 +120,7 @@ export default function TaxRules() {
 
   const handleDelete = () => {
     if (deleteId) {
-      toast.success("Tax rule deleted");
-      setDeleteId(null);
+      deleteRule.mutate({ id: deleteId });
     }
   };
 
@@ -376,6 +390,7 @@ export default function TaxRules() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {isLoading && <TableRow><TableCell colSpan={9} className="text-center py-8">Loading...</TableCell></TableRow>}
               {filtered.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.jurisdiction}</TableCell>

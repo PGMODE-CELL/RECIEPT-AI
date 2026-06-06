@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { trpc } from "@/providers/trpc";
 import {
   Card,
   CardContent,
@@ -70,9 +71,7 @@ interface ExecutionLog {
   executedAt: string;
 }
 
-const mockRules: AutomationRule[] = []
-
-const mockLogs: ExecutionLog[] = []
+// TODO: Replace with backend endpoint when available
 
 const ruleTypeLabels: Record<RuleType, string> = {
   reminder: "Reminder",
@@ -87,9 +86,17 @@ const ruleTypeBadgeVariant: Record<RuleType, "default" | "secondary" | "destruct
 };
 
 export default function Automation() {
-  const [rules, setRules] = useState<AutomationRule[]>(mockRules);
-  const [logs] = useState<ExecutionLog[]>(mockLogs);
+  const { data: rulesData = [], isLoading } = trpc.bankRule.list.useQuery();
+  const [rules, setRules] = useState<AutomationRule[]>([]);
+  // TODO: Replace with backend endpoint when available
+  const [logs] = useState<ExecutionLog[]>([]);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (rulesData.length > 0) {
+      setRules(rulesData as AutomationRule[]);
+    }
+  }, [rulesData]);
   const [activeTab, setActiveTab] = useState<"rules" | "history">("rules");
 
   const [newRule, setNewRule] = useState({

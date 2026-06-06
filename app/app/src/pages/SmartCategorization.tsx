@@ -42,14 +42,7 @@ interface CategorizationRule {
   timesApplied: number;
 }
 
-const MOCK_RULES: CategorizationRule[] = [
-  { id: "r1", keyword: "uber", category: "Travel", priority: 1, timesApplied: 47 },
-  { id: "r2", keyword: "aws", category: "Software & IT", priority: 2, timesApplied: 32 },
-  { id: "r3", keyword: "starbucks", category: "Meals & Entertainment", priority: 1, timesApplied: 58 },
-  { id: "r4", keyword: "fedex", category: "Shipping & Postage", priority: 3, timesApplied: 21 },
-  { id: "r5", keyword: "microsoft", category: "Software & IT", priority: 2, timesApplied: 36 },
-  { id: "r6", keyword: "netflix", category: "Entertainment", priority: 1, timesApplied: 12 },
-];
+
 
 const CATEGORIES = [
   "Travel", "Software & IT", "Meals & Entertainment", "Shipping & Postage",
@@ -75,7 +68,8 @@ function suggestCategory(description: string, rules: CategorizationRule[]): { ca
 
 export default function SmartCategorization() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [rules, setRules] = useState<CategorizationRule[]>(MOCK_RULES);
+  // TODO: replace with trpc.bankRule.list when categorization rules endpoint exists
+  const [rules, setRules] = useState<CategorizationRule[]>([]);
   const [newRuleKeyword, setNewRuleKeyword] = useState("");
   const [newRuleCategory, setNewRuleCategory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");

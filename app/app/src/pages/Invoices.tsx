@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash, FileText, Search, Download, Eye, CreditCard, X, Edit, Loader2 } from "lucide-react";
+import { Plus, Trash, FileText, Search, Download, Eye, CreditCard, X, Edit, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {

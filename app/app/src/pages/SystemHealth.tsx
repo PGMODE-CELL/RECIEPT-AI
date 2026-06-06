@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { trpc } from "@/providers/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ interface MetricPoint {
   value: number;
 }
 
+// TODO: Replace with trpc.audit.list.useQuery() or systemHealth endpoint when available
 const responseTimeData: MetricPoint[] = [
   { time: "00:00", value: 120 },
   { time: "04:00", value: 95 },
@@ -33,6 +35,7 @@ const responseTimeData: MetricPoint[] = [
   { time: "23:59", value: 110 },
 ];
 
+// TODO: Replace with trpc endpoint when available
 const errorRateData = [
   { time: "Mon", errors: 12, requests: 4500 },
   { time: "Tue", errors: 8, requests: 5200 },
@@ -43,6 +46,7 @@ const errorRateData = [
   { time: "Sun", errors: 2, requests: 1800 },
 ];
 
+// TODO: Replace with trpc endpoint when available
 const activeUsersData = [
   { hour: "6am", users: 12 },
   { hour: "8am", users: 45 },
@@ -54,6 +58,7 @@ const activeUsersData = [
   { hour: "8pm", users: 15 },
 ];
 
+// TODO: Replace with trpc endpoint when available
 const defaultServices: ServiceStatus[] = [
   { name: "API Server", status: "healthy", uptime: "99.98%", responseTime: 45, lastChecked: "2026-05-31 09:00:00" },
   { name: "PostgreSQL Database", status: "healthy", uptime: "99.99%", responseTime: 12, lastChecked: "2026-05-31 09:00:00" },
@@ -65,6 +70,7 @@ const defaultServices: ServiceStatus[] = [
   { name: "CDN", status: "healthy", uptime: "99.99%", responseTime: 15, lastChecked: "2026-05-31 09:00:00" },
 ];
 
+// TODO: Replace with trpc.audit.list.useQuery() when backend endpoint exists
 const recentErrors = [
   { id: 1, level: "error", message: "Connection timeout to payment gateway", service: "Payment Gateway", timestamp: "2026-05-31 08:45:12", count: 3 },
   { id: 2, level: "warning", message: "Email delivery delay > 5s", service: "Email Service", timestamp: "2026-05-31 08:30:00", count: 12 },
@@ -73,6 +79,7 @@ const recentErrors = [
   { id: 5, level: "info", message: "Scheduled backup completed", service: "Background Jobs", timestamp: "2026-05-31 02:00:00", count: 1 },
 ];
 
+// TODO: Replace with trpc endpoint when available
 const dbMetrics = [
   { metric: "Connections", value: "42/100", percentage: 42 },
   { metric: "Query Time (avg)", value: "8ms", percentage: 8 },

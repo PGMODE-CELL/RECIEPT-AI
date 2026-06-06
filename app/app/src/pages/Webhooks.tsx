@@ -59,8 +59,6 @@ interface WebhookEntry {
   createdAt: string;
 }
 
-const mockWebhooks: WebhookEntry[] = []
-
 const availableEvents = [
   "invoice.created",
   "invoice.sent",
@@ -75,7 +73,7 @@ const availableEvents = [
 ];
 
 export default function Webhooks() {
-  const [webhooks] = useState<WebhookEntry[]>(mockWebhooks);
+  const { data: webhooks = [], isLoading, refetch } = trpc.webhook.list.useQuery();
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -84,6 +82,24 @@ export default function Webhooks() {
     name: "",
     url: "",
     events: [] as string[],
+  });
+
+  const createWebhook = trpc.webhook.create.useMutation({
+    onSuccess: () => {
+      setOpen(false);
+      refetch();
+      toast.success("Webhook created");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deleteWebhook = trpc.webhook.delete.useMutation({
+    onSuccess: () => {
+      setDeleteId(null);
+      refetch();
+      toast.success("Webhook deleted");
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   const filtered = webhooks.filter(
@@ -102,15 +118,13 @@ export default function Webhooks() {
       toast.error("Select at least one event");
       return;
     }
-    toast.success("Webhook created");
-    setOpen(false);
+    createWebhook.mutate(newWebhook as any);
     setNewWebhook({ name: "", url: "", events: [] });
   };
 
   const handleDelete = () => {
     if (deleteId) {
-      toast.success("Webhook deleted");
-      setDeleteId(null);
+      deleteWebhook.mutate({ id: deleteId });
     }
   };
 
@@ -275,6 +289,7 @@ export default function Webhooks() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {isLoading && <TableRow><TableCell colSpan={6} className="text-center py-8">Loading...</TableCell></TableRow>}
               {filtered.map((w) => (
                 <TableRow key={w.id}>
                   <TableCell className="font-medium">{w.name}</TableCell>

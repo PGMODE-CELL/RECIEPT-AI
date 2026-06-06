@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { trpc } from "@/providers/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ const sampleData: Record<string, string> = {
   paymentLink: "https://pay.example.com/abc123",
 };
 
+// TODO: Replace with trpc.notification.list.useQuery() or emailTemplates.list endpoint when available
 const initialTemplates: EmailTemplate[] = [
   {
     id: "1",

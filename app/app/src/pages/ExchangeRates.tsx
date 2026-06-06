@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { trpc } from "@/providers/trpc";
 import {
   Card,
   CardContent,
@@ -50,8 +51,6 @@ interface Currency {
   lastUpdated: string;
 }
 
-const mockCurrencies: Currency[] = []
-
 const historicalData = [
   { date: "May 25", EUR: 0.921, GBP: 0.789, JPY: 156.8, CAD: 1.371 },
   { date: "May 26", EUR: 0.924, GBP: 0.790, JPY: 157.0, CAD: 1.369 },
@@ -63,7 +62,15 @@ const historicalData = [
 ];
 
 export default function ExchangeRates() {
-  const [currencies, setCurrencies] = useState<Currency[]>(mockCurrencies);
+  const { data: ratesData = [], isLoading, refetch } = trpc.forex.rates.useQuery();
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
+
+  useEffect(() => {
+    if (ratesData.length > 0) {
+      setCurrencies(ratesData as Currency[]);
+    }
+  }, [ratesData]);
+
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [autoUpdate, setAutoUpdate] = useState(false);

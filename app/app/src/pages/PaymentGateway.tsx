@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { trpc } from "@/providers/trpc"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,6 +30,7 @@ interface PaymentLink {
   createdAt: string
 }
 
+// TODO: Replace with trpc.settings.listTaxRates.useQuery() or paymentGateway endpoint when available
 const sampleLinks: PaymentLink[] = [
   { id: "1", invoiceNumber: "INV-2026-0038", amount: 2500, status: "paid", url: "https://pay.stripe.com/abc123", createdAt: "2026-05-28" },
   { id: "2", invoiceNumber: "INV-2026-0039", amount: 4200, status: "pending", url: "https://pay.stripe.com/def456", createdAt: "2026-05-29" },

@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { trpc } from "@/providers/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,6 +127,7 @@ const dataSourceColumns: Record<DataSource, ColumnDef[]> = {
   ],
 };
 
+// TODO: Replace with trpc.report.*.useQuery() when backend endpoints exist for generic report data
 const sampleData: Record<DataSource, Record<string, string>[]> = {
   invoices: [
     { number: "INV-2026-001", client: "Acme Corp", date: "2026-05-01", dueDate: "2026-05-31", amount: "$2,500.00", status: "Paid", tax: "$250.00", total: "$2,750.00", notes: "Consulting services" },

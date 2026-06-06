@@ -60,10 +60,9 @@ interface Period {
   closedBy: string | null;
 }
 
-const mockPeriods: Period[] = []
 
 export default function PeriodClose() {
-  const [periods] = useState<Period[]>(mockPeriods);
+  const { data: periods = [], isLoading, refetch } = trpc.periodClose.list.useQuery();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [yearEndDialogOpen, setYearEndDialogOpen] = useState(false);
@@ -75,9 +74,13 @@ export default function PeriodClose() {
       (filterStatus === "all" || p.status === filterStatus)
   );
 
-  const handleClose = (id: number) => {
+  const closePeriodMutation = trpc.periodClose.closePeriod.useMutation();
+
+  const handleClose = async (id: number) => {
+    await closePeriodMutation.mutateAsync(id);
     toast.success("Period closed successfully");
     setCloseConfirmId(null);
+    refetch();
   };
 
   const handleReopen = (id: number) => {
@@ -268,6 +271,14 @@ export default function PeriodClose() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : (
+                <>
               {filtered.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.name}</TableCell>
@@ -321,6 +332,8 @@ export default function PeriodClose() {
                     No periods found
                   </TableCell>
                 </TableRow>
+              )}
+                </>
               )}
             </TableBody>
           </Table>

@@ -48,6 +48,7 @@ export default function BatchProcessing() {
   const { data: invoices = [] } = trpc.invoice.list.useQuery({ limit: 200 });
   const { data: bills = [] } = trpc.bill.list.useQuery({ limit: 200 });
 
+  // TODO: replace with backend query when batch jobs endpoint exists
   const [jobs, setJobs] = useState<BatchJob[]>([]);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("jobs");
@@ -58,13 +59,7 @@ export default function BatchProcessing() {
   const invoiceCount = invoices?.invoices?.length || 0;
   const billCount = bills?.bills?.length || 0;
 
-  const defaultJobs: BatchJob[] = [
-    { id: 1, name: "Invoice Batch", type: "invoices", status: "completed", totalItems: invoiceCount || 145, processedItems: invoiceCount || 145, failedItems: 0, createdAt: new Date().toISOString().slice(0, 16).replace("T", " "), startedAt: new Date().toISOString().slice(0, 16).replace("T", " "), completedAt: new Date().toISOString().slice(0, 16).replace("T", " "), errors: [] },
-    { id: 2, name: "Bill Batch", type: "invoices", status: "running", totalItems: billCount || 89, processedItems: Math.round((billCount || 89) * 0.7), failedItems: 2, createdAt: new Date().toISOString().slice(0, 16).replace("T", " "), startedAt: new Date().toISOString().slice(0, 16).replace("T", " "), completedAt: null, errors: ["Row 15: Missing vendor"] },
-    { id: 3, name: "Data Export", type: "export", status: "queued", totalItems: 0, processedItems: 0, failedItems: 0, createdAt: new Date().toISOString().slice(0, 16).replace("T", " "), startedAt: null, completedAt: null, errors: [] },
-  ];
-
-  const effectiveJobs = jobs.length > 0 ? jobs : defaultJobs;
+  const effectiveJobs = jobs;
 
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);

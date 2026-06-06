@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { trpc } from "@/providers/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +22,7 @@ interface ReportRow {
   tdsRate?: number;
 }
 
-const mockData: Record<string, ReportRow[]> = {}
+// TODO: Replace with backend endpoint when available
 
 const reportLabels: Record<string, string> = {
   "gstr-1": "GSTR-1 (Outward Supplies)",
@@ -33,11 +34,13 @@ const reportLabels: Record<string, string> = {
 };
 
 export default function ComplianceReports() {
+  // TODO: Replace with backend endpoint when available
+  const [reportData] = useState<Record<string, ReportRow[]>>({});
   const [activeTab, setActiveTab] = useState("gstr-1");
   const [dateFrom, setDateFrom] = useState("2026-04-01");
   const [dateTo, setDateTo] = useState("2026-04-30");
 
-  const data = mockData[activeTab] || [];
+  const data = reportData[activeTab] || [];
   const filteredData = data.filter((row) => {
     if (!dateFrom || !dateTo) return true;
     return row.date >= dateFrom && row.date <= dateTo;

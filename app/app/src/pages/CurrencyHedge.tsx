@@ -73,46 +73,27 @@ export default function CurrencyHedge() {
       }
     }
 
-    const defaultPositions: HedgePosition[] = [
-      { id: "default-eur", currency: "EUR", exposureType: "payable", amount: 50000, exchangeRate: 1.08, hedgeRate: 1.09, hedgeType: "forward", hedgeRatio: 80, maturityDate: "2026-06-30", unrealizedPL: -500, counterparty: "JP Morgan" },
-      { id: "default-gbp", currency: "GBP", exposureType: "receivable", amount: 75000, exchangeRate: 1.27, hedgeRate: 1.25, hedgeType: "option", hedgeRatio: 60, maturityDate: "2026-09-30", unrealizedPL: 1500, counterparty: "Citi Bank" },
-      { id: "default-jpy", currency: "JPY", exposureType: "payable", amount: 5000000, exchangeRate: 0.0067, hedgeRate: 0.0068, hedgeType: "none", hedgeRatio: 0, maturityDate: "2026-03-31", unrealizedPL: -500, counterparty: "-" },
-      { id: "default-cad", currency: "CAD", exposureType: "receivable", amount: 100000, exchangeRate: 0.74, hedgeRate: 0.75, hedgeType: "forward", hedgeRatio: 100, maturityDate: "2026-12-31", unrealizedPL: 1000, counterparty: "HSBC" },
-    ];
-
     const result: HedgePosition[] = [];
-    const allCurrencies = new Set([...Object.keys(currencyTxns), "EUR", "GBP", "JPY", "CAD"]);
 
-    for (const cur of allCurrencies) {
-      const txData = currencyTxns[cur];
-      const defPos = defaultPositions.find((p) => p.currency === cur);
-      const rate = FX_RATES[cur] || defPos?.exchangeRate || 1;
+    for (const [cur, txData] of Object.entries(currencyTxns)) {
+      if (txData.payables === 0 && txData.receivables === 0) continue;
+      const rate = FX_RATES[cur] || 1;
+      const total = txData.payables + txData.receivables;
+      const isPayable = txData.payables > txData.receivables;
 
-      if (txData && (txData.payables > 0 || txData.receivables > 0)) {
-        const total = txData.payables + txData.receivables;
-        const isPayable = txData.payables > txData.receivables;
-        const hedgeTypes: Array<"forward" | "option" | "none"> = ["forward", "option", "none"];
-        const hedgeType = hedgeTypes[Math.floor(Math.random() * 2)];
-        const hedgeRatio = hedgeType === "none" ? 0 : Math.round(40 + Math.random() * 60);
-        const hedgeRate = rate * (1 + (Math.random() * 0.02 - 0.01));
-        const unrealizedPL = Math.round((Math.random() * 4000) - 2000);
-
-        result.push({
-          id: `pos-${cur}`,
-          currency: cur,
-          exposureType: isPayable ? "payable" : "receivable",
-          amount: total,
-          exchangeRate: rate,
-          hedgeRate: Math.round(hedgeRate * 10000) / 10000,
-          hedgeType,
-          hedgeRatio,
-          maturityDate: "2026-" + String(Math.floor(3 + Math.random() * 9)).padStart(2, "0") + "-30",
-          unrealizedPL,
-          counterparty: ["JP Morgan", "Citi Bank", "HSBC", "Barclays", "Deutsche Bank"][Math.floor(Math.random() * 5)],
-        });
-      } else if (defPos) {
-        result.push(defPos);
-      }
+      result.push({
+        id: `pos-${cur}`,
+        currency: cur,
+        exposureType: isPayable ? "payable" : "receivable",
+        amount: total,
+        exchangeRate: rate,
+        hedgeRate: 0,
+        hedgeType: "none",
+        hedgeRatio: 0,
+        maturityDate: "-",
+        unrealizedPL: 0,
+        counterparty: "-",
+      });
     }
 
     return result;

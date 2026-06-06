@@ -1,5 +1,6 @@
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { trpc } from "@/providers/trpc"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -76,9 +77,25 @@ export default function BankFeedImport() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const ofxInputRef = useRef<HTMLInputElement>(null)
 
+  const { data: bankRules } = trpc.bankRule.list.useQuery(undefined, { placeholderData: [] })
+
+  const activeRules = useMemo(() => {
+    if (bankRules && bankRules.length > 0) {
+      return bankRules
+        .filter((r: any) => r.isActive !== false)
+        .map((r: any) => ({
+          keyword: r.matchValue?.toLowerCase() || "",
+          category: r.actionValue || "Uncategorized",
+          type: "expense" as "income" | "expense",
+        }))
+        .filter((r: any) => r.keyword)
+    }
+    return categorizationRules
+  }, [bankRules])
+
   const categorizeTransaction = (description: string): { category: string; type: "income" | "expense" } => {
     const lowerDesc = description.toLowerCase()
-    for (const rule of categorizationRules) {
+    for (const rule of activeRules) {
       if (lowerDesc.includes(rule.keyword)) {
         return { category: rule.category, type: rule.type }
       }

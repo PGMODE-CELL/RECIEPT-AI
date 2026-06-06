@@ -31,27 +31,16 @@ interface ApprovalThreshold {
   autoApprove: boolean;
 }
 
-const defaultRules: PolicyRule[] = [
-  { id: 1, category: "Meals", dailyLimit: 50, monthlyLimit: 800, requiresReceipt: true, approverRole: "Manager", enabled: true },
-  { id: 2, category: "Travel", dailyLimit: 200, monthlyLimit: 3000, requiresReceipt: true, approverRole: "Director", enabled: true },
-  { id: 3, category: "Office Supplies", dailyLimit: 100, monthlyLimit: 500, requiresReceipt: false, approverRole: "Manager", enabled: true },
-  { id: 4, category: "Software", dailyLimit: 0, monthlyLimit: 200, requiresReceipt: true, approverRole: "IT Admin", enabled: true },
-  { id: 5, category: "Communication", dailyLimit: 30, monthlyLimit: 400, requiresReceipt: false, approverRole: "Manager", enabled: true },
-];
 
-const defaultThresholds: ApprovalThreshold[] = [
-  { id: 1, minAmount: 0, maxAmount: 100, approver: "Auto-Approve", autoApprove: true },
-  { id: 2, minAmount: 101, maxAmount: 500, approver: "Manager", autoApprove: false },
-  { id: 3, minAmount: 501, maxAmount: 2000, approver: "Director", autoApprove: false },
-  { id: 4, minAmount: 2001, maxAmount: 10000, approver: "VP Finance", autoApprove: false },
-];
 
 export default function ExpensePolicy() {
-  const { data: expenseClaims = [] } = trpc.expenseClaim.list.useQuery({ limit: 100 });
-  const { data: budgets = [] } = trpc.budget.list.useQuery();
+  const { data: expenseClaims = [], isLoading: claimsLoading } = trpc.expenseClaim.list.useQuery({ limit: 100 });
+  const { data: budgets = [], isLoading: budgetsLoading } = trpc.budget.list.useQuery();
 
-  const [rules, setRules] = useState<PolicyRule[]>(defaultRules);
-  const [thresholds, setThresholds] = useState<ApprovalThreshold[]>(defaultThresholds);
+  // TODO: replace with trpc.bankRule.list when endpoint aligns with policy rules
+  const [rules, setRules] = useState<PolicyRule[]>([]);
+  // TODO: replace with backend query when approval thresholds endpoint exists
+  const [thresholds, setThresholds] = useState<ApprovalThreshold[]>([]);
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
   const [thresholdDialogOpen, setThresholdDialogOpen] = useState(false);
 
@@ -109,6 +98,15 @@ export default function ExpensePolicy() {
 
   const [newRule, setNewRule] = useState({ category: "", dailyLimit: 0, monthlyLimit: 0, requiresReceipt: true, approverRole: "Manager" });
   const [newThreshold, setNewThreshold] = useState({ minAmount: 0, maxAmount: 0, approver: "", autoApprove: false });
+
+  if (claimsLoading || budgetsLoading) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto space-y-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Expense Policy Engine</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Loading data...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">

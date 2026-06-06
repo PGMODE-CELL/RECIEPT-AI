@@ -72,10 +72,32 @@ interface TimeEntry {
   type: "time" | "expense";
 }
 
-const mockJobs: Job[] = []
-
 export default function JobCosting() {
-  const [jobs] = useState<Job[]>(mockJobs);
+  const { data: jobs, isLoading, refetch } = trpc.jobCosting.list.useQuery();
+  const createMutation = trpc.jobCosting.create.useMutation({
+    onSuccess: () => {
+      toast.success("Job created successfully");
+      refetch();
+      setOpen(false);
+      setNewJob({
+        projectName: "",
+        jobCode: "",
+        description: "",
+        estimatedCost: "",
+        startDate: "",
+        endDate: "",
+      });
+    },
+    onError: (err) => toast.error(err.message),
+  });
+  const deleteMutation = trpc.jobCosting.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Job deleted");
+      refetch();
+      setDeleteId(null);
+    },
+    onError: (err) => toast.error(err.message),
+  });
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -92,7 +114,7 @@ export default function JobCosting() {
     endDate: "",
   });
 
-  const filtered = jobs.filter(
+  const filtered = (jobs ?? []).filter(
     (j) =>
       (!search ||
         j.projectName.toLowerCase().includes(search.toLowerCase()) ||
@@ -105,29 +127,26 @@ export default function JobCosting() {
       toast.error("Project name and job code are required");
       return;
     }
-    toast.success("Job created successfully");
-    setOpen(false);
-    setNewJob({
-      projectName: "",
-      jobCode: "",
-      description: "",
-      estimatedCost: "",
-      startDate: "",
-      endDate: "",
+    createMutation.mutate({
+      projectName: newJob.projectName,
+      jobCode: newJob.jobCode,
+      description: newJob.description,
+      estimatedCost: parseFloat(newJob.estimatedCost) || 0,
+      startDate: newJob.startDate,
+      endDate: newJob.endDate,
     });
   };
 
   const handleDelete = () => {
     if (deleteId) {
-      toast.success("Job deleted");
-      setDeleteId(null);
+      deleteMutation.mutate(deleteId);
     }
   };
 
-  const totalEstimated = jobs.reduce((s, j) => s + j.estimatedCost, 0);
-  const totalActual = jobs.reduce((s, j) => s + j.actualCost, 0);
-  const totalWip = jobs.reduce((s, j) => s + j.wipAmount, 0);
-  const activeCount = jobs.filter((j) => j.status === "active").length;
+  const totalEstimated = (jobs ?? []).reduce((s, j) => s + j.estimatedCost, 0);
+  const totalActual = (jobs ?? []).reduce((s, j) => s + j.actualCost, 0);
+  const totalWip = (jobs ?? []).reduce((s, j) => s + j.wipAmount, 0);
+  const activeCount = (jobs ?? []).filter((j) => j.status === "active").length;
 
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
@@ -340,7 +359,13 @@ export default function JobCosting() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((j) => (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : filtered.map((j) => (
                 <TableRow key={j.id}>
                   <TableCell className="font-mono text-sm">{j.jobCode}</TableCell>
                   <TableCell className="font-medium">{j.projectName}</TableCell>
@@ -391,7 +416,7 @@ export default function JobCosting() {
                   </TableCell>
                 </TableRow>
               ))}
-              {filtered.length === 0 && (
+              {!isLoading && filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                     No jobs found

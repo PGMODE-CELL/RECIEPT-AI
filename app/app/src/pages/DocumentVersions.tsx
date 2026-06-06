@@ -51,10 +51,25 @@ interface DocumentVersion {
   isCurrent: boolean;
 }
 
-const mockVersions: DocumentVersion[] = []
-
 export default function DocumentVersions() {
-  const [versions] = useState<DocumentVersion[]>(mockVersions);
+  const { data: versions = [], isLoading, refetch } = trpc.documentVersion.list.useQuery();
+
+  const createVersion = trpc.documentVersion.create.useMutation({
+    onSuccess: () => {
+      setUploadOpen(false);
+      refetch();
+      toast.success("Version created");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deleteVersion = trpc.documentVersion.delete.useMutation({
+    onSuccess: () => {
+      refetch();
+      toast.success("Version deleted");
+    },
+    onError: (e) => toast.error(e.message),
+  });
   const [search, setSearch] = useState("");
   const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -72,8 +87,7 @@ export default function DocumentVersions() {
     : [];
 
   const handleUpload = () => {
-    toast.success("New version uploaded successfully");
-    setUploadOpen(false);
+    createVersion.mutate({});
   };
 
   const handleRestore = (versionNumber: number) => {
@@ -251,7 +265,11 @@ export default function DocumentVersions() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {selectedDocument ? (
+              {isLoading ? (
+                <div className="text-center py-12 text-gray-500">
+                  Loading versions...
+                </div>
+              ) : selectedDocument ? (
                 <Table>
                   <TableHeader>
                     <TableRow>

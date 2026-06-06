@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { trpc } from "@/providers/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,7 @@ interface ExtractedDoc {
   rawData?: Record<string, string>;
 }
 
+// TODO: Replace with trpc.document.list.useQuery() when backend endpoint supports AI extraction fields
 const MOCK_DOCS: ExtractedDoc[] = [
   {
     id: "1", fileName: "acme-invoice-001.pdf", type: "invoice", uploadDate: "2026-01-25", status: "completed",

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { trpc } from "@/providers/trpc"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,6 +22,7 @@ interface Template {
   layout: string
 }
 
+// TODO: Replace with trpc.invoiceTemplate.list.useQuery() when backend endpoint exists
 const templates: Template[] = [
   { id: "professional", name: "Professional", description: "Clean and corporate design", layout: "sidebar" },
   { id: "modern", name: "Modern", description: "Bold colors with large headers", layout: "header" },

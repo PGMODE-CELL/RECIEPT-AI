@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useApi } from "@/providers/ApiProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,6 +8,7 @@ import {
   ArrowUp, ArrowDown, Plus, X, GripVertical,
   DollarSign, BarChart3, Activity
 } from "lucide-react";
+import { trpc } from "@/providers/trpc";
 
 type WidgetId = "revenue" | "expenses" | "cashflow" | "profitmargin" | "invoices" | "bills" | "customers" | "projects";
 
@@ -20,38 +22,87 @@ interface WidgetDef {
   sub: string;
 }
 
-const ALL_WIDGETS: WidgetDef[] = [
-  { id: "revenue", label: "Revenue", icon: TrendingUp, color: "text-green-600", bg: "bg-green-50", value: "$48,250", sub: "+12% vs last month" },
-  { id: "expenses", label: "Expenses", icon: TrendingDown, color: "text-red-600", bg: "bg-red-50", value: "$32,100", sub: "+5% vs last month" },
-  { id: "cashflow", label: "Cash Flow", icon: Wallet, color: "text-blue-600", bg: "bg-blue-50", value: "$16,150", sub: "Net positive" },
-  { id: "profitmargin", label: "Profit Margin", icon: BarChart3, color: "text-purple-600", bg: "bg-purple-50", value: "33.5%", sub: "+2.1% vs last month" },
-  { id: "invoices", label: "Invoices", icon: FileText, color: "text-indigo-600", bg: "bg-indigo-50", value: "24", sub: "8 pending, 16 paid" },
-  { id: "bills", label: "Bills", icon: Receipt, color: "text-amber-600", bg: "bg-amber-50", value: "12", sub: "3 overdue" },
-  { id: "customers", label: "Customers", icon: Users, color: "text-cyan-600", bg: "bg-cyan-50", value: "156", sub: "+8 this month" },
-  { id: "projects", label: "Projects", icon: FolderKanban, color: "text-pink-600", bg: "bg-pink-50", value: "7", sub: "4 active" },
-];
+const WIDGET_IDS: WidgetId[] = ["revenue", "expenses", "cashflow", "profitmargin", "invoices", "bills", "customers", "projects"];
 
-const LAYOUT_KEY = "custom-dashboard-layout";
+interface WidgetMeta {
+  label: string;
+  icon: typeof TrendingUp;
+  color: string;
+  bg: string;
+}
+
+const WIDGET_META: Record<WidgetId, WidgetMeta> = {
+  revenue: { label: "Revenue", icon: TrendingUp, color: "text-green-600", bg: "bg-green-50" },
+  expenses: { label: "Expenses", icon: TrendingDown, color: "text-red-600", bg: "bg-red-50" },
+  cashflow: { label: "Cash Flow", icon: Wallet, color: "text-blue-600", bg: "bg-blue-50" },
+  profitmargin: { label: "Profit Margin", icon: BarChart3, color: "text-purple-600", bg: "bg-purple-50" },
+  invoices: { label: "Invoices", icon: FileText, color: "text-indigo-600", bg: "bg-indigo-50" },
+  bills: { label: "Bills", icon: Receipt, color: "text-amber-600", bg: "bg-amber-50" },
+  customers: { label: "Customers", icon: Users, color: "text-cyan-600", bg: "bg-cyan-50" },
+  projects: { label: "Projects", icon: FolderKanban, color: "text-pink-600", bg: "bg-pink-50" },
+};
+
+function getLayoutKey() {
+  try {
+    const raw = localStorage.getItem("receiptai_org");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return `custom-dashboard-layout-${parsed}`;
+    }
+  } catch {}
+  return "custom-dashboard-layout";
+}
 
 function loadLayout(): WidgetId[] {
   try {
-    const stored = localStorage.getItem(LAYOUT_KEY);
+    const stored = localStorage.getItem(getLayoutKey());
     if (stored) {
       const parsed = JSON.parse(stored) as WidgetId[];
-      const valid = parsed.filter((id) => ALL_WIDGETS.some((w) => w.id === id));
-      if (valid.length === ALL_WIDGETS.length) return valid;
+      const valid = parsed.filter((id) => WIDGET_IDS.includes(id));
+      if (valid.length === WIDGET_IDS.length) return valid;
     }
   } catch {}
-  return ALL_WIDGETS.map((w) => w.id);
+  return [...WIDGET_IDS];
 }
 
 function saveLayout(ids: WidgetId[]) {
-  localStorage.setItem(LAYOUT_KEY, JSON.stringify(ids));
+  localStorage.setItem(getLayoutKey(), JSON.stringify(ids));
 }
 
 export default function CustomDashboard() {
+  const { orgId, isAuthenticated } = useApi();
   const [layout, setLayout] = useState<WidgetId[]>(loadLayout);
   const [adding, setAdding] = useState(false);
+  const dashboardEnabled = isAuthenticated && !!orgId;
+
+  const { data: stats } = trpc.dashboard.stats.useQuery(undefined, { enabled: dashboardEnabled,
+    placeholderData: {
+      revenue: 0, outstanding: 0, overdue: 0, bankBalance: 0,
+      totalBills: 0, billsDue: 0, invoiceCount: 0, billCount: 0,
+      contactCount: 0, productCount: 0, pendingReceipts: 0,
+      activeProjects: 0, employeeCount: 0, monthlyRevenue: [],
+    },
+  });
+
+  const ALL_WIDGETS: WidgetDef[] = useMemo(() => {
+    const s = stats || {
+      revenue: 0, outstanding: 0, overdue: 0, bankBalance: 0,
+      totalBills: 0, billsDue: 0, invoiceCount: 0, billCount: 0,
+      contactCount: 0, productCount: 0, pendingReceipts: 0,
+      activeProjects: 0, employeeCount: 0, monthlyRevenue: [],
+    };
+    const fmt = (n: number) => `$${n.toLocaleString()}`;
+    return [
+      { id: "revenue", label: "Revenue", icon: TrendingUp, color: "text-green-600", bg: "bg-green-50", value: fmt(s.revenue || 0), sub: "Total income" },
+      { id: "expenses", label: "Expenses", icon: TrendingDown, color: "text-red-600", bg: "bg-red-50", value: fmt(s.totalBills || 0), sub: "Outstanding bills" },
+      { id: "cashflow", label: "Cash Flow", icon: Wallet, color: "text-blue-600", bg: "bg-blue-50", value: fmt(s.bankBalance || 0), sub: "Bank balance" },
+      { id: "profitmargin", label: "Profit Margin", icon: BarChart3, color: "text-purple-600", bg: "bg-purple-50", value: s.revenue ? `${((s.revenue - (s.totalBills || 0)) / s.revenue * 100).toFixed(1)}%` : "—", sub: "Income vs bills" },
+      { id: "invoices", label: "Invoices", icon: FileText, color: "text-indigo-600", bg: "bg-indigo-50", value: `${s.invoiceCount || 0}`, sub: `${s.outstanding || 0} outstanding, ${s.overdue || 0} overdue` },
+      { id: "bills", label: "Bills", icon: Receipt, color: "text-amber-600", bg: "bg-amber-50", value: `${s.billCount || 0}`, sub: `${s.billsDue || 0} due` },
+      { id: "customers", label: "Customers", icon: Users, color: "text-cyan-600", bg: "bg-cyan-50", value: `${s.contactCount || 0}`, sub: `${s.productCount || 0} products` },
+      { id: "projects", label: "Projects", icon: FolderKanban, color: "text-pink-600", bg: "bg-pink-50", value: `${s.activeProjects || 0}`, sub: `${s.pendingReceipts || 0} pending receipts` },
+    ];
+  }, [stats]);
 
   useEffect(() => {
     saveLayout(layout);

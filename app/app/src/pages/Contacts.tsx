@@ -160,6 +160,7 @@ export default function Contacts() {
               const form = new FormData(e.currentTarget);
               updateContact.mutate({
                 id: editId!,
+                type: form.get("type") as any || editingContact.type,
                 name: form.get("name") as string,
                 companyName: form.get("company") as string || undefined,
                 email: form.get("email") as string || undefined,
@@ -172,6 +173,10 @@ export default function Contacts() {
                 notes: form.get("notes") as string || undefined,
               });
             }} className="space-y-4">
+              <div className="space-y-2"><Label>Type</Label>
+                <Select name="type" defaultValue={editingContact.type}><SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="customer">Customer</SelectItem><SelectItem value="vendor">Vendor</SelectItem><SelectItem value="both">Both</SelectItem></SelectContent>
+                </Select></div>
               <div className="space-y-2"><Label>Name *</Label><Input name="name" defaultValue={editingContact.name} required /></div>
               <div className="space-y-2"><Label>Company</Label><Input name="company" defaultValue={editingContact.companyName || ""} /></div>
               <div className="grid grid-cols-2 gap-4">

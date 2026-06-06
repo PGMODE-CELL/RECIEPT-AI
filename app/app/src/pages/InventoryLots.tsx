@@ -59,10 +59,32 @@ interface InventoryLot {
   receivedDate: string;
 }
 
-const mockLots: InventoryLot[] = []
-
 export default function InventoryLots() {
-  const [lots] = useState<InventoryLot[]>(mockLots);
+  const { data: lots, isLoading, refetch } = trpc.inventoryLot.list.useQuery();
+  const createMutation = trpc.inventoryLot.create.useMutation({
+    onSuccess: () => {
+      toast.success("Inventory lot created");
+      refetch();
+      setOpen(false);
+      setNewLot({
+        productName: "",
+        lotNumber: "",
+        serialNumber: "",
+        quantity: "",
+        unitCost: "",
+        expiryDate: "",
+      });
+    },
+    onError: (err) => toast.error(err.message),
+  });
+  const deleteMutation = trpc.inventoryLot.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Lot deleted");
+      refetch();
+      setDeleteId(null);
+    },
+    onError: (err) => toast.error(err.message),
+  });
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -77,7 +99,7 @@ export default function InventoryLots() {
     expiryDate: "",
   });
 
-  const filtered = lots.filter(
+  const filtered = (lots ?? []).filter(
     (l) =>
       (!search ||
         l.productName.toLowerCase().includes(search.toLowerCase()) ||
@@ -91,35 +113,32 @@ export default function InventoryLots() {
       toast.error("Product name and lot number are required");
       return;
     }
-    toast.success("Inventory lot created");
-    setOpen(false);
-    setNewLot({
-      productName: "",
-      lotNumber: "",
-      serialNumber: "",
-      quantity: "",
-      unitCost: "",
-      expiryDate: "",
+    createMutation.mutate({
+      productName: newLot.productName,
+      lotNumber: newLot.lotNumber,
+      serialNumber: newLot.serialNumber,
+      quantity: parseInt(newLot.quantity) || 0,
+      unitCost: parseFloat(newLot.unitCost) || 0,
+      expiryDate: newLot.expiryDate || null,
     });
   };
 
   const handleDelete = () => {
     if (deleteId) {
-      toast.success("Lot deleted");
-      setDeleteId(null);
+      deleteMutation.mutate(deleteId);
     }
   };
 
-  const totalQty = lots.reduce((s, l) => s + l.quantity, 0);
-  const totalValue = lots.reduce((s, l) => s + l.totalCost, 0);
-  const expiringCount = lots.filter(
+  const totalQty = (lots ?? []).reduce((s, l) => s + l.quantity, 0);
+  const totalValue = (lots ?? []).reduce((s, l) => s + l.totalCost, 0);
+  const expiringCount = (lots ?? []).filter(
     (l) =>
       l.expiryDate &&
       new Date(l.expiryDate) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) &&
       l.status !== "expired" &&
       l.status !== "depleted"
   ).length;
-  const lotCount = lots.length;
+  const lotCount = (lots ?? []).length;
 
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
@@ -331,7 +350,13 @@ export default function InventoryLots() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((l) => {
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : filtered.map((l) => {
                 const isExpiring =
                   l.expiryDate &&
                   new Date(l.expiryDate) <=
@@ -383,7 +408,7 @@ export default function InventoryLots() {
                   </TableRow>
                 );
               })}
-              {filtered.length === 0 && (
+              {!isLoading && filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                     No lots found
