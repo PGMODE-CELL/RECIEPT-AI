@@ -6,5 +6,23 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Netlify build hook
-        run: curl -X POST https://api.netlify.com/build_hooks/6a2552e853395b302f662be9
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/app/package-lock.json
+      - run: npm ci
+        working-directory: app/app
+      - run: npx vite build
+        working-directory: app/app
+      - run: |
+          cd dist/public
+          zip -r ../../deploy.zip .
+          cd ../..
+          curl -s -X POST \
+            -H "Authorization: Bearer nfp_2chy32xguRd1gaXRbc5hFc2HrRpgEhqu00ed" \
+            -H "Content-Type: application/zip" \
+            --data-binary "@deploy.zip" \
+            https://api.netlify.com/api/v1/sites/2c7b80d4-22bc-4123-a94a-a0a401cf7b40/deploys
+        working-directory: app/app
