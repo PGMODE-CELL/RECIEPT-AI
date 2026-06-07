@@ -15,7 +15,7 @@ export default function Login() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      navigate(orgId ? "/" : "/org-setup");
+      navigate(orgId ? "/dashboard" : "/org-setup");
     }
   }, [isAuthenticated, isLoading, navigate, orgId]);
   const [loading, setLoading] = useState(false);

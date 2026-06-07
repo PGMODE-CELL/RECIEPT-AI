@@ -142,7 +142,7 @@ export default function App() {
           <AppLayout>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                <Route path="/" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/custom-dashboard" element={<CustomDashboard />} />
                 <Route path="/ai-insights" element={<AIInsights />} />
                 <Route path="/crm" element={<CRM />} />
