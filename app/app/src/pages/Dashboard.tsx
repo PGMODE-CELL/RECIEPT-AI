@@ -13,7 +13,7 @@ import { useApi } from "@/providers/ApiProvider";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { orgId, isAuthenticated } = useApi();
+  const { orgId, isAuthenticated, user } = useApi();
   const enabled = isAuthenticated && !!orgId;
 
   const { data: stats, isLoading } = trpc.dashboard.stats.useQuery(undefined, { enabled });
@@ -45,7 +45,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Overview of your business</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Welcome back, {user?.email || user?.name || "User"}</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => navigate("/invoices")} className="bg-indigo-600 hover:bg-indigo-700">
