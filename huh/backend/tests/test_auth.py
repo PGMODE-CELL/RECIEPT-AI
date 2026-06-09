@@ -1,3 +1,19 @@
+import sqlite3
+
+
+def _reset_token_for(email: str) -> str | None:
+    """Reset tokens are no longer returned by the API (security); read it
+    straight from the test database instead."""
+    con = sqlite3.connect("test_receipt_ai.db")
+    try:
+        row = con.execute(
+            "SELECT reset_token FROM users WHERE email = ?", (email,)
+        ).fetchone()
+    finally:
+        con.close()
+    return row[0] if row else None
+
+
 def test_register(client):
     res = client.post(
         "/api/auth/register",
@@ -81,16 +97,17 @@ def test_forgot_password_known_email(client, auth_headers):
     )
     assert res.status_code == 200
     data = res.json()
-    assert "reset_token" in data
-    assert len(data["reset_token"]) > 0
+    # The token must NOT be exposed in the response; it is delivered out-of-band.
+    assert "reset_token" not in data
+    assert _reset_token_for("test@example.com")
 
 
 def test_reset_password_success(client, auth_headers):
-    res = client.post(
+    client.post(
         "/api/auth/forgot-password",
         json={"email": "test@example.com"},
     )
-    token = res.json()["reset_token"]
+    token = _reset_token_for("test@example.com")
     res = client.post(
         "/api/auth/reset-password",
         json={"token": token, "password": "newpass123"},
@@ -108,11 +125,11 @@ def test_reset_password_bad_token(client):
 
 
 def test_reset_password_short_password(client, auth_headers):
-    res = client.post(
+    client.post(
         "/api/auth/forgot-password",
         json={"email": "test@example.com"},
     )
-    token = res.json()["reset_token"]
+    token = _reset_token_for("test@example.com")
     res = client.post(
         "/api/auth/reset-password",
         json={"token": token, "password": "ab"},

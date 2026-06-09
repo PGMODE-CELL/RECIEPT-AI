@@ -12,13 +12,19 @@ class Settings:
     # Secrets — all MUST be set via environment variables in production
     SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     if not SECRET_KEY:
+        if ENVIRONMENT == "production":
+            raise RuntimeError("SECRET_KEY must be set in production")
         import warnings
+
         warnings.warn("SECRET_KEY not set — using insecure dev fallback")
         SECRET_KEY = "dev-secret-key-do-not-use-in-production"
 
     ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY", "")
     if not ENCRYPTION_KEY:
+        if ENVIRONMENT == "production":
+            raise RuntimeError("ENCRYPTION_KEY must be set in production")
         import warnings
+
         warnings.warn("ENCRYPTION_KEY not set — using insecure dev fallback")
         ENCRYPTION_KEY = "dev-encryption-key-do-not-use-in-production"
 
@@ -56,7 +62,6 @@ class Settings:
     # Security headers
     CSP_DEFAULT_SRC: str = os.getenv("CSP_DEFAULT_SRC", "'self'")
     HSTS_MAX_AGE: int = int(os.getenv("HSTS_MAX_AGE", "31536000"))
-
 
     # --- SCALING INFRASTRUCTURE ---
     # Redis

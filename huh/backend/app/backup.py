@@ -2,6 +2,7 @@ import os
 import shutil
 import glob
 import json
+import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from app.config import settings
@@ -30,7 +31,17 @@ def backup_database() -> str:
         }
     else:
         backup_path = backup_dir / f"receipt_ai_{ts}.sql"
-        os.system(f"pg_dump --clean --if-exists --file={backup_path} '{settings.DATABASE_URL}'")
+        subprocess.run(
+            [
+                "pg_dump",
+                "--clean",
+                "--if-exists",
+                "--file",
+                str(backup_path),
+                settings.DATABASE_URL,
+            ],
+            check=True,
+        )
         manifest = {
             "timestamp": ts,
             "type": "postgres",
@@ -83,9 +94,12 @@ def restore_database(backup_path: str) -> str:
         shutil.copy2(backup_path, db_path)
         return f"Restored SQLite from {backup_path}"
     else:
-        result = os.system(f"psql '{settings.DATABASE_URL}' < '{backup_path}'")
-        if result != 0:
-            raise RuntimeError("Restore failed. Ensure psql is available and the database exists.")
+        with open(backup_path, "rb") as fh:
+            result = subprocess.run(["psql", settings.DATABASE_URL], stdin=fh)
+        if result.returncode != 0:
+            raise RuntimeError(
+                "Restore failed. Ensure psql is available and the database exists."
+            )
         return f"Restored PostgreSQL from {backup_path}"
 
 

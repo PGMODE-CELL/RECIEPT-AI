@@ -38,10 +38,11 @@ async def get_current_user(
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
         )
-        result = await db.execute(select(User).filter(User.id == int(payload.get("sub"))))
-        user = result.scalar_one_or_none()
-        if not user or not user.is_active:
-            raise HTTPException(401, "Invalid user")
-        return user
-    except JWTError:
+        user_id = int(payload["sub"])
+    except (JWTError, KeyError, TypeError, ValueError):
         raise HTTPException(401, "Invalid token")
+    result = await db.execute(select(User).filter(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user or not user.is_active:
+        raise HTTPException(401, "Invalid user")
+    return user

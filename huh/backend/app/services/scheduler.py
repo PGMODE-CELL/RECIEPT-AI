@@ -17,42 +17,75 @@ def process_recurring_transactions():
     db = SessionLocal()
     try:
         today = date.today()
-        recs = db.query(RecurringTransaction).filter(
-            RecurringTransaction.active,
-            RecurringTransaction.next_date <= today,
-        ).all()
+        recs = (
+            db.query(RecurringTransaction)
+            .filter(
+                RecurringTransaction.active,
+                RecurringTransaction.next_date <= today,
+            )
+            .all()
+        )
         for rec in recs:
             txn = Transaction(
-                org_id=rec.org_id, date=today,
+                org_id=rec.org_id,
+                date=today,
                 description=rec.description,
-                amount=rec.amount, type=rec.transaction_type or "expense",
+                amount=rec.amount,
+                type=rec.transaction_type or "expense",
             )
             db.add(txn)
             db.flush()
             if rec.transaction_type == "money_in" or rec.transaction_type == "income":
-                debit_acct = db.query(Account).filter(
-                    Account.org_id == rec.org_id, Account.type == "asset",
-                    Account.name.like("%Cash%"),
-                ).first()
-                credit_acct = db.query(Account).filter(
-                    Account.org_id == rec.org_id, Account.type == "income",
-                ).first()
+                debit_acct = (
+                    db.query(Account)
+                    .filter(
+                        Account.org_id == rec.org_id,
+                        Account.type == "asset",
+                        Account.name.like("%Cash%"),
+                    )
+                    .first()
+                )
+                credit_acct = (
+                    db.query(Account)
+                    .filter(
+                        Account.org_id == rec.org_id,
+                        Account.type == "income",
+                    )
+                    .first()
+                )
                 if not credit_acct:
-                    credit_acct = db.query(Account).filter(
-                        Account.org_id == rec.org_id, Account.type == "income",
-                    ).first()
+                    credit_acct = (
+                        db.query(Account)
+                        .filter(
+                            Account.org_id == rec.org_id,
+                            Account.type == "income",
+                        )
+                        .first()
+                    )
             else:
-                debit_acct = db.query(Account).filter(
-                    Account.org_id == rec.org_id, Account.type == "expense",
-                ).first()
-                credit_acct = db.query(Account).filter(
-                    Account.org_id == rec.org_id, Account.type == "asset",
-                    Account.name.like("%Cash%"),
-                ).first()
+                debit_acct = (
+                    db.query(Account)
+                    .filter(
+                        Account.org_id == rec.org_id,
+                        Account.type == "expense",
+                    )
+                    .first()
+                )
+                credit_acct = (
+                    db.query(Account)
+                    .filter(
+                        Account.org_id == rec.org_id,
+                        Account.type == "asset",
+                        Account.name.like("%Cash%"),
+                    )
+                    .first()
+                )
             if debit_acct and credit_acct:
                 line = TransactionLine(
                     transaction_id=txn.id,
-                    debit_account_id=debit_acct.id if rec.transaction_type == "money_out" else debit_acct.id,
+                    debit_account_id=debit_acct.id
+                    if rec.transaction_type == "money_out"
+                    else debit_acct.id,
                     credit_account_id=credit_acct.id,
                     amount=rec.amount,
                 )
@@ -66,6 +99,7 @@ def process_recurring_transactions():
                 rec.next_date = today + timedelta(weeks=2)
             elif freq == "monthly":
                 import calendar
+
                 next_month = today.month + 1
                 year = today.year
                 if next_month > 12:
@@ -94,10 +128,14 @@ def process_recurring_billing():
     db = SessionLocal()
     try:
         today = date.today()
-        plans = db.query(RecurringBillingPlan).filter(
-            RecurringBillingPlan.status == "active",
-            RecurringBillingPlan.next_billing_date <= today,
-        ).all()
+        plans = (
+            db.query(RecurringBillingPlan)
+            .filter(
+                RecurringBillingPlan.status == "active",
+                RecurringBillingPlan.next_billing_date <= today,
+            )
+            .all()
+        )
         for plan in plans:
             if plan.max_cycles and plan.current_cycle >= plan.max_cycles:
                 plan.status = "completed"
@@ -105,11 +143,14 @@ def process_recurring_billing():
                 continue
             inv_count = db.query(Invoice).filter(Invoice.org_id == plan.org_id).count()
             inv = Invoice(
-                org_id=plan.org_id, contact_id=plan.contact_id,
+                org_id=plan.org_id,
+                contact_id=plan.contact_id,
                 number=f"RBILL-{plan.org_id}-{inv_count+1}",
                 date=datetime.now(timezone.utc),
                 due_date=datetime.now(timezone.utc) + timedelta(days=30),
-                total=plan.total_amount, paid=0, status="draft",
+                total=plan.total_amount,
+                paid=0,
+                status="draft",
                 items=plan.items,
             )
             db.add(inv)
@@ -134,7 +175,9 @@ def process_recurring_billing():
             else:
                 plan.next_billing_date = next_date
             db.commit()
-            logger.info(f"Auto-generated invoice from recurring billing plan #{plan.id}")
+            logger.info(
+                f"Auto-generated invoice from recurring billing plan #{plan.id}"
+            )
     except Exception as e:
         logger.error(f"Recurring billing scheduler error: {e}")
     finally:
@@ -145,17 +188,26 @@ def process_payment_reminders():
     db = SessionLocal()
     try:
         now = datetime.now(timezone.utc)
-        reminders = db.query(PaymentReminder).filter(
-            PaymentReminder.active,
-            PaymentReminder.next_send_at <= now,
-        ).all()
+        reminders = (
+            db.query(PaymentReminder)
+            .filter(
+                PaymentReminder.active,
+                PaymentReminder.next_send_at <= now,
+            )
+            .all()
+        )
         for r in reminders:
             inv = db.query(Invoice).filter(Invoice.id == r.invoice_id).first()
             if not inv or inv.status in ("paid", "cancelled") or inv.paid >= inv.total:
                 r.active = False
                 db.commit()
                 continue
-            log = ReminderLog(reminder_id=r.id, invoice_id=r.invoice_id, contact_id=r.contact_id, status="sent")
+            log = ReminderLog(
+                reminder_id=r.id,
+                invoice_id=r.invoice_id,
+                contact_id=r.contact_id,
+                status="sent",
+            )
             db.add(log)
             r.sent_count += 1
             r.last_sent_at = now
@@ -177,6 +229,7 @@ def process_payment_reminders():
 def backup_database_job():
     try:
         from app.backup import backup_database
+
         path = backup_database()
         logger.info(f"Auto-backup: {path}")
     except Exception as e:
@@ -185,11 +238,22 @@ def backup_database_job():
 
 def start_scheduler():
     try:
-        scheduler.add_job(process_recurring_transactions, "interval", hours=6, id="recurring_txns")
-        scheduler.add_job(process_recurring_billing, "interval", hours=6, id="recurring_billing")
-        scheduler.add_job(process_payment_reminders, "interval", hours=1, id="payment_reminders")
+        scheduler.add_job(
+            process_recurring_transactions, "interval", hours=6, id="recurring_txns"
+        )
+        scheduler.add_job(
+            process_recurring_billing, "interval", hours=6, id="recurring_billing"
+        )
+        scheduler.add_job(
+            process_payment_reminders, "interval", hours=1, id="payment_reminders"
+        )
         scheduler.add_job(backup_database_job, "interval", hours=24, id="daily_backup")
         scheduler.start()
         logger.info("Background scheduler started with daily backup")
     except Exception as e:
         logger.warning(f"Scheduler not started (may be running): {e}")
+
+
+def stop_scheduler():
+    if scheduler.running:
+        scheduler.shutdown(wait=False)
