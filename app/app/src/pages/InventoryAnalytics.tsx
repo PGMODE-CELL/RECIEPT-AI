@@ -6,14 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { trpc } from "@/providers/trpc";
 import {
@@ -33,16 +26,7 @@ import {
   AreaChart,
   Area,
 } from "recharts";
-import {
-  Package,
-  AlertTriangle,
-  DollarSign,
-  ShoppingCart,
-  Archive,
-  RefreshCw,
-  Target,
-  Box,
-} from "lucide-react";
+import { Package, AlertTriangle, DollarSign, ShoppingCart, Archive, RefreshCw, Target, Box } from "lucide-react";
 
 interface InventoryItem {
   id: string;
@@ -73,8 +57,12 @@ export default function InventoryAnalytics() {
       const reorder = Number(p.reorderLevel) || 0;
       const cost = Number(p.costPrice) || 0;
       const totalValue = qty * cost;
-      const turnoverRate = qty > 0 ? Math.min(20, Math.round((365 / (qty + 1)) * 10) / 10) : 0;
-      const daysSinceLastSale = qty === 0 ? 90 : Math.min(60, Math.round(Math.random() * 30));
+      // Real inventory turnover requires sales/COGS history the backend does not
+      // expose yet, so it is left unset rather than fabricated.
+      const turnoverRate = 0;
+      const updated = p.updatedAt ? new Date(String(p.updatedAt)) : null;
+      const daysSinceLastSale =
+        updated && !isNaN(updated.getTime()) ? Math.max(0, Math.floor((Date.now() - updated.getTime()) / 86400000)) : 0;
       const maxStock = reorder * 3 || qty * 2 || 100;
       let status: "healthy" | "low_stock" | "overstock" | "dead_stock" = "healthy";
       if (qty === 0) status = "dead_stock";
@@ -103,13 +91,12 @@ export default function InventoryAnalytics() {
   const stats = useMemo(() => {
     const totalItems = inventory.reduce((acc, i) => acc + i.currentStock, 0);
     const totalValue = inventory.reduce((acc, i) => acc + i.totalValue, 0);
-    const withTurnover = inventory.filter((i) => i.turnoverRate > 0);
-    const avgTurnover = withTurnover.length > 0
-      ? withTurnover.reduce((acc, i) => acc + i.turnoverRate, 0) / withTurnover.length
-      : 0;
-    const lowStock = inventory.filter((i) => i.status === "low_stock").length;
-    const deadStock = inventory.filter((i) => i.status === "dead_stock").length;
-    const overstock = inventory.filter((i) => i.status === "overstock").length;
+    const withTurnover = inventory.filter(i => i.turnoverRate > 0);
+    const avgTurnover =
+      withTurnover.length > 0 ? withTurnover.reduce((acc, i) => acc + i.turnoverRate, 0) / withTurnover.length : 0;
+    const lowStock = inventory.filter(i => i.status === "low_stock").length;
+    const deadStock = inventory.filter(i => i.status === "dead_stock").length;
+    const overstock = inventory.filter(i => i.status === "overstock").length;
     return { totalItems, totalValue, avgTurnover, lowStock, deadStock, overstock };
   }, [inventory]);
 
@@ -138,41 +125,32 @@ export default function InventoryAnalytics() {
       supMap[sup].spend += item.totalValue;
       supMap[sup].items.push(item);
     }
-    return Object.entries(supMap).map(([supplier, data]) => ({
-      supplier,
-      avgLeadTime: Math.round((2 + Math.random() * 4) * 10) / 10,
-      onTimeRate: Math.round(88 + Math.random() * 11 * 10) / 10,
-      qualityScore: Math.round(85 + Math.random() * 14),
-      totalOrders: data.orders,
-      totalSpend: Math.round(data.spend),
-    })).sort((a, b) => b.qualityScore - a.qualityScore);
+    return Object.entries(supMap)
+      .map(([supplier, data]) => ({
+        supplier,
+        totalOrders: data.orders,
+        totalSpend: Math.round(data.spend),
+      }))
+      .sort((a, b) => b.totalSpend - a.totalSpend);
   }, [inventory]);
 
-  const TURNOVER_TRENDS = useMemo(() => {
-    const months = ["Aug", "Sep", "Oct", "Nov", "Dec", "Jan"];
-    return months.map((month) => ({
-      month,
-      turnover: Math.round((6.5 + Math.random() * 3) * 10) / 10,
-      avgDays: Math.round(40 + Math.random() * 15),
-    }));
-  }, []);
-
-  const STOCK_VALUATION = useMemo(() => {
-    const base = stats.totalValue;
-    const months = ["Aug", "Sep", "Oct", "Nov", "Dec", "Jan"];
-    return months.map((month, i) => ({
-      month,
-      value: Math.round(base * (0.85 + (i * 0.03) + (Math.random() * 0.05))),
-    }));
-  }, [stats.totalValue]);
+  // Turnover and valuation history require time-series data the backend does not
+  // expose yet; no fabricated series are shown.
+  const TURNOVER_TRENDS: { month: string; turnover: number; avgDays: number }[] = [];
+  const STOCK_VALUATION: { month: string; value: number }[] = [];
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "healthy": return "bg-green-100 text-green-800";
-      case "low_stock": return "bg-red-100 text-red-800";
-      case "overstock": return "bg-yellow-100 text-yellow-800";
-      case "dead_stock": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "healthy":
+        return "bg-green-100 text-green-800";
+      case "low_stock":
+        return "bg-red-100 text-red-800";
+      case "overstock":
+        return "bg-yellow-100 text-yellow-800";
+      case "dead_stock":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -307,7 +285,7 @@ export default function InventoryAnalytics() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {inventory.map((item) => {
+                  {inventory.map(item => {
                     const stockPercent = item.maxStock > 0 ? (item.currentStock / item.maxStock) * 100 : 0;
                     return (
                       <TableRow key={item.id}>
@@ -329,9 +307,7 @@ export default function InventoryAnalytics() {
                         <TableCell className="font-medium">${item.totalValue.toLocaleString()}</TableCell>
                         <TableCell>{item.turnoverRate > 0 ? `${item.turnoverRate}x` : "-"}</TableCell>
                         <TableCell>
-                          <Badge className={getStatusBadge(item.status)}>
-                            {item.status.replace("_", " ")}
-                          </Badge>
+                          <Badge className={getStatusBadge(item.status)}>{item.status.replace("_", " ")}</Badge>
                         </TableCell>
                       </TableRow>
                     );
@@ -350,15 +326,21 @@ export default function InventoryAnalytics() {
                 <CardDescription>Monthly turnover rate</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={TURNOVER_TRENDS}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="turnover" stroke="#6366f1" name="Turnover Rate" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
+                {TURNOVER_TRENDS.length === 0 ? (
+                  <div className="h-[300px] flex items-center justify-center text-center text-sm text-muted-foreground">
+                    Turnover history will appear once sales data is available.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={TURNOVER_TRENDS}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="turnover" stroke="#6366f1" name="Turnover Rate" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
 
@@ -368,15 +350,21 @@ export default function InventoryAnalytics() {
                 <CardDescription>Days inventory sits before selling</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={TURNOVER_TRENDS}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="avgDays" fill="#f97316" name="Avg Days" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {TURNOVER_TRENDS.length === 0 ? (
+                  <div className="h-[300px] flex items-center justify-center text-center text-sm text-muted-foreground">
+                    Average days-in-stock history will appear once sales data is available.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={TURNOVER_TRENDS}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="avgDays" fill="#f97316" name="Avg Days" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -419,7 +407,7 @@ export default function InventoryAnalytics() {
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, "Value"]} />
+                    <Tooltip formatter={value => [`$${Number(value).toLocaleString()}`, "Value"]} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -437,43 +425,26 @@ export default function InventoryAnalytics() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Supplier</TableHead>
-                    <TableHead>Avg Lead Time</TableHead>
-                    <TableHead>On-Time Rate</TableHead>
-                    <TableHead>Quality Score</TableHead>
-                    <TableHead>Total Orders</TableHead>
+                    <TableHead>Total Items</TableHead>
                     <TableHead>Total Spend</TableHead>
-                    <TableHead>Rating</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {SUPPLIER_PERFORMANCE.map((supplier) => {
-                    const overallScore = (supplier.onTimeRate + supplier.qualityScore) / 2;
-                    return (
+                  {SUPPLIER_PERFORMANCE.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                        No supplier data available.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    SUPPLIER_PERFORMANCE.map(supplier => (
                       <TableRow key={supplier.supplier}>
                         <TableCell className="font-medium">{supplier.supplier}</TableCell>
-                        <TableCell>{supplier.avgLeadTime} days</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Progress value={supplier.onTimeRate} className="h-1.5 w-16" />
-                            <span className="text-sm">{supplier.onTimeRate}%</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Progress value={supplier.qualityScore} className="h-1.5 w-16" />
-                            <span className="text-sm">{supplier.qualityScore}</span>
-                          </div>
-                        </TableCell>
                         <TableCell>{supplier.totalOrders}</TableCell>
                         <TableCell>${supplier.totalSpend.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Badge className={overallScore >= 95 ? "bg-green-100 text-green-800" : overallScore >= 90 ? "bg-blue-100 text-blue-800" : "bg-yellow-100 text-yellow-800"}>
-                            {overallScore >= 95 ? "Excellent" : overallScore >= 90 ? "Good" : "Fair"}
-                          </Badge>
-                        </TableCell>
                       </TableRow>
-                    );
-                  })}
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -488,15 +459,28 @@ export default function InventoryAnalytics() {
                 <CardDescription>Total stock value over time</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={STOCK_VALUATION}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, "Value"]} />
-                    <Area type="monotone" dataKey="value" stroke="#6366f1" fill="#6366f1" fillOpacity={0.2} name="Stock Value" />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {STOCK_VALUATION.length === 0 ? (
+                  <div className="h-[300px] flex items-center justify-center text-center text-sm text-muted-foreground">
+                    Valuation history will appear as inventory snapshots accumulate over time.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={STOCK_VALUATION}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip formatter={value => [`$${Number(value).toLocaleString()}`, "Value"]} />
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        stroke="#6366f1"
+                        fill="#6366f1"
+                        fillOpacity={0.2}
+                        name="Stock Value"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
 
@@ -507,8 +491,8 @@ export default function InventoryAnalytics() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {inventory
-                  .filter((i) => i.status === "dead_stock" || i.daysSinceLastSale > 30)
-                  .map((item) => (
+                  .filter(i => i.status === "dead_stock" || i.daysSinceLastSale > 30)
+                  .map(item => (
                     <div key={item.id} className="p-3 border rounded-lg space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-sm">{item.name}</span>
@@ -518,7 +502,12 @@ export default function InventoryAnalytics() {
                         <span>SKU: {item.sku}</span>
                         <span>Value: ${item.totalValue.toLocaleString()}</span>
                       </div>
-                      <Button size="sm" variant="outline" className="w-full" onClick={() => toast.success(`Discount action initiated for ${item.name}`)}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => toast.success(`Discount action initiated for ${item.name}`)}
+                      >
                         <Target className="mr-2 h-3 w-3" />
                         Create Clearance Discount
                       </Button>

@@ -49,14 +49,8 @@ export default function SupplierPortal() {
   const [selectedPO, setSelectedPO] = useState<SupplierPO | null>(null);
   const [submitInvoicePO, setSubmitInvoicePO] = useState<SupplierPO | null>(null);
 
-  const { data: purchaseOrders = [] } = trpc.purchaseOrder.list.useQuery(
-    {},
-    { enabled: isLoggedIn }
-  );
-  const { data: contacts = [] } = trpc.contact.list.useQuery(
-    undefined,
-    { enabled: isLoggedIn }
-  );
+  const { data: purchaseOrders = [] } = trpc.purchaseOrder.list.useQuery({}, { enabled: isLoggedIn });
+  const { data: contacts = [] } = trpc.contact.list.useQuery();
 
   const vendorContacts = contacts.filter((c: any) => c.type === "vendor" || c.type === "supplier");
 
@@ -81,7 +75,7 @@ export default function SupplierPortal() {
       status: po.status === "paid" ? "paid" : po.status === "received" ? "approved" : "submitted",
     }));
 
-  const payments: PaymentStatus[] = invoices.map((inv) => ({
+  const payments: PaymentStatus[] = invoices.map(inv => ({
     id: inv.id,
     invoiceNumber: inv.invoiceNumber,
     amount: inv.amount,
@@ -90,23 +84,41 @@ export default function SupplierPortal() {
     status: inv.status === "paid" ? "paid" : inv.status === "approved" ? "approved" : "submitted",
   }));
 
-  const formatCurrency = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
+  const formatCurrency = (v: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
 
   const statusColor = (s: string) => {
     const colors: Record<string, string> = {
-      pending: "bg-yellow-100 text-yellow-800", confirmed: "bg-blue-100 text-blue-800",
-      shipped: "bg-purple-100 text-purple-800", delivered: "bg-green-100 text-green-800",
-      closed: "bg-gray-100 text-gray-800", submitted: "bg-yellow-100 text-yellow-800",
-      approved: "bg-blue-100 text-blue-800", paid: "bg-green-100 text-green-800",
-      rejected: "bg-red-100 text-red-800", scheduled: "bg-purple-100 text-purple-800",
-      draft: "bg-gray-100 text-gray-800", sent: "bg-blue-100 text-blue-800",
-      received: "bg-green-100 text-green-800", cancelled: "bg-red-100 text-red-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      confirmed: "bg-blue-100 text-blue-800",
+      shipped: "bg-purple-100 text-purple-800",
+      delivered: "bg-green-100 text-green-800",
+      closed: "bg-gray-100 text-gray-800",
+      submitted: "bg-yellow-100 text-yellow-800",
+      approved: "bg-blue-100 text-blue-800",
+      paid: "bg-green-100 text-green-800",
+      rejected: "bg-red-100 text-red-800",
+      scheduled: "bg-purple-100 text-purple-800",
+      draft: "bg-gray-100 text-gray-800",
+      sent: "bg-blue-100 text-blue-800",
+      received: "bg-green-100 text-green-800",
+      cancelled: "bg-red-100 text-red-800",
     };
     return colors[s] || "bg-gray-100 text-gray-800";
   };
 
   const handleLogin = () => {
-    if (loginEmail) { setIsLoggedIn(true); toast.success("Welcome to the Supplier Portal"); }
+    if (!loginEmail) {
+      toast.error("Please enter your email address");
+      return;
+    }
+    const match = vendorContacts.find((c: any) => c.email?.toLowerCase() === loginEmail.toLowerCase());
+    if (!match) {
+      toast.error("No supplier account found for this email");
+      return;
+    }
+    setIsLoggedIn(true);
+    toast.success("Welcome to the Supplier Portal");
   };
 
   if (!isLoggedIn) {
@@ -121,10 +133,16 @@ export default function SupplierPortal() {
             <p className="text-sm text-gray-500">Sign in to view POs and track payments</p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Input type="email" placeholder="Email address" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} />
+            <Input
+              type="email"
+              placeholder="Email address"
+              value={loginEmail}
+              onChange={e => setLoginEmail(e.target.value)}
+            />
             <Input type="password" placeholder="Password" />
-            <Button onClick={handleLogin} className="w-full"><LogIn className="w-4 h-4 mr-2" /> Sign In</Button>
-            <p className="text-xs text-center text-gray-500">Demo: enter any email to sign in</p>
+            <Button onClick={handleLogin} className="w-full">
+              <LogIn className="w-4 h-4 mr-2" /> Sign In
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -136,12 +154,16 @@ export default function SupplierPortal() {
       <header className="bg-white dark:bg-gray-800 border-b px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center text-white font-bold">S</div>
+            <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center text-white font-bold">
+              S
+            </div>
             <span className="font-semibold">Supplier Portal</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-500">{loginEmail}</span>
-            <Button variant="outline" size="sm" onClick={() => setIsLoggedIn(false)}>Sign Out</Button>
+            <Button variant="outline" size="sm" onClick={() => setIsLoggedIn(false)}>
+              Sign Out
+            </Button>
           </div>
         </div>
       </header>
@@ -150,26 +172,50 @@ export default function SupplierPortal() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg"><Package className="w-5 h-5 text-blue-600" /></div>
-              <div><p className="text-xs text-gray-500">Total POs</p><p className="text-2xl font-bold">{poItems.length}</p></div>
+              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                <Package className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Total POs</p>
+                <p className="text-2xl font-bold">{poItems.length}</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg"><FileText className="w-5 h-5 text-yellow-600" /></div>
-              <div><p className="text-xs text-gray-500">Invoices</p><p className="text-2xl font-bold">{invoices.length}</p></div>
+              <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
+                <FileText className="w-5 h-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Invoices</p>
+                <p className="text-2xl font-bold">{invoices.length}</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg"><CheckCircle className="w-5 h-5 text-green-600" /></div>
-              <div><p className="text-xs text-gray-500">Paid</p><p className="text-2xl font-bold">{formatCurrency(payments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0))}</p></div>
+              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Paid</p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(payments.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0))}
+                </p>
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg"><Clock className="w-5 h-5 text-purple-600" /></div>
-              <div><p className="text-xs text-gray-500">Pending Payment</p><p className="text-2xl font-bold">{formatCurrency(payments.filter((p) => p.status !== "paid").reduce((s, p) => s + p.amount, 0))}</p></div>
+              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                <Clock className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Pending Payment</p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(payments.filter(p => p.status !== "paid").reduce((s, p) => s + p.amount, 0))}
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -196,18 +242,24 @@ export default function SupplierPortal() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {poItems.map((po) => (
+                    {poItems.map(po => (
                       <TableRow key={po.id}>
                         <TableCell className="font-mono font-medium">{po.orderNumber}</TableCell>
                         <TableCell>{po.orderDate}</TableCell>
                         <TableCell>{po.contactName}</TableCell>
                         <TableCell className="text-right font-semibold">{formatCurrency(po.totalAmount)}</TableCell>
-                        <TableCell><Badge className={statusColor(po.status)}>{po.status}</Badge></TableCell>
+                        <TableCell>
+                          <Badge className={statusColor(po.status)}>{po.status}</Badge>
+                        </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button size="sm" variant="ghost" onClick={() => setSelectedPO(po)}><Eye className="w-4 h-4" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => setSelectedPO(po)}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
                             {po.status === "confirmed" && (
-                              <Button size="sm" variant="outline" onClick={() => setSubmitInvoicePO(po)}>Submit Invoice</Button>
+                              <Button size="sm" variant="outline" onClick={() => setSubmitInvoicePO(po)}>
+                                Submit Invoice
+                              </Button>
                             )}
                           </div>
                         </TableCell>
@@ -233,13 +285,15 @@ export default function SupplierPortal() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoices.map((inv) => (
+                    {invoices.map(inv => (
                       <TableRow key={inv.id}>
                         <TableCell className="font-mono font-medium">{inv.invoiceNumber}</TableCell>
                         <TableCell>{inv.poNumber}</TableCell>
                         <TableCell>{inv.date}</TableCell>
                         <TableCell className="text-right font-semibold">{formatCurrency(inv.amount)}</TableCell>
-                        <TableCell><Badge className={statusColor(inv.status)}>{inv.status}</Badge></TableCell>
+                        <TableCell>
+                          <Badge className={statusColor(inv.status)}>{inv.status}</Badge>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -264,7 +318,7 @@ export default function SupplierPortal() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {payments.map((p) => (
+                    {payments.map(p => (
                       <TableRow key={p.id}>
                         <TableCell className="font-mono">{p.invoiceNumber}</TableCell>
                         <TableCell className="text-right font-semibold">{formatCurrency(p.amount)}</TableCell>
@@ -272,7 +326,9 @@ export default function SupplierPortal() {
                         <TableCell className="text-sm">{p.approvedDate || "-"}</TableCell>
                         <TableCell className="text-sm">{p.expectedPayment}</TableCell>
                         <TableCell className="text-sm">{p.paidDate || "-"}</TableCell>
-                        <TableCell><Badge className={statusColor(p.status)}>{p.status}</Badge></TableCell>
+                        <TableCell>
+                          <Badge className={statusColor(p.status)}>{p.status}</Badge>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -284,12 +340,20 @@ export default function SupplierPortal() {
 
         <Dialog open={selectedPO !== null} onOpenChange={() => setSelectedPO(null)}>
           <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>Purchase Order: {selectedPO?.orderNumber}</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>Purchase Order: {selectedPO?.orderNumber}</DialogTitle>
+            </DialogHeader>
             {selectedPO && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><p className="text-gray-500">Vendor</p><p className="font-medium">{selectedPO.contactName}</p></div>
-                  <div><p className="text-gray-500">Date</p><p className="font-medium">{selectedPO.orderDate}</p></div>
+                  <div>
+                    <p className="text-gray-500">Vendor</p>
+                    <p className="font-medium">{selectedPO.contactName}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Date</p>
+                    <p className="font-medium">{selectedPO.orderDate}</p>
+                  </div>
                 </div>
                 <div className="text-right font-bold text-lg">Total: {formatCurrency(selectedPO.totalAmount)}</div>
               </div>
@@ -306,7 +370,13 @@ export default function SupplierPortal() {
               <Input placeholder="Invoice Number" />
               <Input type="date" defaultValue={new Date().toISOString().split("T")[0]} />
               <Input type="number" placeholder="Amount" defaultValue={submitInvoicePO?.totalAmount} />
-              <Button className="w-full" onClick={() => { toast.success("Invoice submitted"); setSubmitInvoicePO(null); }}>
+              <Button
+                className="w-full"
+                onClick={() => {
+                  toast.success("Invoice submitted");
+                  setSubmitInvoicePO(null);
+                }}
+              >
                 Submit Invoice
               </Button>
             </div>

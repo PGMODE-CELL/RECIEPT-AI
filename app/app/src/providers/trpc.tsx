@@ -14,17 +14,12 @@ declare global {
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
 
-function getDemoUser() {
-  try { const stored = localStorage.getItem("receiptai_demo_user"); return stored ? JSON.parse(stored) : null; } catch { return null; }
-}
-
-function isDemoMode() { return !!getDemoUser(); }
-function isRealMode() { return !!getToken(); }
-
 // Maps tRPC procedure paths → FastAPI REST endpoints
 // Every tRPC procedure must be listed here to avoid falling back to mock data.
 // Procedures without a backend route will receive a 404 error (visible to user).
 const ROUTE_MAP: Record<string, { method: string; path: string; needsOrg: boolean }> = {
+  // System
+  health: { method: "GET", path: "/api/health", needsOrg: false },
   // Auth
   "auth.me": { method: "GET", path: "/api/auth/me", needsOrg: false },
   "auth.logout": { method: "POST", path: "/api/auth/logout", needsOrg: false },
@@ -164,7 +159,11 @@ const ROUTE_MAP: Record<string, { method: string; path: string; needsOrg: boolea
   "payroll.employee.list": { method: "GET", path: "/api/payroll/{orgId}/employees", needsOrg: true },
   "payroll.employee.create": { method: "POST", path: "/api/payroll/{orgId}/employees", needsOrg: true },
   "payroll.payslip.list": { method: "GET", path: "/api/payroll/{orgId}/payslips", needsOrg: true },
-  "payroll.payslip.generate": { method: "POST", path: "/api/payroll/{orgId}/employees/{empId}/payslip", needsOrg: true },
+  "payroll.payslip.generate": {
+    method: "POST",
+    path: "/api/payroll/{orgId}/employees/{empId}/payslip",
+    needsOrg: true,
+  },
   // Document
   "document.list": { method: "GET", path: "/api/attachments/{orgId}/list", needsOrg: true },
   "document.create": { method: "POST", path: "/api/attachments/{orgId}/upload", needsOrg: true },
@@ -202,9 +201,21 @@ const ROUTE_MAP: Record<string, { method: string; path: string; needsOrg: boolea
   // Reconciliation
   "reconciliation.list": { method: "GET", path: "/api/financials/{orgId}/statement/reconciliation", needsOrg: true },
   "reconciliation.create": { method: "POST", path: "/api/financials/{orgId}/statement/reconciliation", needsOrg: true },
-  "reconciliation.reconcile": { method: "POST", path: "/api/financials/{orgId}/statement/{id}/reconcile", needsOrg: true },
-  "reconciliation.delete": { method: "DELETE", path: "/api/financials/{orgId}/statement/reconciliation/{id}", needsOrg: true },
-  "reconciliation.getUnreconciled": { method: "GET", path: "/api/financials/{orgId}/statement/{importId}/suggestions", needsOrg: true },
+  "reconciliation.reconcile": {
+    method: "POST",
+    path: "/api/financials/{orgId}/statement/{id}/reconcile",
+    needsOrg: true,
+  },
+  "reconciliation.delete": {
+    method: "DELETE",
+    path: "/api/financials/{orgId}/statement/reconciliation/{id}",
+    needsOrg: true,
+  },
+  "reconciliation.getUnreconciled": {
+    method: "GET",
+    path: "/api/financials/{orgId}/statement/{importId}/suggestions",
+    needsOrg: true,
+  },
   // Payment
   "payment.history": { method: "GET", path: "/api/payments/{orgId}/history", needsOrg: true },
   "payment.record": { method: "POST", path: "/api/payments/{orgId}/manual", needsOrg: true },
@@ -261,8 +272,16 @@ const ROUTE_MAP: Record<string, { method: string; path: string; needsOrg: boolea
   // General Ledger
   "generalLedger.list": { method: "GET", path: "/api/financials/{orgId}/ledger/{accountId}", needsOrg: true },
   // Payment Gateway
-  "paymentGateway.createIntent": { method: "POST", path: "/api/payments/{orgId}/stripe/create-payment-intent", needsOrg: true },
-  "invoice.createFromTimeEntries": { method: "POST", path: "/api/projects/{orgId}/time-entries/invoice", needsOrg: true },
+  "paymentGateway.createIntent": {
+    method: "POST",
+    path: "/api/payments/{orgId}/stripe/create-payment-intent",
+    needsOrg: true,
+  },
+  "invoice.createFromTimeEntries": {
+    method: "POST",
+    path: "/api/projects/{orgId}/time-entries/invoice",
+    needsOrg: true,
+  },
   // Attachment
   "attachment.list": { method: "GET", path: "/api/attachments/{orgId}/list", needsOrg: true },
   "attachment.upload": { method: "POST", path: "/api/attachments/{orgId}/upload", needsOrg: true },
@@ -302,18 +321,34 @@ const ROUTE_MAP: Record<string, { method: string; path: string; needsOrg: boolea
   "manufacturing.deleteBom": { method: "DELETE", path: "/api/manufacturing/{orgId}/boms/{id}", needsOrg: true },
   "manufacturing.listBomItems": { method: "GET", path: "/api/manufacturing/{orgId}/boms/{id}/items", needsOrg: true },
   "manufacturing.addBomItem": { method: "POST", path: "/api/manufacturing/{orgId}/boms/{id}/items", needsOrg: true },
-  "manufacturing.removeBomItem": { method: "DELETE", path: "/api/manufacturing/{orgId}/boms/{id}/items/{itemId}", needsOrg: true },
+  "manufacturing.removeBomItem": {
+    method: "DELETE",
+    path: "/api/manufacturing/{orgId}/boms/{id}/items/{itemId}",
+    needsOrg: true,
+  },
   "manufacturing.listWorkOrders": { method: "GET", path: "/api/manufacturing/{orgId}/work-orders", needsOrg: true },
   "manufacturing.createWorkOrder": { method: "POST", path: "/api/manufacturing/{orgId}/work-orders", needsOrg: true },
-  "manufacturing.updateWorkOrder": { method: "PUT", path: "/api/manufacturing/{orgId}/work-orders/{id}", needsOrg: true },
-  "manufacturing.deleteWorkOrder": { method: "DELETE", path: "/api/manufacturing/{orgId}/work-orders/{id}", needsOrg: true },
+  "manufacturing.updateWorkOrder": {
+    method: "PUT",
+    path: "/api/manufacturing/{orgId}/work-orders/{id}",
+    needsOrg: true,
+  },
+  "manufacturing.deleteWorkOrder": {
+    method: "DELETE",
+    path: "/api/manufacturing/{orgId}/work-orders/{id}",
+    needsOrg: true,
+  },
   // Revenue Recognition
   "revenueRecognition.list": { method: "GET", path: "/api/revenue-recognition/{orgId}", needsOrg: true },
   "revenueRecognition.getById": { method: "GET", path: "/api/revenue-recognition/{orgId}/{id}", needsOrg: true },
   "revenueRecognition.create": { method: "POST", path: "/api/revenue-recognition/{orgId}", needsOrg: true },
   "revenueRecognition.update": { method: "PUT", path: "/api/revenue-recognition/{orgId}/{id}", needsOrg: true },
   "revenueRecognition.delete": { method: "DELETE", path: "/api/revenue-recognition/{orgId}/{id}", needsOrg: true },
-  "revenueRecognition.recognizeRevenue": { method: "POST", path: "/api/revenue-recognition/{orgId}/{id}/recognize", needsOrg: true },
+  "revenueRecognition.recognizeRevenue": {
+    method: "POST",
+    path: "/api/revenue-recognition/{orgId}/{id}/recognize",
+    needsOrg: true,
+  },
   // Lease
   "lease.list": { method: "GET", path: "/api/leases/{orgId}", needsOrg: true },
   "lease.getById": { method: "GET", path: "/api/leases/{orgId}/{id}", needsOrg: true },
@@ -357,14 +392,22 @@ const ROUTE_MAP: Record<string, { method: string; path: string; needsOrg: boolea
   "documentVersion.create": { method: "POST", path: "/api/document-versions/{orgId}", needsOrg: true },
   "documentVersion.update": { method: "PUT", path: "/api/document-versions/{orgId}/{id}", needsOrg: true },
   "documentVersion.delete": { method: "DELETE", path: "/api/document-versions/{orgId}/{id}", needsOrg: true },
-  "documentVersion.getVersionHistory": { method: "GET", path: "/api/document-versions/{orgId}/{id}/history", needsOrg: true },
+  "documentVersion.getVersionHistory": {
+    method: "GET",
+    path: "/api/document-versions/{orgId}/{id}/history",
+    needsOrg: true,
+  },
   // Inventory Valuation
   "inventoryValuation.list": { method: "GET", path: "/api/inventory-valuation/{orgId}", needsOrg: true },
   "inventoryValuation.getById": { method: "GET", path: "/api/inventory-valuation/{orgId}/{id}", needsOrg: true },
   "inventoryValuation.create": { method: "POST", path: "/api/inventory-valuation/{orgId}", needsOrg: true },
   "inventoryValuation.update": { method: "PUT", path: "/api/inventory-valuation/{orgId}/{id}", needsOrg: true },
   "inventoryValuation.delete": { method: "DELETE", path: "/api/inventory-valuation/{orgId}/{id}", needsOrg: true },
-  "inventoryValuation.calculateValues": { method: "GET", path: "/api/inventory-valuation/{orgId}/calculate", needsOrg: true },
+  "inventoryValuation.calculateValues": {
+    method: "GET",
+    path: "/api/inventory-valuation/{orgId}/calculate",
+    needsOrg: true,
+  },
   "inventoryValuation.updateMethod": { method: "PUT", path: "/api/inventory-valuation/{orgId}/method", needsOrg: true },
   // Fiscal Period
   "fiscalPeriod.list": { method: "GET", path: "/api/accounting-periods/{orgId}", needsOrg: true },
@@ -374,7 +417,11 @@ const ROUTE_MAP: Record<string, { method: string; path: string; needsOrg: boolea
   "fiscalPeriod.delete": { method: "DELETE", path: "/api/accounting-periods/{orgId}/{id}", needsOrg: true },
   "fiscalPeriod.closePeriod": { method: "POST", path: "/api/accounting-periods/{orgId}/{id}/close", needsOrg: true },
   "fiscalPeriod.get": { method: "GET", path: "/api/accounting-periods/{orgId}/current", needsOrg: true },
-  "fiscalPeriod.yearEndClose": { method: "POST", path: "/api/accounting-periods/{orgId}/year-end-close", needsOrg: true },
+  "fiscalPeriod.yearEndClose": {
+    method: "POST",
+    path: "/api/accounting-periods/{orgId}/year-end-close",
+    needsOrg: true,
+  },
   // Tax Rule
   "taxRule.list": { method: "GET", path: "/api/tax/{orgId}/rates", needsOrg: true },
   "taxRule.getById": { method: "GET", path: "/api/tax/{orgId}/rates/{id}", needsOrg: true },
@@ -384,10 +431,20 @@ const ROUTE_MAP: Record<string, { method: string; path: string; needsOrg: boolea
   "taxRule.applyToTransaction": { method: "POST", path: "/api/tax/{orgId}/compute-invoice", needsOrg: true },
 };
 
-function resolvePath(route: typeof ROUTE_MAP[string], input: any): { url: string; queryParams: Record<string, string> } {
+function resolvePath(
+  route: (typeof ROUTE_MAP)[string],
+  input: any,
+): { url: string; queryParams: Record<string, string> } {
   const orgId = getOrgId();
   let path = route.path;
-  const pathParams: Record<string, string> = { orgId: String(orgId || ""), id: "", accountId: "", empId: "", itemId: "", importId: "" };
+  const pathParams: Record<string, string> = {
+    orgId: String(orgId || ""),
+    id: "",
+    accountId: "",
+    empId: "",
+    itemId: "",
+    importId: "",
+  };
 
   // Extract IDs from input
   if (input?.id !== undefined) pathParams.id = String(input.id);
@@ -408,7 +465,18 @@ function resolvePath(route: typeof ROUTE_MAP[string], input: any): { url: string
   // Build query params from input (exclude known path params and special keys)
   const queryParams: Record<string, string> = {};
   if (input && typeof input === "object" && !Array.isArray(input)) {
-    const skipKeys = new Set(["id", "accountId", "empId", "itemId", "invoiceId", "invoiceIds", "budgetId", "estimateId", "poId", "items"]);
+    const skipKeys = new Set([
+      "id",
+      "accountId",
+      "empId",
+      "itemId",
+      "invoiceId",
+      "invoiceIds",
+      "budgetId",
+      "estimateId",
+      "poId",
+      "items",
+    ]);
     Object.entries(input).forEach(([k, v]) => {
       if (!skipKeys.has(k) && v !== undefined && v !== null && v !== "") {
         // Map period.from/.to → period_start/period_end for backend params
@@ -430,12 +498,29 @@ function resolvePath(route: typeof ROUTE_MAP[string], input: any): { url: string
   return { url: `${API_BASE}${path}`, queryParams };
 }
 
-function mockResponse(path: string): any {
-  const demo = getDemoUser();
-  if (path === "auth.me") return demo;
+// Safe empty defaults for the rare procedure that has no backend route yet.
+// These are honest empty/zero shapes (never fabricated data) so the UI renders
+// an empty state instead of crashing on a missing field.
+function emptyFallback(path: string): any {
   if (path === "auth.logout") return { success: true };
   if (path === "ping") return { ok: true, ts: Date.now() };
-  if (path === "dashboard.stats") return { revenue: 0, outstanding: 0, overdue: 0, bankBalance: 0, totalBills: 0, billsDue: 0, invoiceCount: 0, billCount: 0, contactCount: 0, productCount: 0, pendingReceipts: 0, activeProjects: 0, employeeCount: 0, monthlyRevenue: [] };
+  if (path === "dashboard.stats")
+    return {
+      revenue: 0,
+      outstanding: 0,
+      overdue: 0,
+      bankBalance: 0,
+      totalBills: 0,
+      billsDue: 0,
+      invoiceCount: 0,
+      billCount: 0,
+      contactCount: 0,
+      productCount: 0,
+      pendingReceipts: 0,
+      activeProjects: 0,
+      employeeCount: 0,
+      monthlyRevenue: [],
+    };
   if (path === "dashboard.recentActivity") return [];
   if (path.includes("nextNumber")) {
     if (path.includes("invoice")) return "INV-0001";
@@ -446,20 +531,47 @@ function mockResponse(path: string): any {
   if (path.includes("getCompany") || path.includes("getById")) return null;
   if (path.includes("listTaxRates") || path.includes("listCurrencies")) return [];
   if (path.includes("statement")) return { invoices: [], bills: [] };
-  if (path.includes("getStats")) return { activeEmployees: 0, totalMonthlySalary: 0, lastRunDate: null, total: 0, todayCount: 0 };
-  if (path.includes("getSummary")) return { totalBudget: 0, totalSpent: 0, count: 0, activeCount: 0, totalCost: 0, totalAccumulated: 0, totalCurrentValue: 0 };
+  if (path.includes("getStats"))
+    return { activeEmployees: 0, totalMonthlySalary: 0, lastRunDate: null, total: 0, todayCount: 0 };
+  if (path.includes("getSummary"))
+    return {
+      totalBudget: 0,
+      totalSpent: 0,
+      count: 0,
+      activeCount: 0,
+      totalCost: 0,
+      totalAccumulated: 0,
+      totalCurrentValue: 0,
+    };
   if (path.includes("getUnreconciled")) return [];
-  if (path.includes("profitLoss")) return { period: { from: "", to: "" }, income: 0, expenses: 0, netProfit: 0, incomeAccounts: [], expenseAccounts: [] };
-  if (path.includes("balanceSheet")) return { asOf: "", assets: [], liabilities: [], equity: [], totalAssets: 0, totalLiabilities: 0, totalEquity: 0 };
-  if (path.includes("cashFlow")) return { period: { from: "", to: "" }, inflows: [], outflows: [], totalIn: 0, totalOut: 0, netFlow: 0 };
+  if (path.includes("profitLoss"))
+    return {
+      period: { from: "", to: "" },
+      income: 0,
+      expenses: 0,
+      netProfit: 0,
+      incomeAccounts: [],
+      expenseAccounts: [],
+    };
+  if (path.includes("balanceSheet"))
+    return { asOf: "", assets: [], liabilities: [], equity: [], totalAssets: 0, totalLiabilities: 0, totalEquity: 0 };
+  if (path.includes("cashFlow"))
+    return { period: { from: "", to: "" }, inflows: [], outflows: [], totalIn: 0, totalOut: 0, netFlow: 0 };
   if (path.includes("agedReceivables") || path.includes("agedPayables")) return [];
-  if (path.includes("taxSummary")) return { period: { from: "", to: "" }, outputTax: 0, inputTax: 0, taxPayable: 0, totalRevenue: 0, totalPurchases: 0 };
+  if (path.includes("taxSummary"))
+    return {
+      period: { from: "", to: "" },
+      outputTax: 0,
+      inputTax: 0,
+      taxPayable: 0,
+      totalRevenue: 0,
+      totalPurchases: 0,
+    };
   if (path.endsWith(".list") || path.endsWith(".all") || path.includes("getAll") || path.includes("list")) return [];
   if (path.includes("depreciate")) return { depreciation: "0.00" };
   if (path.includes("getUnreadCount")) return 0;
   if (path.includes("markRead") || path.includes("markAllRead")) return { success: true };
-  if (path.includes("convertToInvoice")) return { success: true, id: Math.floor(Math.random() * 10000) };
-  return { success: true, id: Math.floor(Math.random() * 10000) };
+  return { success: true };
 }
 
 // Extract input from tRPC URL
@@ -475,7 +587,7 @@ function extractInput(url: string, init?: RequestInit): any {
       const body = JSON.parse(String(init.body));
       return body?.["0"] ?? body?.["1"] ?? null;
     }
-  } catch { }
+  } catch {}
   return null;
 }
 
@@ -483,7 +595,9 @@ function extractProcedurePath(url: string): string {
   try {
     const urlObj = new URL(url, window.location.origin);
     return urlObj.pathname.replace("/api/trpc/", "").split("?")[0];
-  } catch { return ""; }
+  } catch {
+    return "";
+  }
 }
 
 // Normalize FastAPI responses to match frontend expectations
@@ -542,10 +656,20 @@ function normalizeResponse(procedure: string, data: any): any {
     }
     if (!("revenue" in data)) {
       return {
-        revenue: 0, outstanding: 0, overdue: 0, bankBalance: 0,
-        totalBills: 0, billsDue: 0, invoiceCount: 0, billCount: 0,
-        contactCount: 0, productCount: 0, pendingReceipts: 0,
-        activeProjects: 0, employeeCount: 0, monthlyRevenue: [],
+        revenue: 0,
+        outstanding: 0,
+        overdue: 0,
+        bankBalance: 0,
+        totalBills: 0,
+        billsDue: 0,
+        invoiceCount: 0,
+        billCount: 0,
+        contactCount: 0,
+        productCount: 0,
+        pendingReceipts: 0,
+        activeProjects: 0,
+        employeeCount: 0,
+        monthlyRevenue: [],
       };
     }
   }
@@ -573,7 +697,11 @@ function normalizeResponse(procedure: string, data: any): any {
         inflows: data.operating?.filter((i: any) => (i.amount || 0) > 0) || [],
         outflows: data.operating?.filter((i: any) => (i.amount || 0) < 0) || [],
         totalIn: data.operating_total || 0,
-        totalOut: -(data.operating?.filter((i: any) => (i.amount || 0) < 0).reduce((s: number, i: any) => s + Math.abs(i.amount), 0) || 0),
+        totalOut: -(
+          data.operating
+            ?.filter((i: any) => (i.amount || 0) < 0)
+            .reduce((s: number, i: any) => s + Math.abs(i.amount), 0) || 0
+        ),
         netFlow: data.net_cash_flow || 0,
       };
     }
@@ -621,7 +749,7 @@ function normalizeResponse(procedure: string, data: any): any {
 // ===== Request data mapping: frontend → backend field names =====
 
 function camelToSnake(s: string): string {
-  return s.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`);
+  return s.replace(/[A-Z]/g, m => `_${m.toLowerCase()}`);
 }
 
 // Per-procedure input transforms: maps frontend data shape → backend-expected data shape.
@@ -629,7 +757,7 @@ function camelToSnake(s: string): string {
 // This handles: renames (contactId→contact_id), value generation (dueDate→due_days),
 // items format (unitPrice→price), dropping fields, and expanding items into totals.
 const INPUT_TRANSFORMS: Record<string, (data: Record<string, any>) => void> = {
-  "invoice.create": (data) => {
+  "invoice.create": data => {
     if (Array.isArray(data.items)) {
       data.items = data.items.map((item: any) => ({
         description: item.description,
@@ -643,7 +771,9 @@ const INPUT_TRANSFORMS: Record<string, (data: Record<string, any>) => void> = {
       const due = new Date(data.dueDate as string);
       const issue = data.issueDate ? new Date(data.issueDate as string) : new Date();
       data.due_days = Math.max(1, Math.round((due.getTime() - issue.getTime()) / 86400000));
-    } else { data.due_days = 30; }
+    } else {
+      data.due_days = 30;
+    }
     delete data.invoiceNumber;
     delete data.issueDate;
     delete data.dueDate;
@@ -651,11 +781,15 @@ const INPUT_TRANSFORMS: Record<string, (data: Record<string, any>) => void> = {
     delete data.notes;
   },
 
-  "bill.create": (data) => {
+  "bill.create": data => {
     if (Array.isArray(data.items)) {
       const items = data.items as any[];
       data.amount = items.reduce((s: number, i: any) => s + parseFloat(i.amount || "0"), 0);
-      data.description = items.filter((i: any) => i.description).map((i: any) => i.description).join("; ") || "Bill items";
+      data.description =
+        items
+          .filter((i: any) => i.description)
+          .map((i: any) => i.description)
+          .join("; ") || "Bill items";
     }
     delete data.items;
     data.contact_id = data.contactId;
@@ -663,7 +797,9 @@ const INPUT_TRANSFORMS: Record<string, (data: Record<string, any>) => void> = {
     if (data.dueDate) {
       const due = new Date(data.dueDate as string);
       data.due_days = Math.max(1, Math.round((due.getTime() - Date.now()) / 86400000));
-    } else { data.due_days = 30; }
+    } else {
+      data.due_days = 30;
+    }
     delete data.billNumber;
     delete data.billDate;
     delete data.dueDate;
@@ -671,7 +807,7 @@ const INPUT_TRANSFORMS: Record<string, (data: Record<string, any>) => void> = {
     delete data.notes;
   },
 
-  "product.create": (data) => {
+  "product.create": data => {
     data.price = data.salePrice;
     data.quantity = data.quantityOnHand;
     delete data.salePrice;
@@ -679,19 +815,19 @@ const INPUT_TRANSFORMS: Record<string, (data: Record<string, any>) => void> = {
     delete data.type;
   },
 
-  "journalEntry.create": (data) => {
+  "journalEntry.create": data => {
     data.lines_json = data.lines;
     delete data.lines;
     delete data.entryNumber;
   },
 
-  "transaction.create": (data) => {
+  "transaction.create": data => {
     delete data.accountId;
     delete data.direction;
     delete data.reference;
   },
 
-  "estimate.create": (data) => {
+  "estimate.create": data => {
     data.contact_id = data.contactId;
     delete data.contactId;
     if (Array.isArray(data.items)) {
@@ -703,7 +839,7 @@ const INPUT_TRANSFORMS: Record<string, (data: Record<string, any>) => void> = {
     }
   },
 
-  "purchaseOrder.create": (data) => {
+  "purchaseOrder.create": data => {
     data.contact_id = data.contactId;
     delete data.contactId;
     delete data.orderNumber;
@@ -718,57 +854,63 @@ const INPUT_TRANSFORMS: Record<string, (data: Record<string, any>) => void> = {
     }
   },
 
-  "creditNote.create": (data) => {
+  "creditNote.create": data => {
     delete data.creditNumber;
   },
 
-  "project.create": (data) => {
+  "project.create": data => {
     data.contact_id = data.contactId;
     delete data.contactId;
   },
 
-  "budget.create": (data) => {
+  "budget.create": data => {
     delete data.accountId;
     delete data.startDate;
     delete data.endDate;
   },
 
-  "recurring.create": (data) => {
+  "recurring.create": data => {
     delete data.nextDate;
   },
 
-  "invoice.recordPayment": (data) => {
+  "invoice.recordPayment": data => {
     data.invoice_id = data.id;
     delete data.id;
     delete data.accountId;
   },
 
-  "bill.recordPayment": (data) => {
+  "bill.recordPayment": data => {
     data.invoice_id = data.id;
     delete data.id;
     delete data.accountId;
   },
 
-  "crm.createLead": (data) => {
-    if (data.contactName) { data.name = data.contactName; delete data.contactName; }
+  "crm.createLead": data => {
+    if (data.contactName) {
+      data.name = data.contactName;
+      delete data.contactName;
+    }
   },
-  "crm.updateLead": (data) => {
-    if (data.contactName) { data.name = data.contactName; delete data.contactName; }
+  "crm.updateLead": data => {
+    if (data.contactName) {
+      data.name = data.contactName;
+      delete data.contactName;
+    }
   },
 
-  "revenueRecognition.create": (data) => {
+  "revenueRecognition.create": data => {
     if (Array.isArray(data.schedule)) {
       data.schedule = JSON.stringify(data.schedule);
     }
-    delete data.totalAmount;  // backend computes this
+    delete data.totalAmount; // backend computes this
   },
 
-  "webhook.create": (data) => {
+  "webhook.create": data => {
     if (Array.isArray(data.events)) {
       data.events = JSON.stringify(data.events);
     }
   },
-  "webhook.update": (data) => {
+  "webhook.update": data => {
     if (Array.isArray(data.events)) {
       data.events = JSON.stringify(data.events);
     }
@@ -776,11 +918,7 @@ const INPUT_TRANSFORMS: Record<string, (data: Record<string, any>) => void> = {
 };
 
 // Procedures that use bare query params (no Form() / no JSON body)
-const QUERY_PARAM_PROCEDURES = new Set([
-  "budget.create", "budget.update",
-  "creditNote.create",
-  "recurring.create",
-]);
+const QUERY_PARAM_PROCEDURES = new Set(["budget.create", "budget.update", "creditNote.create", "recurring.create"]);
 
 // Handle tRPC fetch for real API mode
 async function handleRealApiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
@@ -797,10 +935,12 @@ async function handleRealApiFetch(input: RequestInfo | URL, init?: RequestInit):
   const route = ROUTE_MAP[procedurePath];
 
   if (!route) {
-    return Promise.resolve(new Response(JSON.stringify({ result: { data: mockResponse(procedurePath) } }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    return Promise.resolve(
+      new Response(JSON.stringify({ result: { data: emptyFallback(procedurePath) } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
   }
 
   const { url: apiUrl, queryParams } = resolvePath(route, inputData);
@@ -815,7 +955,12 @@ async function handleRealApiFetch(input: RequestInfo | URL, init?: RequestInit):
   // Handle POST/PUT body with field mapping
   let body: string | undefined;
   if (route.method === "POST" || route.method === "PUT") {
-    const isJsonEndpoint = procedurePath.startsWith("auth.") || procedurePath === "ping" || procedurePath === "health" || procedurePath === "transaction.create" || procedurePath === "report.profitLoss";
+    const isJsonEndpoint =
+      procedurePath.startsWith("auth.") ||
+      procedurePath === "ping" ||
+      procedurePath === "health" ||
+      procedurePath === "transaction.create" ||
+      procedurePath === "report.profitLoss";
 
     if (inputData && typeof inputData === "object" && !Array.isArray(inputData)) {
       const cleanData = { ...inputData };
@@ -878,51 +1023,51 @@ async function handleRealApiFetch(input: RequestInfo | URL, init?: RequestInit):
       try {
         const parsed = JSON.parse(errorBody);
         errorMessage = parsed.detail || parsed.message || errorMessage;
-      } catch { /* use default */ }
-      return Promise.resolve(new Response(JSON.stringify({
-        error: { message: errorMessage, code: "INTERNAL_SERVER_ERROR" }
-      }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }));
+      } catch {
+        /* use default */
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            error: { message: errorMessage, code: "INTERNAL_SERVER_ERROR" },
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      );
     }
 
     const data = normalizeResponse(procedurePath, await res.json());
-    return Promise.resolve(new Response(JSON.stringify({ result: { data } }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    return Promise.resolve(
+      new Response(JSON.stringify({ result: { data } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
   } catch {
-    return Promise.resolve(new Response(JSON.stringify({
-      error: { message: "Network error - backend unreachable", code: "INTERNAL_SERVER_ERROR" }
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    return Promise.resolve(
+      new Response(
+        JSON.stringify({
+          error: { message: "Network error - backend unreachable", code: "INTERNAL_SERVER_ERROR" },
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
   }
 }
 
 // Always install a dynamic fetch interceptor that checks credentials at request time
 const originalFetch = globalThis.fetch.bind(globalThis);
 globalThis.__originalFetch = originalFetch;
-globalThis.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+globalThis.fetch = function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const url = typeof input === "string" ? input : input instanceof URL ? input.href : String(input);
   if (!url.includes("/api/trpc")) {
     return originalFetch(input, init);
-  }
-  if (isDemoMode()) {
-    let procs: string[] = [];
-    const urlObj = new URL(url, window.location.origin);
-    const pathPart = urlObj.pathname.replace("/api/trpc/", "");
-    if (pathPart) procs = pathPart.split(",");
-    if (procs.length === 0) {
-      try { const body = init?.body ? JSON.parse(String(init.body)) : {}; procs = Object.keys(body).map((_, i) => String(i)); } catch { }
-    }
-    const results = procs.map(proc => ({ result: { data: mockResponse(proc) } }));
-    if (procs.length === 0) results.push({ result: { data: null } });
-    return Promise.resolve(new Response(JSON.stringify(results.length === 1 ? results[0] : results), {
-      status: 200, headers: { "Content-Type": "application/json" },
-    }));
   }
   return handleRealApiFetch(input, init);
 } as typeof globalThis.fetch;

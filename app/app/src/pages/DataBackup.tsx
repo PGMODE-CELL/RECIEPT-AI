@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { trpc } from "@/providers/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +11,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { Download, Upload, Shield, Clock, CheckCircle, AlertTriangle, RefreshCw, Calendar, HardDrive, Lock, Unlock, Play, Trash } from "lucide-react";
+import {
+  Download,
+  Upload,
+  Shield,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  RefreshCw,
+  Calendar,
+  HardDrive,
+  Lock,
+  Unlock,
+  Play,
+  Trash,
+} from "lucide-react";
 import { toast } from "sonner";
 
 interface BackupRecord {
@@ -41,22 +54,9 @@ interface BackupSchedule {
   nextRun: string;
 }
 
-// TODO: Replace with trpc.notification.list.useQuery() or backup-specific endpoint when available
-const defaultBackups: BackupRecord[] = [
-  { id: 1, name: "Daily Full Backup", type: "full", size: "2.4 GB", createdAt: "2026-05-31 02:00", duration: "12m 34s", status: "completed", encrypted: true, checksum: "sha256:a1b2c3d4e5f6", location: "AWS S3 (us-east-1)" },
-  { id: 2, name: "Incremental - May 30", type: "incremental", size: "340 MB", createdAt: "2026-05-30 02:00", duration: "3m 12s", status: "completed", encrypted: true, checksum: "sha256:f6e5d4c3b2a1", location: "AWS S3 (us-east-1)" },
-  { id: 3, name: "Incremental - May 29", type: "incremental", size: "280 MB", createdAt: "2026-05-29 02:00", duration: "2m 45s", status: "completed", encrypted: true, checksum: "sha256:b2a1f6e5d4c3", location: "AWS S3 (us-east-1)" },
-  { id: 4, name: "Weekly Full Backup", type: "full", size: "2.3 GB", createdAt: "2026-05-26 03:00", duration: "11m 58s", status: "completed", encrypted: true, checksum: "sha256:c3d4e5f6a1b2", location: "AWS S3 (us-east-1)" },
-  { id: 5, name: "Manual Export", type: "full", size: "2.4 GB", createdAt: "2026-05-25 15:30", duration: "13m 02s", status: "completed", encrypted: false, checksum: "sha256:d4e5f6a1b2c3", location: "Local Download" },
-];
-
-// TODO: Replace with trpc endpoint when available
-const defaultSchedules: BackupSchedule[] = [
-  { id: 1, name: "Daily Nightly Backup", frequency: "Daily", time: "02:00", type: "full", retention: 30, encrypted: true, enabled: true, lastRun: "2026-05-31 02:00", nextRun: "2026-06-01 02:00" },
-  { id: 2, name: "Hourly Incremental", frequency: "Hourly", time: "Every hour", type: "incremental", retention: 7, encrypted: true, enabled: true, lastRun: "2026-05-31 08:00", nextRun: "2026-05-31 09:00" },
-  { id: 3, name: "Weekly Archive", frequency: "Weekly", time: "Sunday 03:00", type: "full", retention: 90, encrypted: true, enabled: true, lastRun: "2026-05-26 03:00", nextRun: "2026-06-02 03:00" },
-  { id: 4, name: "Monthly Compliance Backup", frequency: "Monthly", time: "1st 04:00", type: "full", retention: 365, encrypted: true, enabled: false, lastRun: "2026-05-01 04:00", nextRun: "2026-06-01 04:00" },
-];
+// No backup/schedule backend endpoint exists yet; start empty rather than seeding demo records.
+const defaultBackups: BackupRecord[] = [];
+const defaultSchedules: BackupSchedule[] = [];
 
 export default function DataBackup() {
   const [backups, setBackups] = useState<BackupRecord[]>(defaultBackups);
@@ -67,7 +67,14 @@ export default function DataBackup() {
   const [backupInProgress, setBackupInProgress] = useState(false);
   const [backupProgress, setBackupProgress] = useState(0);
 
-  const [newSchedule, setNewSchedule] = useState({ name: "", frequency: "Daily", time: "02:00", type: "full" as BackupSchedule["type"], retention: 30, encrypted: true });
+  const [newSchedule, setNewSchedule] = useState({
+    name: "",
+    frequency: "Daily",
+    time: "02:00",
+    type: "full" as BackupSchedule["type"],
+    retention: 30,
+    encrypted: true,
+  });
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -80,21 +87,27 @@ export default function DataBackup() {
   };
 
   const addSchedule = () => {
-    if (!newSchedule.name) { toast.error("Schedule name required"); return; }
-    setSchedules([...schedules, {
-      id: Date.now(),
-      ...newSchedule,
-      enabled: true,
-      lastRun: "Never",
-      nextRun: new Date(Date.now() + 86400000).toISOString().split("T")[0] + " " + newSchedule.time,
-    }]);
+    if (!newSchedule.name) {
+      toast.error("Schedule name required");
+      return;
+    }
+    setSchedules([
+      ...schedules,
+      {
+        id: Date.now(),
+        ...newSchedule,
+        enabled: true,
+        lastRun: "Never",
+        nextRun: new Date(Date.now() + 86400000).toISOString().split("T")[0] + " " + newSchedule.time,
+      },
+    ]);
     setScheduleDialogOpen(false);
     setNewSchedule({ name: "", frequency: "Daily", time: "02:00", type: "full", retention: 30, encrypted: true });
     toast.success("Backup schedule created");
   };
 
   const toggleSchedule = (id: number) => {
-    setSchedules(schedules.map(s => s.id === id ? { ...s, enabled: !s.enabled } : s));
+    setSchedules(schedules.map(s => (s.id === id ? { ...s, enabled: !s.enabled } : s)));
     toast.success("Schedule updated");
   };
 
@@ -111,18 +124,21 @@ export default function DataBackup() {
         if (prev >= 100) {
           clearInterval(interval);
           setBackupInProgress(false);
-          setBackups([{
-            id: Date.now(),
-            name: "Manual Backup",
-            type: "full",
-            size: "2.4 GB",
-            createdAt: new Date().toISOString().replace("T", " ").slice(0, 16),
-            duration: "12m 15s",
-            status: "completed",
-            encrypted: true,
-            checksum: "sha256:" + Math.random().toString(36).slice(2, 14),
-            location: "AWS S3 (us-east-1)",
-          }, ...backups]);
+          setBackups([
+            {
+              id: Date.now(),
+              name: "Manual Backup",
+              type: "full",
+              size: "\u2014",
+              createdAt: new Date().toISOString().replace("T", " ").slice(0, 16),
+              duration: "\u2014",
+              status: "completed",
+              encrypted: true,
+              checksum: "",
+              location: "Local",
+            },
+            ...backups,
+          ]);
           toast.success("Backup completed successfully");
           return 100;
         }
@@ -135,7 +151,7 @@ export default function DataBackup() {
     toast.success(`Downloading ${backup.name} (${backup.size})`);
   };
 
-  const totalSize = "6.0 GB";
+  const totalSize = backups.length ? `${backups.length}` : "0";
   const encryptedCount = backups.filter(b => b.encrypted).length;
 
   return (
@@ -188,7 +204,9 @@ export default function DataBackup() {
               <CheckCircle className="w-8 h-8 text-green-600" />
               <div>
                 <p className="text-sm text-gray-500">Successful</p>
-                <p className="text-2xl font-bold text-green-600">{backups.filter(b => b.status === "completed").length}</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {backups.filter(b => b.status === "completed").length}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -199,7 +217,9 @@ export default function DataBackup() {
               <Lock className="w-8 h-8 text-purple-600" />
               <div>
                 <p className="text-sm text-gray-500">Encrypted</p>
-                <p className="text-2xl font-bold text-purple-600">{encryptedCount}/{backups.length}</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {encryptedCount}/{backups.length}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -225,7 +245,9 @@ export default function DataBackup() {
 
         <TabsContent value="history">
           <Card>
-            <CardHeader><CardTitle>Backup History</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Backup History</CardTitle>
+            </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
@@ -244,16 +266,30 @@ export default function DataBackup() {
                   {backups.map(backup => (
                     <TableRow key={backup.id}>
                       <TableCell className="font-medium">{backup.name}</TableCell>
-                      <TableCell><Badge className="bg-indigo-100 text-indigo-700">{backup.type}</Badge></TableCell>
+                      <TableCell>
+                        <Badge className="bg-indigo-100 text-indigo-700">{backup.type}</Badge>
+                      </TableCell>
                       <TableCell>{backup.size}</TableCell>
                       <TableCell className="text-sm">{backup.createdAt}</TableCell>
                       <TableCell>{backup.duration}</TableCell>
-                      <TableCell>{backup.encrypted ? <Lock className="w-4 h-4 text-green-500" /> : <Unlock className="w-4 h-4 text-gray-400" />}</TableCell>
-                      <TableCell><Badge className={getStatusColor(backup.status)}>{backup.status}</Badge></TableCell>
+                      <TableCell>
+                        {backup.encrypted ? (
+                          <Lock className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <Unlock className="w-4 h-4 text-gray-400" />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(backup.status)}>{backup.status}</Badge>
+                      </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button size="sm" variant="ghost" onClick={() => downloadBackup(backup)}><Download className="w-4 h-4 text-blue-500" /></Button>
-                          <Button size="sm" variant="ghost" onClick={() => setRestoreDialogOpen(true)}><Upload className="w-4 h-4 text-green-500" /></Button>
+                          <Button size="sm" variant="ghost" onClick={() => downloadBackup(backup)}>
+                            <Download className="w-4 h-4 text-blue-500" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setRestoreDialogOpen(true)}>
+                            <Upload className="w-4 h-4 text-green-500" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -269,25 +305,51 @@ export default function DataBackup() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Backup Schedules</CardTitle>
               <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
-                <DialogTrigger asChild><Button size="sm"><Play className="w-4 h-4 mr-1" /> New Schedule</Button></DialogTrigger>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Play className="w-4 h-4 mr-1" /> New Schedule
+                  </Button>
+                </DialogTrigger>
                 <DialogContent>
-                  <DialogHeader><DialogTitle>Create Backup Schedule</DialogTitle></DialogHeader>
+                  <DialogHeader>
+                    <DialogTitle>Create Backup Schedule</DialogTitle>
+                  </DialogHeader>
                   <div className="space-y-4">
-                    <div><Label>Schedule Name</Label><Input value={newSchedule.name} onChange={e => setNewSchedule({ ...newSchedule, name: e.target.value })} /></div>
+                    <div>
+                      <Label>Schedule Name</Label>
+                      <Input
+                        value={newSchedule.name}
+                        onChange={e => setNewSchedule({ ...newSchedule, name: e.target.value })}
+                      />
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Frequency</Label>
-                        <Select value={newSchedule.frequency} onValueChange={v => setNewSchedule({ ...newSchedule, frequency: v })}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
+                        <Select
+                          value={newSchedule.frequency}
+                          onValueChange={v => setNewSchedule({ ...newSchedule, frequency: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
                           <SelectContent>
-                            {["Hourly", "Daily", "Weekly", "Monthly"].map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                            {["Hourly", "Daily", "Weekly", "Monthly"].map(f => (
+                              <SelectItem key={f} value={f}>
+                                {f}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
                         <Label>Backup Type</Label>
-                        <Select value={newSchedule.type} onValueChange={v => setNewSchedule({ ...newSchedule, type: v as BackupSchedule["type"] })}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
+                        <Select
+                          value={newSchedule.type}
+                          onValueChange={v => setNewSchedule({ ...newSchedule, type: v as BackupSchedule["type"] })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="full">Full</SelectItem>
                             <SelectItem value="incremental">Incremental</SelectItem>
@@ -297,14 +359,32 @@ export default function DataBackup() {
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div><Label>Time</Label><Input value={newSchedule.time} onChange={e => setNewSchedule({ ...newSchedule, time: e.target.value })} /></div>
-                      <div><Label>Retention (days)</Label><Input type="number" value={newSchedule.retention} onChange={e => setNewSchedule({ ...newSchedule, retention: +e.target.value })} /></div>
+                      <div>
+                        <Label>Time</Label>
+                        <Input
+                          value={newSchedule.time}
+                          onChange={e => setNewSchedule({ ...newSchedule, time: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Retention (days)</Label>
+                        <Input
+                          type="number"
+                          value={newSchedule.retention}
+                          onChange={e => setNewSchedule({ ...newSchedule, retention: +e.target.value })}
+                        />
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Switch checked={newSchedule.encrypted} onCheckedChange={v => setNewSchedule({ ...newSchedule, encrypted: v })} />
+                      <Switch
+                        checked={newSchedule.encrypted}
+                        onCheckedChange={v => setNewSchedule({ ...newSchedule, encrypted: v })}
+                      />
                       <Label>Encrypt backup</Label>
                     </div>
-                    <Button onClick={addSchedule} className="w-full">Create Schedule</Button>
+                    <Button onClick={addSchedule} className="w-full">
+                      Create Schedule
+                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -329,9 +409,17 @@ export default function DataBackup() {
                     <TableRow key={schedule.id}>
                       <TableCell className="font-medium">{schedule.name}</TableCell>
                       <TableCell>{schedule.frequency}</TableCell>
-                      <TableCell><Badge className="bg-indigo-100 text-indigo-700">{schedule.type}</Badge></TableCell>
+                      <TableCell>
+                        <Badge className="bg-indigo-100 text-indigo-700">{schedule.type}</Badge>
+                      </TableCell>
                       <TableCell>{schedule.retention} days</TableCell>
-                      <TableCell>{schedule.encrypted ? <Lock className="w-4 h-4 text-green-500" /> : <Unlock className="w-4 h-4 text-gray-400" />}</TableCell>
+                      <TableCell>
+                        {schedule.encrypted ? (
+                          <Lock className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <Unlock className="w-4 h-4 text-gray-400" />
+                        )}
+                      </TableCell>
                       <TableCell className="text-sm">{schedule.lastRun}</TableCell>
                       <TableCell className="text-sm">{schedule.nextRun}</TableCell>
                       <TableCell>
@@ -354,30 +442,46 @@ export default function DataBackup() {
       {/* Restore Dialog */}
       <Dialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Restore from Backup</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Restore from Backup</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4">
             <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 p-4 rounded-lg flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5" />
               <div>
                 <p className="font-medium text-amber-700">Warning</p>
-                <p className="text-sm text-amber-600">Restoring a backup will overwrite current data. This action cannot be undone.</p>
+                <p className="text-sm text-amber-600">
+                  Restoring a backup will overwrite current data. This action cannot be undone.
+                </p>
               </div>
             </div>
             <div>
               <Label>Select Backup to Restore</Label>
               <Select>
-                <SelectTrigger><SelectValue placeholder="Choose a backup" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a backup" />
+                </SelectTrigger>
                 <SelectContent>
-                  {backups.filter(b => b.status === "completed").map(b => (
-                    <SelectItem key={b.id} value={String(b.id)}>{b.name} ({b.createdAt})</SelectItem>
-                  ))}
+                  {backups
+                    .filter(b => b.status === "completed")
+                    .map(b => (
+                      <SelectItem key={b.id} value={String(b.id)}>
+                        {b.name} ({b.createdAt})
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="flex items-center gap-2">
               <Input placeholder="Type 'RESTORE' to confirm" />
             </div>
-            <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => { setRestoreDialogOpen(false); toast.success("Restore initiated"); }}>
+            <Button
+              className="w-full bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                setRestoreDialogOpen(false);
+                toast.success("Restore initiated");
+              }}
+            >
               <Upload className="w-4 h-4 mr-2" /> Restore Backup
             </Button>
           </div>

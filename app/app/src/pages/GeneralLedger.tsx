@@ -9,6 +9,15 @@ import { Badge } from "@/components/ui/badge";
 import { Download, Printer, BookOpen, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { toast } from "sonner";
 
+interface LedgerEntry {
+  id: number;
+  date: string;
+  description: string;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
 export default function GeneralLedger() {
   const { data: accounts } = trpc.account.list.useQuery();
   const [selectedAccountId, setSelectedAccountId] = useState("");
@@ -22,33 +31,22 @@ export default function GeneralLedger() {
 
   const selectedAccount = useMemo(() => {
     if (!accounts || !selectedAccountId) return null;
-    return accounts.find((a: any) => a.id === selectedAccountId) || null;
+    return accounts.find((a: any) => String(a.id) === String(selectedAccountId)) || null;
   }, [accounts, selectedAccountId]);
 
-  // Mock transactions based on account data
-  const transactions = useMemo(() => {
-    if (!selectedAccount) return [];
-    const balance = Number(selectedAccount.balance) || 0;
-    const monthlyAmount = balance / 6;
-    const txns = [];
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      const amount = monthlyAmount * (0.8 + Math.random() * 0.4);
-      const isInflow = ["asset", "expense"].includes(selectedAccount.type) ? amount > 0 : amount >= 0;
-      txns.push({
-        date: date.toISOString().split("T")[0],
-        reference: `TXN-${String(1000 + i).padStart(4, "0")}`,
-        description: i % 2 === 0 ? "Invoice payment received" : "Bill payment made",
-        debit: isInflow ? Math.abs(amount) : 0,
-        credit: !isInflow ? Math.abs(amount) : 0,
-        balance: balance * ((6 - i) / 6),
-      });
-    }
-    return txns;
-  }, [selectedAccount]);
+  // Real ledger entries for the selected account, filtered to the chosen period.
+  const { data: ledger, isLoading } = trpc.generalLedger.list.useQuery(
+    { accountId: selectedAccountId },
+    { enabled: !!selectedAccountId },
+  );
 
-  const openingBalance = transactions.length > 0 ? transactions[0].balance - (transactions[0].debit - transactions[0].credit) : 0;
+  const transactions = useMemo<LedgerEntry[]>(() => {
+    const entries: LedgerEntry[] = (ledger?.entries ?? []) as LedgerEntry[];
+    return entries.filter(e => e.date >= dateRange.from && e.date <= dateRange.to);
+  }, [ledger, dateRange.from, dateRange.to]);
+
+  const openingBalance =
+    transactions.length > 0 ? transactions[0].balance - (transactions[0].debit - transactions[0].credit) : 0;
   const closingBalance = transactions.length > 0 ? transactions[transactions.length - 1].balance : 0;
 
   const handlePrint = () => window.print();
@@ -64,8 +62,15 @@ export default function GeneralLedger() {
       `Period: ${dateRange.from} to ${dateRange.to}`,
       "",
       headers.join(","),
-      ...transactions.map((t) =>
-        [t.date, t.reference, `"${t.description}"`, t.debit.toFixed(2), t.credit.toFixed(2), t.balance.toFixed(2)].join(",")
+      ...transactions.map(t =>
+        [
+          t.date,
+          `JE-${t.id}`,
+          `"${t.description}"`,
+          t.debit.toFixed(2),
+          t.credit.toFixed(2),
+          t.balance.toFixed(2),
+        ].join(","),
       ),
       "",
       `"Opening Balance",,,,,"${openingBalance.toFixed(2)}"`,
@@ -91,8 +96,12 @@ export default function GeneralLedger() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Detailed transaction history for any account</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handlePrint}><Printer className="w-4 h-4 mr-2" /> Print</Button>
-          <Button variant="outline" onClick={handleExport}><Download className="w-4 h-4 mr-2" /> Export CSV</Button>
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="w-4 h-4 mr-2" /> Print
+          </Button>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" /> Export CSV
+          </Button>
         </div>
       </div>
 
@@ -104,22 +113,32 @@ export default function GeneralLedger() {
               <Label className="text-xs">Account</Label>
               <select
                 value={selectedAccountId}
-                onChange={(e) => setSelectedAccountId(e.target.value)}
+                onChange={e => setSelectedAccountId(e.target.value)}
                 className="w-full h-10 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
               >
                 <option value="">Select an account</option>
                 {accounts?.map((acc: any) => (
-                  <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
+                  <option key={acc.id} value={acc.id}>
+                    {acc.code} - {acc.name}
+                  </option>
                 ))}
               </select>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">From</Label>
-              <Input type="date" value={dateRange.from} onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })} />
+              <Input
+                type="date"
+                value={dateRange.from}
+                onChange={e => setDateRange({ ...dateRange, from: e.target.value })}
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">To</Label>
-              <Input type="date" value={dateRange.to} onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })} />
+              <Input
+                type="date"
+                value={dateRange.to}
+                onChange={e => setDateRange({ ...dateRange, to: e.target.value })}
+              />
             </div>
           </div>
         </CardContent>
@@ -139,14 +158,24 @@ export default function GeneralLedger() {
             <Card>
               <CardContent className="p-4">
                 <p className="text-sm text-gray-500">Account</p>
-                <p className="font-medium">{selectedAccount?.code} - {selectedAccount?.name}</p>
-                <Badge className={`mt-1 ${
-                  selectedAccount?.type === "asset" ? "bg-blue-100 text-blue-700" :
-                  selectedAccount?.type === "liability" ? "bg-amber-100 text-amber-700" :
-                  selectedAccount?.type === "equity" ? "bg-purple-100 text-purple-700" :
-                  selectedAccount?.type === "income" ? "bg-green-100 text-green-700" :
-                  "bg-red-100 text-red-700"
-                }`}>{selectedAccount?.type}</Badge>
+                <p className="font-medium">
+                  {selectedAccount?.code} - {selectedAccount?.name}
+                </p>
+                <Badge
+                  className={`mt-1 ${
+                    selectedAccount?.type === "asset"
+                      ? "bg-blue-100 text-blue-700"
+                      : selectedAccount?.type === "liability"
+                        ? "bg-amber-100 text-amber-700"
+                        : selectedAccount?.type === "equity"
+                          ? "bg-purple-100 text-purple-700"
+                          : selectedAccount?.type === "income"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {selectedAccount?.type}
+                </Badge>
               </CardContent>
             </Card>
             <Card>
@@ -168,7 +197,9 @@ export default function GeneralLedger() {
           {/* Transactions Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Transactions ({dateRange.from} to {dateRange.to})</CardTitle>
+              <CardTitle>
+                Transactions ({dateRange.from} to {dateRange.to})
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -183,29 +214,43 @@ export default function GeneralLedger() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.length === 0 ? (
+                  {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">No transactions found</TableCell>
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                        Loading…
+                      </TableCell>
+                    </TableRow>
+                  ) : transactions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                        No transactions found
+                      </TableCell>
                     </TableRow>
                   ) : (
                     transactions.map((txn, i) => (
                       <TableRow key={i}>
                         <TableCell className="font-mono text-sm">{txn.date}</TableCell>
-                        <TableCell className="font-mono text-sm">{txn.reference}</TableCell>
+                        <TableCell className="font-mono text-sm">JE-{txn.id}</TableCell>
                         <TableCell>{txn.description}</TableCell>
                         <TableCell className="text-right font-mono">
                           {txn.debit > 0 ? (
                             <span className="text-green-600 flex items-center justify-end gap-1">
-                              <ArrowUpRight className="w-3 h-3" />{formatCurrency(txn.debit)}
+                              <ArrowUpRight className="w-3 h-3" />
+                              {formatCurrency(txn.debit)}
                             </span>
-                          ) : "—"}
+                          ) : (
+                            "—"
+                          )}
                         </TableCell>
                         <TableCell className="text-right font-mono">
                           {txn.credit > 0 ? (
                             <span className="text-red-600 flex items-center justify-end gap-1">
-                              <ArrowDownRight className="w-3 h-3" />{formatCurrency(txn.credit)}
+                              <ArrowDownRight className="w-3 h-3" />
+                              {formatCurrency(txn.credit)}
                             </span>
-                          ) : "—"}
+                          ) : (
+                            "—"
+                          )}
                         </TableCell>
                         <TableCell className="text-right font-mono font-medium">
                           {formatCurrency(txn.balance)}

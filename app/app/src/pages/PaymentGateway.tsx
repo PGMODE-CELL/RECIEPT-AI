@@ -1,102 +1,102 @@
-import { useState } from "react"
-import { trpc } from "@/providers/trpc"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
-import { toast } from "sonner"
+import { useState } from "react";
+import { trpc } from "@/providers/trpc";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 
 interface GatewayConfig {
   stripe: {
-    apiKey: string
-    webhookUrl: string
-    enabled: boolean
-  }
+    apiKey: string;
+    webhookUrl: string;
+    enabled: boolean;
+  };
   paypal: {
-    clientId: string
-    secret: string
-    enabled: boolean
-  }
+    clientId: string;
+    secret: string;
+    enabled: boolean;
+  };
 }
 
 interface PaymentLink {
-  id: string
-  invoiceNumber: string
-  amount: number
-  status: "pending" | "paid" | "expired" | "failed"
-  url: string
-  createdAt: string
+  id: string;
+  invoiceNumber: string;
+  amount: number;
+  status: "pending" | "paid" | "expired" | "failed";
+  url: string;
+  createdAt: string;
 }
 
-// TODO: Replace with trpc.settings.listTaxRates.useQuery() or paymentGateway endpoint when available
-const sampleLinks: PaymentLink[] = [
-  { id: "1", invoiceNumber: "INV-2026-0038", amount: 2500, status: "paid", url: "https://pay.stripe.com/abc123", createdAt: "2026-05-28" },
-  { id: "2", invoiceNumber: "INV-2026-0039", amount: 4200, status: "pending", url: "https://pay.stripe.com/def456", createdAt: "2026-05-29" },
-  { id: "3", invoiceNumber: "INV-2026-0040", amount: 1800, status: "expired", url: "https://pay.stripe.com/ghi789", createdAt: "2026-05-15" },
-  { id: "4", invoiceNumber: "INV-2026-0041", amount: 3300, status: "pending", url: "https://paypal.me/acme/3300", createdAt: "2026-05-30" },
-]
+// No payment-link listing endpoint exists yet; start empty rather than seeding demo links.
+const sampleLinks: PaymentLink[] = [];
 
 export default function PaymentGateway() {
   const [config, setConfig] = useState<GatewayConfig>({
     stripe: { apiKey: "", webhookUrl: "", enabled: true },
     paypal: { clientId: "", secret: "", enabled: false },
-  })
-  const [links] = useState<PaymentLink[]>(sampleLinks)
-  const [testingStripe, setTestingStripe] = useState(false)
-  const [testingPaypal, setTestingPaypal] = useState(false)
-  const [newLinkInvoice, setNewLinkInvoice] = useState("")
-  const [newLinkAmount, setNewLinkAmount] = useState("")
-  const [newLinkGateway, setNewLinkGateway] = useState<"stripe" | "paypal">("stripe")
+  });
+  const [links] = useState<PaymentLink[]>(sampleLinks);
+  const [testingStripe, setTestingStripe] = useState(false);
+  const [testingPaypal, setTestingPaypal] = useState(false);
+  const [newLinkInvoice, setNewLinkInvoice] = useState("");
+  const [newLinkAmount, setNewLinkAmount] = useState("");
+  const [newLinkGateway, setNewLinkGateway] = useState<"stripe" | "paypal">("stripe");
 
   const testStripe = () => {
     if (!config.stripe.apiKey) {
-      toast.error("Enter a Stripe API key first")
-      return
+      toast.error("Enter a Stripe API key first");
+      return;
     }
-    setTestingStripe(true)
+    setTestingStripe(true);
     setTimeout(() => {
-      setTestingStripe(false)
+      setTestingStripe(false);
       if (config.stripe.apiKey.startsWith("sk_test_") || config.stripe.apiKey.startsWith("sk_live_")) {
-        toast.success("Stripe connection successful")
+        toast.success("Stripe connection successful");
       } else {
-        toast.error("Invalid Stripe API key format")
+        toast.error("Invalid Stripe API key format");
       }
-    }, 1500)
-  }
+    }, 1500);
+  };
 
   const testPaypal = () => {
     if (!config.paypal.clientId) {
-      toast.error("Enter a PayPal Client ID first")
-      return
+      toast.error("Enter a PayPal Client ID first");
+      return;
     }
-    setTestingPaypal(true)
+    setTestingPaypal(true);
     setTimeout(() => {
-      setTestingPaypal(false)
-      toast.success("PayPal connection verified")
-    }, 1500)
-  }
+      setTestingPaypal(false);
+      toast.success("PayPal connection verified");
+    }, 1500);
+  };
 
   const generateLink = () => {
     if (!newLinkInvoice || !newLinkAmount) {
-      toast.error("Enter invoice number and amount")
-      return
+      toast.error("Enter invoice number and amount");
+      return;
     }
-    toast.success(`Payment link generated for ${newLinkInvoice}`)
-    setNewLinkInvoice("")
-    setNewLinkAmount("")
-  }
+    toast.success(`Payment link generated for ${newLinkInvoice}`);
+    setNewLinkInvoice("");
+    setNewLinkAmount("");
+  };
 
   const statusColor = (status: string) => {
     switch (status) {
-      case "paid": return "default"
-      case "pending": return "secondary"
-      case "expired": return "outline"
-      case "failed": return "destructive"
-      default: return "outline"
+      case "paid":
+        return "default";
+      case "pending":
+        return "secondary";
+      case "expired":
+        return "outline";
+      case "failed":
+        return "destructive";
+      default:
+        return "outline";
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -117,7 +117,10 @@ export default function PaymentGateway() {
                   </CardTitle>
                   <CardDescription>Accept credit cards and payments via Stripe</CardDescription>
                 </div>
-                <Switch checked={config.stripe.enabled} onCheckedChange={(v) => setConfig({ ...config, stripe: { ...config.stripe, enabled: v } })} />
+                <Switch
+                  checked={config.stripe.enabled}
+                  onCheckedChange={v => setConfig({ ...config, stripe: { ...config.stripe, enabled: v } })}
+                />
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -128,7 +131,7 @@ export default function PaymentGateway() {
                   type="password"
                   placeholder="sk_test_... or sk_live_..."
                   value={config.stripe.apiKey}
-                  onChange={(e) => setConfig({ ...config, stripe: { ...config.stripe, apiKey: e.target.value } })}
+                  onChange={e => setConfig({ ...config, stripe: { ...config.stripe, apiKey: e.target.value } })}
                 />
               </div>
               <div>
@@ -138,9 +141,18 @@ export default function PaymentGateway() {
                     id="stripeWebhook"
                     placeholder="https://yourapp.com/api/webhooks/stripe"
                     value={config.stripe.webhookUrl}
-                    onChange={(e) => setConfig({ ...config, stripe: { ...config.stripe, webhookUrl: e.target.value } })}
+                    onChange={e => setConfig({ ...config, stripe: { ...config.stripe, webhookUrl: e.target.value } })}
                   />
-                  <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(config.stripe.webhookUrl); toast.success("Copied") }}>Copy</Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(config.stripe.webhookUrl);
+                      toast.success("Copied");
+                    }}
+                  >
+                    Copy
+                  </Button>
                 </div>
               </div>
               <div className="p-3 rounded-lg bg-gray-50 text-xs font-mono text-gray-600">
@@ -162,7 +174,10 @@ export default function PaymentGateway() {
                   </CardTitle>
                   <CardDescription>Accept PayPal and card payments</CardDescription>
                 </div>
-                <Switch checked={config.paypal.enabled} onCheckedChange={(v) => setConfig({ ...config, paypal: { ...config.paypal, enabled: v } })} />
+                <Switch
+                  checked={config.paypal.enabled}
+                  onCheckedChange={v => setConfig({ ...config, paypal: { ...config.paypal, enabled: v } })}
+                />
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -172,7 +187,7 @@ export default function PaymentGateway() {
                   id="paypalClientId"
                   placeholder="PayPal Client ID"
                   value={config.paypal.clientId}
-                  onChange={(e) => setConfig({ ...config, paypal: { ...config.paypal, clientId: e.target.value } })}
+                  onChange={e => setConfig({ ...config, paypal: { ...config.paypal, clientId: e.target.value } })}
                 />
               </div>
               <div>
@@ -182,7 +197,7 @@ export default function PaymentGateway() {
                   type="password"
                   placeholder="PayPal Client Secret"
                   value={config.paypal.secret}
-                  onChange={(e) => setConfig({ ...config, paypal: { ...config.paypal, secret: e.target.value } })}
+                  onChange={e => setConfig({ ...config, paypal: { ...config.paypal, secret: e.target.value } })}
                 />
               </div>
               <div className="p-3 rounded-lg bg-gray-50 text-xs font-mono text-gray-600">
@@ -204,20 +219,43 @@ export default function PaymentGateway() {
             <CardContent className="space-y-4">
               <div>
                 <Label>Invoice Number</Label>
-                <Input placeholder="INV-2026-0042" value={newLinkInvoice} onChange={(e) => setNewLinkInvoice(e.target.value)} />
+                <Input
+                  placeholder="INV-2026-0042"
+                  value={newLinkInvoice}
+                  onChange={e => setNewLinkInvoice(e.target.value)}
+                />
               </div>
               <div>
                 <Label>Amount</Label>
-                <Input type="number" placeholder="1000.00" value={newLinkAmount} onChange={(e) => setNewLinkAmount(e.target.value)} />
+                <Input
+                  type="number"
+                  placeholder="1000.00"
+                  value={newLinkAmount}
+                  onChange={e => setNewLinkAmount(e.target.value)}
+                />
               </div>
               <div>
                 <Label>Payment Gateway</Label>
                 <div className="flex gap-2">
-                  <Button variant={newLinkGateway === "stripe" ? "default" : "outline"} size="sm" onClick={() => setNewLinkGateway("stripe")}>Stripe</Button>
-                  <Button variant={newLinkGateway === "paypal" ? "default" : "outline"} size="sm" onClick={() => setNewLinkGateway("paypal")}>PayPal</Button>
+                  <Button
+                    variant={newLinkGateway === "stripe" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setNewLinkGateway("stripe")}
+                  >
+                    Stripe
+                  </Button>
+                  <Button
+                    variant={newLinkGateway === "paypal" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setNewLinkGateway("paypal")}
+                  >
+                    PayPal
+                  </Button>
                 </div>
               </div>
-              <Button onClick={generateLink} className="w-full">Generate Link</Button>
+              <Button onClick={generateLink} className="w-full">
+                Generate Link
+              </Button>
             </CardContent>
           </Card>
 
@@ -228,8 +266,11 @@ export default function PaymentGateway() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {links.map((link) => (
-                  <div key={link.id} className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50 transition-colors">
+                {links.map(link => (
+                  <div
+                    key={link.id}
+                    className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50 transition-colors"
+                  >
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
                         <span className="font-semibold text-sm">{link.invoiceNumber}</span>
@@ -241,7 +282,14 @@ export default function PaymentGateway() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(link.url); toast.success("Link copied") }}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(link.url);
+                          toast.success("Link copied");
+                        }}
+                      >
                         Copy Link
                       </Button>
                       {link.status === "pending" && (
@@ -258,5 +306,5 @@ export default function PaymentGateway() {
         </div>
       </div>
     </div>
-  )
+  );
 }
