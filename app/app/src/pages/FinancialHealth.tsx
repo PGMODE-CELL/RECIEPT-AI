@@ -113,30 +113,38 @@ export default function FinancialHealth() {
 
   const isLoading = loadingPL || loadingBS;
 
-  const RATIO_DATA = useMemo((): RatioCategory[] => {
-    const income = plData?.income || 0;
-    const expenses = plData?.expenses || 0;
-    const totalAssets = bsData?.totalAssets || 0;
-    const totalLiabilities = bsData?.totalLiabilities || 0;
-    const totalEquity = bsData?.totalEquity || 0;
-    const netProfit = plData?.netProfit || 0;
+  const income = plData?.income || 0;
+  const expenses = plData?.expenses || 0;
+  const totalAssets = bsData?.totalAssets || 0;
+  const totalLiabilities = bsData?.totalLiabilities || 0;
+  const totalEquity = bsData?.totalEquity || 0;
+  const netProfit = plData?.netProfit || 0;
 
-    const currentRatio = totalLiabilities > 0 ? totalAssets / totalLiabilities : 2;
+  const hasData =
+    income !== 0 ||
+    expenses !== 0 ||
+    totalAssets !== 0 ||
+    totalLiabilities !== 0 ||
+    totalEquity !== 0 ||
+    netProfit !== 0;
+
+  const RATIO_DATA = useMemo((): RatioCategory[] => {
+    const currentRatio = totalLiabilities > 0 ? totalAssets / totalLiabilities : 0;
     const quickRatio = currentRatio * 0.8;
     const cashRatio = currentRatio * 0.45;
     const workingCapital = totalAssets - totalLiabilities;
-    const debtToEquity = totalEquity > 0 ? totalLiabilities / totalEquity : 0.5;
-    const debtRatio = totalAssets > 0 ? totalLiabilities / totalAssets : 0.3;
-    const interestCoverage = netProfit > 0 ? netProfit / Math.max(1, totalLiabilities * 0.05) : 5;
-    const equityRatio = totalAssets > 0 ? totalEquity / totalAssets : 0.7;
-    const roa = totalAssets > 0 ? (netProfit / totalAssets) * 100 : 5;
-    const roe = totalEquity > 0 ? (netProfit / totalEquity) * 100 : 12;
-    const grossMargin = income > 0 ? ((income - expenses) / income) * 100 : 40;
-    const netMargin = income > 0 ? (netProfit / income) * 100 : 15;
-    const assetTurnover = totalAssets > 0 ? income / totalAssets : 0.5;
-    const inventoryTurnover = 7;
-    const receivablesTurnover = income > 0 ? 9 : 5;
-    const dso = receivablesTurnover > 0 ? 365 / receivablesTurnover : 45;
+    const debtToEquity = totalEquity > 0 ? totalLiabilities / totalEquity : 0;
+    const debtRatio = totalAssets > 0 ? totalLiabilities / totalAssets : 0;
+    const interestCoverage = netProfit > 0 ? netProfit / Math.max(1, totalLiabilities * 0.05) : 0;
+    const equityRatio = totalAssets > 0 ? totalEquity / totalAssets : 0;
+    const roa = totalAssets > 0 ? (netProfit / totalAssets) * 100 : 0;
+    const roe = totalEquity > 0 ? (netProfit / totalEquity) * 100 : 0;
+    const grossMargin = income > 0 ? ((income - expenses) / income) * 100 : 0;
+    const netMargin = income > 0 ? (netProfit / income) * 100 : 0;
+    const assetTurnover = totalAssets > 0 ? income / totalAssets : 0;
+    const inventoryTurnover = 0;
+    const receivablesTurnover = 0;
+    const dso = receivablesTurnover > 0 ? 365 / receivablesTurnover : 0;
 
     const getStatus = (value: number, benchmark: number, isLower = false): RatioItem["status"] => {
       const ratio = isLower ? benchmark / value : value / benchmark;
@@ -296,9 +304,10 @@ export default function FinancialHealth() {
         ],
       },
     ];
-  }, [plData, bsData]);
+  }, [income, expenses, totalAssets, totalLiabilities, totalEquity, netProfit]);
 
   const overallScore = useMemo(() => {
+    if (!hasData) return 0;
     const scores = RATIO_DATA.flatMap(cat =>
       cat.ratios.map(r => {
         if (r.status === "excellent") return 90;
@@ -307,8 +316,8 @@ export default function FinancialHealth() {
         return 35;
       }),
     );
-    return scores.length > 0 ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length) : 75;
-  }, [RATIO_DATA]);
+    return scores.length > 0 ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length) : 0;
+  }, [RATIO_DATA, hasData]);
 
   const categoryScores = useMemo(() => {
     return RATIO_DATA.map(cat => {
@@ -353,12 +362,12 @@ export default function FinancialHealth() {
     const second = RATIO_DATA[1]?.ratios || [];
     const third = RATIO_DATA[2]?.ratios || [];
     return [
-      { ratio: "Current Ratio", yours: first[0]?.value || 2.1, industry: 1.5, best: 3.2 },
-      { ratio: "Quick Ratio", yours: first[1]?.value || 1.6, industry: 1.0, best: 2.5 },
-      { ratio: "Debt-to-Equity", yours: second[0]?.value || 0.42, industry: 1.0, best: 0.3 },
-      { ratio: "ROA", yours: third[0]?.value || 12.5, industry: 5.0, best: 18.0 },
-      { ratio: "ROE", yours: third[1]?.value || 18.2, industry: 12.0, best: 25.0 },
-      { ratio: "Net Margin", yours: third[3]?.value || 15.1, industry: 8.0, best: 22.0 },
+      { ratio: "Current Ratio", yours: first[0]?.value || 0, industry: 1.5, best: 3.2 },
+      { ratio: "Quick Ratio", yours: first[1]?.value || 0, industry: 1.0, best: 2.5 },
+      { ratio: "Debt-to-Equity", yours: second[0]?.value || 0, industry: 1.0, best: 0.3 },
+      { ratio: "ROA", yours: third[0]?.value || 0, industry: 5.0, best: 18.0 },
+      { ratio: "ROE", yours: third[1]?.value || 0, industry: 12.0, best: 25.0 },
+      { ratio: "Net Margin", yours: third[3]?.value || 0, industry: 8.0, best: 22.0 },
     ];
   }, [RATIO_DATA]);
 
@@ -393,6 +402,29 @@ export default function FinancialHealth() {
           Financial Health Scorecard
         </h1>
         <p className="text-muted-foreground">Loading financial data...</p>
+      </div>
+    );
+  }
+
+  if (!hasData) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <Heart className="h-8 w-8 text-rose-600" />
+            Financial Health Scorecard
+          </h1>
+          <p className="text-muted-foreground mt-1">Comprehensive financial health analysis with industry benchmarks</p>
+        </div>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <Heart className="h-10 w-10 text-muted-foreground mb-3" />
+            <p className="text-base font-medium">No financial data yet</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Record invoices, bills, and journal entries to generate your financial health scorecard.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
