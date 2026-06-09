@@ -11,8 +11,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, Legend, AreaChart, Area
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  Legend,
+  AreaChart,
+  Area,
 } from "recharts";
 import { Package, TrendingUp, AlertTriangle, ShoppingCart, ArrowDown, ArrowUp, RefreshCw } from "lucide-react";
 
@@ -56,32 +66,30 @@ export default function InventoryForecast() {
 
   const inventory = useMemo(() => products.map(mapProductToInventory), [products]);
 
-  const lowStockItems = inventory.filter((i) => i.currentStock <= i.reorderPoint);
+  const lowStockItems = inventory.filter(i => i.currentStock <= i.reorderPoint);
   const totalValue = inventory.reduce((s, i) => s + i.currentStock * i.unitCost, 0);
   const totalForecastDemand = inventory.reduce((s, i) => s + i.avgMonthlySales * i.seasonalFactor, 0);
 
-  const formatCurrency = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
+  const formatCurrency = (v: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
 
   const getRecommendation = (item: InventoryItem) => {
-    if (item.currentStock <= item.safetyStock) return { text: "Urgent Reorder", color: "text-red-600", bg: "bg-red-100" };
-    if (item.currentStock <= item.reorderPoint) return { text: "Reorder Soon", color: "text-yellow-600", bg: "bg-yellow-100" };
-    if (item.currentStock > item.reorderPoint * 2) return { text: "Overstocked", color: "text-blue-600", bg: "bg-blue-100" };
+    if (item.currentStock <= item.safetyStock)
+      return { text: "Urgent Reorder", color: "text-red-600", bg: "bg-red-100" };
+    if (item.currentStock <= item.reorderPoint)
+      return { text: "Reorder Soon", color: "text-yellow-600", bg: "bg-yellow-100" };
+    if (item.currentStock > item.reorderPoint * 2)
+      return { text: "Overstocked", color: "text-blue-600", bg: "bg-blue-100" };
     return { text: "Optimal", color: "text-green-600", bg: "bg-green-100" };
   };
 
-  const FORECAST_DATA = useMemo(() => {
-    const months = ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"];
-    const baseDemand = inventory.reduce((s, i) => s + i.avgMonthlySales, 0);
-    return months.map((month, idx) => ({
-      month,
-      actual: idx < 3 ? Math.round(baseDemand * (0.85 + Math.random() * 0.3)) : 0,
-      forecast: Math.round(baseDemand * (0.9 + Math.random() * 0.2)),
-    }));
-  }, [inventory]);
+  // Demand forecasting needs historical sales data the backend does not expose
+  // yet; we show no fabricated time series here.
+  const FORECAST_DATA: { month: string; actual: number; forecast: number }[] = [];
 
   const CATEGORY_DATA = useMemo(() => {
     const cats: Record<string, { stock: number; demand: number }> = {};
-    inventory.forEach((i) => {
+    inventory.forEach(i => {
       if (!cats[i.category]) cats[i.category] = { stock: 0, demand: 0 };
       cats[i.category].stock += i.currentStock;
       cats[i.category].demand += i.avgMonthlySales;
@@ -94,7 +102,9 @@ export default function InventoryForecast() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Inventory Forecast</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Demand forecasting and reorder point calculation</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Demand forecasting and reorder point calculation
+          </p>
         </div>
         <Button variant="outline" onClick={() => toast.success("Forecast recalculated")}>
           <RefreshCw className="w-4 h-4 mr-2" /> Recalculate
@@ -104,50 +114,96 @@ export default function InventoryForecast() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg"><Package className="w-5 h-5 text-blue-600" /></div>
-            <div><p className="text-xs text-gray-500">Total SKUs</p><p className="text-2xl font-bold">{inventory.length}</p></div>
+            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+              <Package className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Total SKUs</p>
+              <p className="text-2xl font-bold">{inventory.length}</p>
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg"><TrendingUp className="w-5 h-5 text-green-600" /></div>
-            <div><p className="text-xs text-gray-500">Inventory Value</p><p className="text-2xl font-bold">{formatCurrency(totalValue)}</p></div>
+            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+              <TrendingUp className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Inventory Value</p>
+              <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg"><AlertTriangle className="w-5 h-5 text-red-600" /></div>
-            <div><p className="text-xs text-gray-500">Low Stock Alerts</p><p className="text-2xl font-bold text-red-600">{lowStockItems.length}</p></div>
+            <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Low Stock Alerts</p>
+              <p className="text-2xl font-bold text-red-600">{lowStockItems.length}</p>
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg"><ShoppingCart className="w-5 h-5 text-purple-600" /></div>
-            <div><p className="text-xs text-gray-500">Monthly Demand</p><p className="text-2xl font-bold">{Math.round(totalForecastDemand)}</p></div>
+            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+              <ShoppingCart className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Monthly Demand</p>
+              <p className="text-2xl font-bold">{Math.round(totalForecastDemand)}</p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader><CardTitle className="text-lg">Demand Forecast</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-lg">Demand Forecast</CardTitle>
+          </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={FORECAST_DATA}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Area type="monotone" dataKey="actual" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} name="Actual Sales" />
-                <Area type="monotone" dataKey="forecast" stroke="#f97316" fill="#f97316" fillOpacity={0.2} strokeDasharray="5 5" name="Forecast" />
-              </AreaChart>
-            </ResponsiveContainer>
+            {FORECAST_DATA.length === 0 ? (
+              <div className="h-[300px] flex flex-col items-center justify-center text-center text-gray-500">
+                <TrendingUp className="w-10 h-10 mb-2 opacity-40" />
+                <p className="text-sm">Demand forecasting will appear once sales history is available.</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={FORECAST_DATA}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Area
+                    type="monotone"
+                    dataKey="actual"
+                    stroke="#3b82f6"
+                    fill="#3b82f6"
+                    fillOpacity={0.3}
+                    name="Actual Sales"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="forecast"
+                    stroke="#f97316"
+                    fill="#f97316"
+                    fillOpacity={0.2}
+                    strokeDasharray="5 5"
+                    name="Forecast"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-lg">Stock by Category</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-lg">Stock by Category</CardTitle>
+          </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={CATEGORY_DATA}>
@@ -173,15 +229,20 @@ export default function InventoryForecast() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {lowStockItems.map((item) => {
+              {lowStockItems.map(item => {
                 const rec = getRecommendation(item);
                 return (
-                  <div key={item.id} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950 rounded-lg">
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950 rounded-lg"
+                  >
                     <div className="flex items-center gap-3">
                       <Package className="w-5 h-5 text-red-500" />
                       <div>
                         <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-gray-500">SKU: {item.sku} &middot; Reorder point: {item.reorderPoint}</p>
+                        <p className="text-sm text-gray-500">
+                          SKU: {item.sku} &middot; Reorder point: {item.reorderPoint}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -199,7 +260,9 @@ export default function InventoryForecast() {
       )}
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Inventory Analysis</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-lg">Inventory Analysis</CardTitle>
+        </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
@@ -216,10 +279,14 @@ export default function InventoryForecast() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {inventory.map((item) => {
+              {inventory.map(item => {
                 const rec = getRecommendation(item);
                 return (
-                  <TableRow key={item.id} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800" onClick={() => setSelectedItem(item)}>
+                  <TableRow
+                    key={item.id}
+                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                    onClick={() => setSelectedItem(item)}
+                  >
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell className="font-mono text-sm">{item.sku}</TableCell>
                     <TableCell className="text-right font-semibold">{item.currentStock}</TableCell>
@@ -240,7 +307,9 @@ export default function InventoryForecast() {
                         <span className="text-gray-500">Base</span>
                       )}
                     </TableCell>
-                    <TableCell><Badge className={`${rec.bg} ${rec.color}`}>{rec.text}</Badge></TableCell>
+                    <TableCell>
+                      <Badge className={`${rec.bg} ${rec.color}`}>{rec.text}</Badge>
+                    </TableCell>
                   </TableRow>
                 );
               })}

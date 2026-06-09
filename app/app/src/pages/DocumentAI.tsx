@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { trpc } from "@/providers/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +12,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import {
-  Upload, FileText, CheckCircle, AlertTriangle, Clock, Brain,
-  Eye, ArrowRight, DollarSign, Calendar, Building, Trash, RotateCcw
+  Upload,
+  FileText,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  Brain,
+  Eye,
+  ArrowRight,
+  DollarSign,
+  Calendar,
+  Building,
+  Trash,
+  RotateCcw,
 } from "lucide-react";
 
 interface ExtractedDoc {
@@ -31,93 +41,47 @@ interface ExtractedDoc {
   rawData?: Record<string, string>;
 }
 
-// TODO: Replace with trpc.document.list.useQuery() when backend endpoint supports AI extraction fields
-const MOCK_DOCS: ExtractedDoc[] = [
-  {
-    id: "1", fileName: "acme-invoice-001.pdf", type: "invoice", uploadDate: "2026-01-25", status: "completed",
-    vendor: "Acme Corporation", amount: 5000, date: "2026-01-15", tax: 400, confidence: 95,
-    rawData: { "Invoice Number": "INV-2026-001", "PO Number": "PO-1234", "Payment Terms": "Net 30", "Due Date": "2026-02-15" },
-  },
-  {
-    id: "2", fileName: "office-supplies-receipt.jpg", type: "receipt", uploadDate: "2026-01-26", status: "completed",
-    vendor: "Office Depot", amount: 285.50, date: "2026-01-24", tax: 22.84, confidence: 88,
-    rawData: { "Store": "Office Depot #4521", "Cashier": "Maria S.", "Payment": "Visa *4242" },
-  },
-  {
-    id: "3", fileName: "cloud-host-monthly.pdf", type: "bill", uploadDate: "2026-01-27", status: "completed",
-    vendor: "CloudHost Pro", amount: 450, date: "2026-01-27", tax: 0, confidence: 92,
-    rawData: { "Account": "CH-88921", "Period": "January 2026", "Plan": "Business Pro" },
-  },
-  {
-    id: "4", fileName: "blurry-receipt.png", type: "receipt", uploadDate: "2026-01-28", status: "review",
-    vendor: "Restaurant", amount: 85.00, date: "2026-01-27", tax: 7.65, confidence: 45,
-  },
-  {
-    id: "5", fileName: "corrupted-file.pdf", type: "invoice", uploadDate: "2026-01-28", status: "failed",
-    confidence: 0,
-  },
-];
-
 export default function DocumentAI() {
-  const [documents, setDocuments] = useState<ExtractedDoc[]>(MOCK_DOCS);
+  const [documents, setDocuments] = useState<ExtractedDoc[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<ExtractedDoc | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [uploading] = useState(false);
+  const [processingId] = useState<string | null>(null);
 
-  const completedCount = documents.filter((d) => d.status === "completed").length;
-  const reviewCount = documents.filter((d) => d.status === "review").length;
-  const totalExtracted = documents.filter((d) => d.status === "completed").reduce((s, d) => s + (d.amount || 0), 0);
+  const completedCount = documents.filter(d => d.status === "completed").length;
+  const reviewCount = documents.filter(d => d.status === "review").length;
+  const totalExtracted = documents.filter(d => d.status === "completed").reduce((s, d) => s + (d.amount || 0), 0);
 
-  const simulateUpload = (fileName: string) => {
+  const handleUpload = (fileName: string) => {
     const newDoc: ExtractedDoc = {
       id: String(Date.now()),
       fileName,
       type: fileName.includes("receipt") ? "receipt" : fileName.includes("bill") ? "bill" : "invoice",
       uploadDate: new Date().toISOString().split("T")[0],
-      status: "processing",
+      status: "review",
       confidence: 0,
     };
-    setDocuments((prev) => [newDoc, ...prev]);
-    setProcessingId(newDoc.id);
-    setUploading(true);
-
-    setTimeout(() => {
-      const vendors = ["Acme Corp", "TechStart Inc", "Global Services", "Office Basics"];
-      const amount = Math.round(Math.random() * 5000 + 100);
-      const confidence = Math.round(Math.random() * 40 + 60);
-      setDocuments((prev) =>
-        prev.map((d) =>
-          d.id === newDoc.id
-            ? {
-                ...d,
-                status: confidence > 60 ? "completed" : "review",
-                vendor: vendors[Math.floor(Math.random() * vendors.length)],
-                amount,
-                date: new Date().toISOString().split("T")[0],
-                tax: Math.round(amount * 0.08),
-                confidence,
-                rawData: { "Invoice #": `INV-${Date.now()}`, "Payment": "Credit Card" },
-              }
-            : d
-        )
-      );
-      setProcessingId(null);
-      setUploading(false);
-      toast.success("Document processed");
-    }, 2500);
+    setDocuments(prev => [newDoc, ...prev]);
+    toast.info("Document uploaded. Automated extraction isn't available yet — enter the details manually.");
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const files = Array.from(e.dataTransfer.files);
-    files.forEach((f) => simulateUpload(f.name));
-    if (files.length === 0) simulateUpload("uploaded-document.pdf");
+    files.forEach(f => handleUpload(f.name));
   }, []);
 
   const handleFileSelect = () => {
-    simulateUpload("selected-document.pdf");
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".pdf,.jpg,.jpeg,.png";
+    input.multiple = true;
+    input.onchange = () => {
+      const files = Array.from(input.files ?? []);
+      files.forEach(f => handleUpload(f.name));
+    };
+    input.click();
   };
 
   const createTransaction = (doc: ExtractedDoc) => {
@@ -125,7 +89,8 @@ export default function DocumentAI() {
     setSelectedDoc(null);
   };
 
-  const formatCurrency = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
+  const formatCurrency = (v: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
 
   const confidenceColor = (c: number) => {
     if (c >= 80) return "text-green-600 bg-green-100";
@@ -138,33 +103,55 @@ export default function DocumentAI() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Document AI</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">AI-powered receipt and invoice data extraction</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            AI-powered receipt and invoice data extraction
+          </p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg"><FileText className="w-5 h-5 text-blue-600" /></div>
-            <div><p className="text-xs text-gray-500">Documents</p><p className="text-2xl font-bold">{documents.length}</p></div>
+            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+              <FileText className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Documents</p>
+              <p className="text-2xl font-bold">{documents.length}</p>
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg"><CheckCircle className="w-5 h-5 text-green-600" /></div>
-            <div><p className="text-xs text-gray-500">Processed</p><p className="text-2xl font-bold text-green-600">{completedCount}</p></div>
+            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Processed</p>
+              <p className="text-2xl font-bold text-green-600">{completedCount}</p>
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg"><AlertTriangle className="w-5 h-5 text-yellow-600" /></div>
-            <div><p className="text-xs text-gray-500">Needs Review</p><p className="text-2xl font-bold text-yellow-600">{reviewCount}</p></div>
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
+              <AlertTriangle className="w-5 h-5 text-yellow-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Needs Review</p>
+              <p className="text-2xl font-bold text-yellow-600">{reviewCount}</p>
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg"><DollarSign className="w-5 h-5 text-purple-600" /></div>
-            <div><p className="text-xs text-gray-500">Total Extracted</p><p className="text-2xl font-bold">{formatCurrency(totalExtracted)}</p></div>
+            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+              <DollarSign className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Total Extracted</p>
+              <p className="text-2xl font-bold">{formatCurrency(totalExtracted)}</p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -173,7 +160,10 @@ export default function DocumentAI() {
         className={`border-2 border-dashed transition-colors ${
           isDragging ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-gray-300 dark:border-gray-700"
         }`}
-        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragOver={e => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
       >
@@ -184,7 +174,9 @@ export default function DocumentAI() {
           <Button onClick={handleFileSelect} disabled={uploading} className="mt-4">
             <Upload className="w-4 h-4 mr-2" /> Browse Files
           </Button>
-          <p className="text-xs text-gray-400 mt-3">Supports PDF, JPG, PNG. AI will extract vendor, amount, date, and tax data.</p>
+          <p className="text-xs text-gray-400 mt-3">
+            Supports PDF, JPG, PNG. AI will extract vendor, amount, date, and tax data.
+          </p>
         </CardContent>
       </Card>
 
@@ -201,7 +193,9 @@ export default function DocumentAI() {
       )}
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Processed Documents</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-lg">Processed Documents</CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -218,31 +212,51 @@ export default function DocumentAI() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {documents.map((doc) => (
+              {documents.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center text-gray-500 py-10">
+                    No documents yet. Upload a receipt, invoice, or bill to get started.
+                  </TableCell>
+                </TableRow>
+              )}
+              {documents.map(doc => (
                 <TableRow key={doc.id}>
                   <TableCell className="font-medium max-w-[200px] truncate">
                     <FileText className="w-4 h-4 inline mr-2 text-gray-400" />
                     {doc.fileName}
                   </TableCell>
-                  <TableCell><Badge variant="outline" className="capitalize">{doc.type}</Badge></TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="capitalize">
+                      {doc.type}
+                    </Badge>
+                  </TableCell>
                   <TableCell>{doc.vendor || "-"}</TableCell>
                   <TableCell className="text-sm">{doc.date || "-"}</TableCell>
-                  <TableCell className="text-right font-semibold">{doc.amount ? formatCurrency(doc.amount) : "-"}</TableCell>
+                  <TableCell className="text-right font-semibold">
+                    {doc.amount ? formatCurrency(doc.amount) : "-"}
+                  </TableCell>
                   <TableCell className="text-right">{doc.tax ? formatCurrency(doc.tax) : "-"}</TableCell>
                   <TableCell>
                     {doc.confidence > 0 ? (
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${confidenceColor(doc.confidence)}`}>
                         {doc.confidence}%
                       </span>
-                    ) : "-"}
+                    ) : (
+                      "-"
+                    )}
                   </TableCell>
                   <TableCell>
-                    <Badge className={
-                      doc.status === "completed" ? "bg-green-100 text-green-800" :
-                      doc.status === "processing" ? "bg-blue-100 text-blue-800" :
-                      doc.status === "review" ? "bg-yellow-100 text-yellow-800" :
-                      "bg-red-100 text-red-800"
-                    }>
+                    <Badge
+                      className={
+                        doc.status === "completed"
+                          ? "bg-green-100 text-green-800"
+                          : doc.status === "processing"
+                            ? "bg-blue-100 text-blue-800"
+                            : doc.status === "review"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
+                      }
+                    >
                       {doc.status === "processing" && <Clock className="w-3 h-3 mr-1 animate-spin" />}
                       {doc.status}
                     </Badge>
@@ -280,7 +294,9 @@ export default function DocumentAI() {
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <p className="text-xs text-gray-500">Amount</p>
-                  <p className="font-medium">{selectedDoc.amount ? formatCurrency(selectedDoc.amount) : "Not detected"}</p>
+                  <p className="font-medium">
+                    {selectedDoc.amount ? formatCurrency(selectedDoc.amount) : "Not detected"}
+                  </p>
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <p className="text-xs text-gray-500">Date</p>

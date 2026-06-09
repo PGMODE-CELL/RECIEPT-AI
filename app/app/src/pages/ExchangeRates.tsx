@@ -1,46 +1,14 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/providers/trpc";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
-import {
-  RefreshCw,
-  Calculator,
-  TrendingUp,
-  TrendingDown,
-  ArrowRightLeft,
-  Pencil,
-  Check,
-  X,
-  Globe,
-} from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { RefreshCw, Calculator, TrendingUp, TrendingDown, ArrowRightLeft, Pencil, Check, X, Globe } from "lucide-react";
 
 interface Currency {
   code: string;
@@ -51,15 +19,9 @@ interface Currency {
   lastUpdated: string;
 }
 
-const historicalData = [
-  { date: "May 25", EUR: 0.921, GBP: 0.789, JPY: 156.8, CAD: 1.371 },
-  { date: "May 26", EUR: 0.924, GBP: 0.790, JPY: 157.0, CAD: 1.369 },
-  { date: "May 27", EUR: 0.922, GBP: 0.792, JPY: 157.1, CAD: 1.370 },
-  { date: "May 28", EUR: 0.925, GBP: 0.788, JPY: 157.3, CAD: 1.367 },
-  { date: "May 29", EUR: 0.920, GBP: 0.791, JPY: 157.5, CAD: 1.372 },
-  { date: "May 30", EUR: 0.923, GBP: 0.793, JPY: 157.0, CAD: 1.365 },
-  { date: "May 31", EUR: 0.923, GBP: 0.791, JPY: 157.2, CAD: 1.368 },
-];
+// Historical rate trends require a time-series forex feed the backend does not
+// expose yet, so no fabricated history is shown.
+const historicalData: Record<string, number | string>[] = [];
 
 export default function ExchangeRates() {
   const { data: ratesData = [], isLoading, refetch } = trpc.forex.rates.useQuery();
@@ -97,12 +59,12 @@ export default function ExchangeRates() {
       toast.error("Please enter a valid rate");
       return;
     }
-    setCurrencies((prev) =>
-      prev.map((c) =>
+    setCurrencies(prev =>
+      prev.map(c =>
         c.code === code
           ? { ...c, rate: newRate, lastUpdated: new Date().toISOString().slice(0, 16).replace("T", " ") }
-          : c
-      )
+          : c,
+      ),
     );
     setEditingCode(null);
     toast.success(`Updated ${code} rate to ${newRate}`);
@@ -113,21 +75,17 @@ export default function ExchangeRates() {
     setEditValue("");
   };
 
-  const handleAutoUpdate = () => {
+  const handleAutoUpdate = async () => {
     setIsUpdating(true);
     toast.info("Fetching latest exchange rates...");
-    setTimeout(() => {
-      setCurrencies((prev) =>
-        prev.map((c) => ({
-          ...c,
-          rate: c.code === "USD" ? 1.0 : c.rate * (1 + (Math.random() - 0.5) * 0.002),
-          change24h: parseFloat(((Math.random() - 0.5) * 2).toFixed(2)),
-          lastUpdated: new Date().toISOString().slice(0, 16).replace("T", " "),
-        }))
-      );
-      setIsUpdating(false);
+    try {
+      await refetch();
       toast.success("Exchange rates updated successfully");
-    }, 1500);
+    } catch {
+      toast.error("Failed to fetch exchange rates");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const handleConvert = () => {
@@ -136,8 +94,8 @@ export default function ExchangeRates() {
       toast.error("Please enter a valid amount");
       return;
     }
-    const fromCurrency = currencies.find((c) => c.code === convertFrom);
-    const toCurrency = currencies.find((c) => c.code === convertTo);
+    const fromCurrency = currencies.find(c => c.code === convertFrom);
+    const toCurrency = currencies.find(c => c.code === convertTo);
     if (!fromCurrency || !toCurrency) return;
 
     const result = (amount / fromCurrency.rate) * toCurrency.rate;
@@ -152,33 +110,22 @@ export default function ExchangeRates() {
     }
   };
 
-  const topCurrencies = currencies
-    .filter((c) => c.code !== "USD")
-    .slice(0, 5);
+  const topCurrencies = currencies.filter(c => c.code !== "USD").slice(0, 5);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Exchange Rates</h1>
-          <p className="text-muted-foreground">
-            Manage currency exchange rates and convert between currencies.
-          </p>
+          <p className="text-muted-foreground">Manage currency exchange rates and convert between currencies.</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant={autoUpdate ? "default" : "outline"}
-            onClick={() => setAutoUpdate(!autoUpdate)}
-          >
-            <RefreshCw
-              className={`mr-2 h-4 w-4 ${isUpdating ? "animate-spin" : ""}`}
-            />
+          <Button variant={autoUpdate ? "default" : "outline"} onClick={() => setAutoUpdate(!autoUpdate)}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isUpdating ? "animate-spin" : ""}`} />
             Auto-Update {autoUpdate ? "On" : "Off"}
           </Button>
           <Button onClick={handleAutoUpdate} disabled={isUpdating}>
-            <RefreshCw
-              className={`mr-2 h-4 w-4 ${isUpdating ? "animate-spin" : ""}`}
-            />
+            <RefreshCw className={`mr-2 h-4 w-4 ${isUpdating ? "animate-spin" : ""}`} />
             Update Now
           </Button>
         </div>
@@ -192,7 +139,7 @@ export default function ExchangeRates() {
               <select
                 className="flex h-9 w-[200px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={autoUpdateInterval}
-                onChange={(e) => setAutoUpdateInterval(e.target.value)}
+                onChange={e => setAutoUpdateInterval(e.target.value)}
               >
                 <option value="15">Every 15 minutes</option>
                 <option value="30">Every 30 minutes</option>
@@ -227,10 +174,7 @@ export default function ExchangeRates() {
             <CardDescription>Biggest Gainer</CardDescription>
             <CardTitle className="flex items-center gap-1 text-green-600">
               <TrendingUp className="h-4 w-4" />
-              {currencies
-                .filter((c) => c.code !== "USD")
-                .sort((a, b) => b.change24h - a.change24h)[0]
-                ?.code || "—"}
+              {currencies.filter(c => c.code !== "USD").sort((a, b) => b.change24h - a.change24h)[0]?.code || "—"}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -239,10 +183,7 @@ export default function ExchangeRates() {
             <CardDescription>Biggest Loser</CardDescription>
             <CardTitle className="flex items-center gap-1 text-red-600">
               <TrendingDown className="h-4 w-4" />
-              {currencies
-                .filter((c) => c.code !== "USD")
-                .sort((a, b) => a.change24h - b.change24h)[0]
-                ?.code || "—"}
+              {currencies.filter(c => c.code !== "USD").sort((a, b) => a.change24h - b.change24h)[0]?.code || "—"}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -254,9 +195,7 @@ export default function ExchangeRates() {
           <Card>
             <CardHeader>
               <CardTitle>Exchange Rates (Base: USD)</CardTitle>
-              <CardDescription>
-                Click the edit icon to manually update a rate.
-              </CardDescription>
+              <CardDescription>Click the edit icon to manually update a rate.</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -271,7 +210,7 @@ export default function ExchangeRates() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {currencies.map((currency) => (
+                  {currencies.map(currency => (
                     <TableRow key={currency.code}>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -288,8 +227,8 @@ export default function ExchangeRates() {
                             <Input
                               className="h-7 w-24 text-right font-mono text-sm"
                               value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onKeyDown={(e) => {
+                              onChange={e => setEditValue(e.target.value)}
+                              onKeyDown={e => {
                                 if (e.key === "Enter") handleEditSave(currency.code);
                                 if (e.key === "Escape") handleEditCancel();
                               }}
@@ -303,12 +242,7 @@ export default function ExchangeRates() {
                             >
                               <Check className="h-3 w-3 text-green-600" />
                             </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7"
-                              onClick={handleEditCancel}
-                            >
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleEditCancel}>
                               <X className="h-3 w-3 text-red-600" />
                             </Button>
                           </div>
@@ -317,28 +251,18 @@ export default function ExchangeRates() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <span
-                          className={
-                            currency.change24h >= 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }
-                        >
+                        <span className={currency.change24h >= 0 ? "text-green-600" : "text-red-600"}>
                           {currency.change24h >= 0 ? "+" : ""}
                           {currency.change24h.toFixed(2)}%
                         </span>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {currency.lastUpdated}
-                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{currency.lastUpdated}</TableCell>
                       <TableCell className="text-right">
                         {editingCode !== currency.code && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() =>
-                              handleEditStart(currency.code, currency.rate)
-                            }
+                            onClick={() => handleEditStart(currency.code, currency.rate)}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -367,9 +291,9 @@ export default function ExchangeRates() {
                 <select
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   value={convertFrom}
-                  onChange={(e) => setConvertFrom(e.target.value)}
+                  onChange={e => setConvertFrom(e.target.value)}
                 >
-                  {currencies.map((c) => (
+                  {currencies.map(c => (
                     <option key={c.code} value={c.code}>
                       {c.code} - {c.name}
                     </option>
@@ -379,16 +303,12 @@ export default function ExchangeRates() {
                   placeholder="Amount"
                   type="number"
                   value={convertAmount}
-                  onChange={(e) => setConvertAmount(e.target.value)}
+                  onChange={e => setConvertAmount(e.target.value)}
                 />
               </div>
 
               <div className="flex justify-center">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleSwapCurrencies}
-                >
+                <Button variant="ghost" size="icon" onClick={handleSwapCurrencies}>
                   <ArrowRightLeft className="h-4 w-4 rotate-90" />
                 </Button>
               </div>
@@ -398,9 +318,9 @@ export default function ExchangeRates() {
                 <select
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   value={convertTo}
-                  onChange={(e) => setConvertTo(e.target.value)}
+                  onChange={e => setConvertTo(e.target.value)}
                 >
-                  {currencies.map((c) => (
+                  {currencies.map(c => (
                     <option key={c.code} value={c.code}>
                       {c.code} - {c.name}
                     </option>
@@ -409,7 +329,7 @@ export default function ExchangeRates() {
                 {convertResult !== null && (
                   <div className="rounded-lg bg-muted p-3 text-center">
                     <p className="text-2xl font-bold">
-                      {currencies.find((c) => c.code === convertTo)?.symbol}
+                      {currencies.find(c => c.code === convertTo)?.symbol}
                       {convertResult.toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
@@ -418,8 +338,8 @@ export default function ExchangeRates() {
                     <p className="text-sm text-muted-foreground">
                       1 {convertFrom} ={" "}
                       {(
-                        currencies.find((c) => c.code === convertFrom)!.rate /
-                        currencies.find((c) => c.code === convertTo)!.rate
+                        currencies.find(c => c.code === convertFrom)!.rate /
+                        currencies.find(c => c.code === convertTo)!.rate
                       ).toFixed(4)}{" "}
                       {convertTo}
                     </p>
@@ -444,32 +364,38 @@ export default function ExchangeRates() {
               <select
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={selectedCurrency}
-                onChange={(e) => setSelectedCurrency(e.target.value)}
+                onChange={e => setSelectedCurrency(e.target.value)}
               >
-                {topCurrencies.map((c) => (
+                {topCurrencies.map(c => (
                   <option key={c.code} value={c.code}>
                     {c.code} - {c.name}
                   </option>
                 ))}
               </select>
               <div className="h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={historicalData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey={selectedCurrency}
-                      stroke="#2563eb"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                      name={selectedCurrency}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {historicalData.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-center text-sm text-gray-500">
+                    Historical rate trends are not available yet.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={historicalData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey={selectedCurrency}
+                        stroke="#2563eb"
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                        name={selectedCurrency}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -12,9 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { trpc } from "@/providers/trpc";
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
-} from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Plus, Trash, DollarSign, TrendingUp, TrendingDown, ArrowRightLeft, RefreshCw } from "lucide-react";
 
 interface InvoiceItem {
@@ -56,7 +54,7 @@ export default function MultiCurrencyInvoice() {
     for (const cur of currencies) {
       rates[cur.code] = {
         rate: Number(cur.exchangeRate) || 1,
-        change: Math.round((Math.random() * 2 - 1) * 10) / 10,
+        change: 0,
       };
     }
     if (!rates.EUR) rates.EUR = { rate: 0.92, change: -0.3 };
@@ -71,23 +69,10 @@ export default function MultiCurrencyInvoice() {
 
   const invoices = useMemo((): MCInvoice[] => {
     const raw = invoiceData?.invoices ?? [];
-    if (!raw.length) {
-      return [
-        {
-          id: "1", number: "MC-INV-001", customer: "EuroTech GmbH", currency: "EUR", exchangeRate: 1.085,
-          items: [
-            { id: "1", description: "Software License", quantity: 5, unitPrice: 2000, amount: 10000 },
-            { id: "2", description: "Implementation Services", quantity: 40, unitPrice: 150, amount: 6000 },
-          ],
-          totalForeign: 16000, totalBase: 17360, status: "sent", createdDate: "2026-01-15", realizedGainLoss: 0,
-        },
-      ];
-    }
-
     return raw.map((inv, i): MCInvoice => {
       const currency = inv.currency || "USD";
       const rateData = exchangeRates[currency];
-      const rate = rateData ? (1 / rateData.rate) : 1;
+      const rate = rateData ? 1 / rateData.rate : 1;
       const totalForeign = Number(inv.total) || 0;
       const totalBase = totalForeign * rate;
       return {
@@ -110,26 +95,27 @@ export default function MultiCurrencyInvoice() {
   const totalForeignCurrency = invoices.reduce((s, i) => s + i.totalForeign, 0);
   const totalGainLoss = invoices.reduce((s, i) => s + i.realizedGainLoss, 0);
 
-  const formatCurrency = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
+  const formatCurrency = (v: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
 
   const calcTotal = (items: InvoiceItem[]) => items.reduce((s, i) => s + i.amount, 0);
 
   const addItem = () => {
-    setNewItems((prev) => [...prev, { id: String(Date.now()), description: "", quantity: 1, unitPrice: 0, amount: 0 }]);
+    setNewItems(prev => [...prev, { id: String(Date.now()), description: "", quantity: 1, unitPrice: 0, amount: 0 }]);
   };
 
   const removeItem = (id: string) => {
-    setNewItems((prev) => prev.filter((i) => i.id !== id));
+    setNewItems(prev => prev.filter(i => i.id !== id));
   };
 
   const updateItem = (id: string, field: string, value: string | number) => {
-    setNewItems((prev) =>
-      prev.map((i) => {
+    setNewItems(prev =>
+      prev.map(i => {
         if (i.id !== id) return i;
         const updated = { ...i, [field]: value };
         updated.amount = updated.quantity * updated.unitPrice;
         return updated;
-      })
+      }),
     );
   };
 
@@ -156,28 +142,13 @@ export default function MultiCurrencyInvoice() {
   };
 
   const refreshRates = () => {
-    toast.success("Exchange rates refreshed from market");
+    toast.info("Exchange rates reflect your configured currency settings.");
   };
 
-  const RATE_TREND = useMemo(() => {
-    const dates = ["Jan 1", "Jan 8", "Jan 15", "Jan 22", "Jan 29"];
-    const baseEUR = exchangeRates.EUR?.rate || 0.92;
-    const baseGBP = exchangeRates.GBP?.rate || 0.79;
-    return dates.map((date, i) => ({
-      date,
-      EUR: Math.round((baseEUR + (i - 2) * 0.003) * 1000) / 1000,
-      GBP: Math.round((baseGBP + (i - 2) * 0.002) * 1000) / 1000,
-    }));
-  }, [exchangeRates]);
-
-  const GAIN_LOSS_DATA = useMemo(() => {
-    const months = ["Sep", "Oct", "Nov", "Dec", "Jan"];
-    return months.map((month) => ({
-      month,
-      realized: Math.round(Math.random() * 3000 - 500),
-      unrealized: Math.round(Math.random() * 3000 - 1000),
-    }));
-  }, []);
+  // Rate history and realized/unrealized FX gain-loss series require a
+  // time-series feed the backend does not expose yet; no fabricated data shown.
+  const RATE_TREND: { date: string; EUR: number; GBP: number }[] = [];
+  const GAIN_LOSS_DATA: { month: string; realized: number; unrealized: number }[] = [];
 
   const isLoading = loadingInvoices || loadingCurrencies;
 
@@ -195,57 +166,101 @@ export default function MultiCurrencyInvoice() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Multi-Currency Invoicing</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Create invoices in foreign currencies with automatic conversion</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Create invoices in foreign currencies with automatic conversion
+          </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={refreshRates}><RefreshCw className="w-4 h-4 mr-2" /> Refresh Rates</Button>
-          <Button onClick={() => setCreateOpen(true)}><Plus className="w-4 h-4 mr-2" /> New Invoice</Button>
+          <Button variant="outline" onClick={refreshRates}>
+            <RefreshCw className="w-4 h-4 mr-2" /> Refresh Rates
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" /> New Invoice
+          </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg"><DollarSign className="w-5 h-5 text-blue-600" /></div>
-            <div><p className="text-xs text-gray-500">Base Currency Total</p><p className="text-xl font-bold">{formatCurrency(totalBaseCurrency)}</p></div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg"><ArrowRightLeft className="w-5 h-5 text-purple-600" /></div>
-            <div><p className="text-xs text-gray-500">Invoices</p><p className="text-2xl font-bold">{invoices.length}</p></div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${totalGainLoss >= 0 ? "bg-green-100 dark:bg-green-900" : "bg-red-100 dark:bg-red-900"}`}>
-              {totalGainLoss >= 0 ? <TrendingUp className="w-5 h-5 text-green-600" /> : <TrendingDown className="w-5 h-5 text-red-600" />}
+            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+              <DollarSign className="w-5 h-5 text-blue-600" />
             </div>
-            <div><p className="text-xs text-gray-500">Realized G/L</p><p className={`text-xl font-bold ${totalGainLoss >= 0 ? "text-green-600" : "text-red-600"}`}>{formatCurrency(totalGainLoss)}</p></div>
+            <div>
+              <p className="text-xs text-gray-500">Base Currency Total</p>
+              <p className="text-xl font-bold">{formatCurrency(totalBaseCurrency)}</p>
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg"><TrendingUp className="w-5 h-5 text-orange-600" /></div>
-            <div><p className="text-xs text-gray-500">Unrealized G/L</p><p className="text-xl font-bold text-green-600">{formatCurrency(0)}</p></div>
+            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+              <ArrowRightLeft className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Invoices</p>
+              <p className="text-2xl font-bold">{invoices.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div
+              className={`p-2 rounded-lg ${
+                totalGainLoss >= 0 ? "bg-green-100 dark:bg-green-900" : "bg-red-100 dark:bg-red-900"
+              }`}
+            >
+              {totalGainLoss >= 0 ? (
+                <TrendingUp className="w-5 h-5 text-green-600" />
+              ) : (
+                <TrendingDown className="w-5 h-5 text-red-600" />
+              )}
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Realized G/L</p>
+              <p className={`text-xl font-bold ${totalGainLoss >= 0 ? "text-green-600" : "text-red-600"}`}>
+                {formatCurrency(totalGainLoss)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
+              <TrendingUp className="w-5 h-5 text-orange-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Unrealized G/L</p>
+              <p className="text-xl font-bold text-green-600">{formatCurrency(0)}</p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
-          <CardHeader><CardTitle className="text-lg">Exchange Rates</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-lg">Exchange Rates</CardTitle>
+          </CardHeader>
           <CardContent className="space-y-2">
             {Object.entries(exchangeRates)
               .filter(([c]) => c !== "USD")
               .map(([currency, data]) => (
-                <div key={currency} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+                <div
+                  key={currency}
+                  className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
                   <div className="flex items-center gap-2">
                     <span className="font-semibold">{currency}</span>
                     <span className="text-sm text-gray-500">= {data.rate}</span>
                   </div>
-                  <span className={`text-sm ${data.change > 0 ? "text-green-600" : data.change < 0 ? "text-red-600" : "text-gray-400"}`}>
-                    {data.change > 0 ? "+" : ""}{data.change}%
+                  <span
+                    className={`text-sm ${
+                      data.change > 0 ? "text-green-600" : data.change < 0 ? "text-red-600" : "text-gray-400"
+                    }`}
+                  >
+                    {data.change > 0 ? "+" : ""}
+                    {data.change}%
                   </span>
                 </div>
               ))}
@@ -253,42 +268,60 @@ export default function MultiCurrencyInvoice() {
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader><CardTitle className="text-lg">Rate Trends (Jan 2026)</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-lg">Rate Trends</CardTitle>
+          </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={RATE_TREND}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis yAxisId="left" />
-                <Tooltip />
-                <Legend />
-                <Line yAxisId="left" type="monotone" dataKey="EUR" stroke="#3b82f6" strokeWidth={2} />
-                <Line yAxisId="left" type="monotone" dataKey="GBP" stroke="#22c55e" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
+            {RATE_TREND.length === 0 ? (
+              <div className="h-[250px] flex items-center justify-center text-center text-sm text-gray-500">
+                Rate trend history is not available yet.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={RATE_TREND}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis yAxisId="left" />
+                  <Tooltip />
+                  <Legend />
+                  <Line yAxisId="left" type="monotone" dataKey="EUR" stroke="#3b82f6" strokeWidth={2} />
+                  <Line yAxisId="left" type="monotone" dataKey="GBP" stroke="#22c55e" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Realized & Unrealized Gains/Losses</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-lg">Realized & Unrealized Gains/Losses</CardTitle>
+        </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={GAIN_LOSS_DATA}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip formatter={(v: number) => formatCurrency(v)} />
-              <Legend />
-              <Line type="monotone" dataKey="realized" stroke="#22c55e" strokeWidth={2} name="Realized" />
-              <Line type="monotone" dataKey="unrealized" stroke="#f97316" strokeWidth={2} name="Unrealized" />
-            </LineChart>
-          </ResponsiveContainer>
+          {GAIN_LOSS_DATA.length === 0 ? (
+            <div className="h-[250px] flex items-center justify-center text-center text-sm text-gray-500">
+              FX gain/loss history will appear once invoices are settled across periods.
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={GAIN_LOSS_DATA}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                <Legend />
+                <Line type="monotone" dataKey="realized" stroke="#22c55e" strokeWidth={2} name="Realized" />
+                <Line type="monotone" dataKey="unrealized" stroke="#f97316" strokeWidth={2} name="Unrealized" />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Invoices</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-lg">Invoices</CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -304,27 +337,44 @@ export default function MultiCurrencyInvoice() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invoices.map((inv) => (
+              {invoices.map(inv => (
                 <TableRow key={inv.id}>
                   <TableCell className="font-mono font-medium">{inv.number}</TableCell>
                   <TableCell>{inv.customer}</TableCell>
-                  <TableCell><Badge variant="outline">{inv.currency}</Badge></TableCell>
-                  <TableCell className="text-right font-mono">{inv.totalForeign.toLocaleString()} {inv.currency}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{inv.currency}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-mono">
+                    {inv.totalForeign.toLocaleString()} {inv.currency}
+                  </TableCell>
                   <TableCell className="text-right font-mono">{inv.exchangeRate}</TableCell>
                   <TableCell className="text-right font-semibold">{formatCurrency(inv.totalBase)}</TableCell>
                   <TableCell className="text-right">
                     {inv.realizedGainLoss !== 0 ? (
-                      <span className={inv.realizedGainLoss > 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
-                        {inv.realizedGainLoss > 0 ? "+" : ""}{formatCurrency(inv.realizedGainLoss)}
+                      <span
+                        className={
+                          inv.realizedGainLoss > 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"
+                        }
+                      >
+                        {inv.realizedGainLoss > 0 ? "+" : ""}
+                        {formatCurrency(inv.realizedGainLoss)}
                       </span>
-                    ) : "-"}
+                    ) : (
+                      "-"
+                    )}
                   </TableCell>
                   <TableCell>
-                    <Badge className={
-                      inv.status === "paid" ? "bg-green-100 text-green-800" :
-                      inv.status === "sent" ? "bg-blue-100 text-blue-800" :
-                      "bg-gray-100 text-gray-800"
-                    }>{inv.status}</Badge>
+                    <Badge
+                      className={
+                        inv.status === "paid"
+                          ? "bg-green-100 text-green-800"
+                          : inv.status === "sent"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-gray-100 text-gray-800"
+                      }
+                    >
+                      {inv.status}
+                    </Badge>
                   </TableCell>
                 </TableRow>
               ))}
@@ -335,7 +385,9 @@ export default function MultiCurrencyInvoice() {
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>Create Multi-Currency Invoice</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Create Multi-Currency Invoice</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -345,11 +397,17 @@ export default function MultiCurrencyInvoice() {
               <div className="space-y-2">
                 <Label>Invoice Currency</Label>
                 <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    {Object.keys(exchangeRates).filter((c) => c !== "USD").map((c) => (
-                      <SelectItem key={c} value={c}>{c} (Rate: {exchangeRates[c].rate})</SelectItem>
-                    ))}
+                    {Object.keys(exchangeRates)
+                      .filter(c => c !== "USD")
+                      .map(c => (
+                        <SelectItem key={c} value={c}>
+                          {c} (Rate: {exchangeRates[c].rate})
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -357,34 +415,38 @@ export default function MultiCurrencyInvoice() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <Label>Line Items</Label>
-                <Button size="sm" variant="outline" onClick={addItem}><Plus className="w-3 h-3 mr-1" /> Add</Button>
+                <Button size="sm" variant="outline" onClick={addItem}>
+                  <Plus className="w-3 h-3 mr-1" /> Add
+                </Button>
               </div>
               <div className="space-y-2">
-                {newItems.map((item) => (
+                {newItems.map(item => (
                   <div key={item.id} className="flex items-center gap-2">
                     <Input
                       placeholder="Description"
                       value={item.description}
-                      onChange={(e) => updateItem(item.id, "description", e.target.value)}
+                      onChange={e => updateItem(item.id, "description", e.target.value)}
                       className="flex-1"
                     />
                     <Input
                       type="number"
                       placeholder="Qty"
                       value={item.quantity || ""}
-                      onChange={(e) => updateItem(item.id, "quantity", Number(e.target.value))}
+                      onChange={e => updateItem(item.id, "quantity", Number(e.target.value))}
                       className="w-20"
                     />
                     <Input
                       type="number"
                       placeholder="Price"
                       value={item.unitPrice || ""}
-                      onChange={(e) => updateItem(item.id, "unitPrice", Number(e.target.value))}
+                      onChange={e => updateItem(item.id, "unitPrice", Number(e.target.value))}
                       className="w-28"
                     />
                     <span className="w-28 text-right font-mono text-sm">{item.amount.toLocaleString()}</span>
                     {newItems.length > 1 && (
-                      <Button size="sm" variant="ghost" onClick={() => removeItem(item.id)}><Trash className="w-4 h-4" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => removeItem(item.id)}>
+                        <Trash className="w-4 h-4" />
+                      </Button>
                     )}
                   </div>
                 ))}
@@ -395,12 +457,16 @@ export default function MultiCurrencyInvoice() {
               </div>
               <div className="mt-1 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg flex justify-between">
                 <span className="font-medium">Base Currency (USD) @ {exchangeRates[selectedCurrency]?.rate}</span>
-                <span className="font-bold">{formatCurrency(calcTotal(newItems) / (exchangeRates[selectedCurrency]?.rate || 1))}</span>
+                <span className="font-bold">
+                  {formatCurrency(calcTotal(newItems) / (exchangeRates[selectedCurrency]?.rate || 1))}
+                </span>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={createInvoice}>Create Invoice</Button>
           </DialogFooter>
         </DialogContent>

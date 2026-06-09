@@ -9,19 +9,18 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import {
-  Sparkles, CheckCircle2, ArrowRight, Plus, Trash2, Brain, Zap, Target, TrendingUp, Filter,
-} from "lucide-react";
+import { Sparkles, CheckCircle2, ArrowRight, Plus, Trash2, Brain, Zap, Target, TrendingUp, Filter } from "lucide-react";
 
 interface Transaction {
   id: string;
@@ -42,28 +41,44 @@ interface CategorizationRule {
   timesApplied: number;
 }
 
-
-
 const CATEGORIES = [
-  "Travel", "Software & IT", "Meals & Entertainment", "Shipping & Postage",
-  "Office Supplies", "Rent & Utilities", "Marketing", "Professional Services",
-  "Insurance", "Utilities", "Payroll", "Equipment", "Miscellaneous",
+  "Travel",
+  "Software & IT",
+  "Meals & Entertainment",
+  "Shipping & Postage",
+  "Office Supplies",
+  "Rent & Utilities",
+  "Marketing",
+  "Professional Services",
+  "Insurance",
+  "Utilities",
+  "Payroll",
+  "Equipment",
+  "Miscellaneous",
 ];
 
-function suggestCategory(description: string, rules: CategorizationRule[]): { category: string; confidence: number; keywords: string[] } {
+function suggestCategory(
+  description: string,
+  rules: CategorizationRule[],
+): { category: string; confidence: number; keywords: string[] } {
   const desc = description.toLowerCase();
   const words = desc.split(/\s+/);
   for (const rule of rules.sort((a, b) => a.priority - b.priority)) {
     if (desc.includes(rule.keyword.toLowerCase())) {
-      return { category: rule.category, confidence: 0.85 + Math.random() * 0.14, keywords: [rule.keyword] };
+      return { category: rule.category, confidence: 0.92, keywords: [rule.keyword] };
     }
   }
-  if (desc.includes("uber") || desc.includes("lyft") || desc.includes("taxi")) return { category: "Travel", confidence: 0.9, keywords: ["travel"] };
-  if (desc.includes("coffee") || desc.includes("starbucks") || desc.includes("restaurant")) return { category: "Meals & Entertainment", confidence: 0.85, keywords: ["meal"] };
-  if (desc.includes("software") || desc.includes("saas") || desc.includes("cloud")) return { category: "Software & IT", confidence: 0.88, keywords: ["software"] };
-  if (desc.includes("office") || desc.includes("supplies")) return { category: "Office Supplies", confidence: 0.82, keywords: ["office"] };
-  if (desc.includes("rent") || desc.includes("utilities") || desc.includes("electric")) return { category: "Rent & Utilities", confidence: 0.9, keywords: ["rent"] };
-  return { category: "Miscellaneous", confidence: 0.5 + Math.random() * 0.2, keywords: words.slice(0, 2) };
+  if (desc.includes("uber") || desc.includes("lyft") || desc.includes("taxi"))
+    return { category: "Travel", confidence: 0.9, keywords: ["travel"] };
+  if (desc.includes("coffee") || desc.includes("starbucks") || desc.includes("restaurant"))
+    return { category: "Meals & Entertainment", confidence: 0.85, keywords: ["meal"] };
+  if (desc.includes("software") || desc.includes("saas") || desc.includes("cloud"))
+    return { category: "Software & IT", confidence: 0.88, keywords: ["software"] };
+  if (desc.includes("office") || desc.includes("supplies"))
+    return { category: "Office Supplies", confidence: 0.82, keywords: ["office"] };
+  if (desc.includes("rent") || desc.includes("utilities") || desc.includes("electric"))
+    return { category: "Rent & Utilities", confidence: 0.9, keywords: ["rent"] };
+  return { category: "Miscellaneous", confidence: 0.5, keywords: words.slice(0, 2) };
 }
 
 export default function SmartCategorization() {
@@ -80,33 +95,35 @@ export default function SmartCategorization() {
 
   useEffect(() => {
     if (txData && transactions.length === 0) {
-      const mapped: Transaction[] = txData.map((tx) => {
-        const { category, confidence, keywords } = suggestCategory(tx.description || "", rules);
-        return {
-          id: String(tx.id),
-          date: tx.date?.toString?.() || String(tx.date || ""),
-          description: tx.description,
-          amount: Number(tx.debit) || Number(tx.credit) || 0,
-          suggestedCategory: category,
-          confidence,
-          keywords,
-          status: "pending" as const,
-        };
-      }).filter((tx) => tx.description);
+      const mapped: Transaction[] = txData
+        .map(tx => {
+          const { category, confidence, keywords } = suggestCategory(tx.description || "", rules);
+          return {
+            id: String(tx.id),
+            date: tx.date?.toString?.() || String(tx.date || ""),
+            description: tx.description,
+            amount: Number(tx.debit) || Number(tx.credit) || 0,
+            suggestedCategory: category,
+            confidence,
+            keywords,
+            status: "pending" as const,
+          };
+        })
+        .filter(tx => tx.description);
       setTransactions(mapped);
     }
   }, [txData, rules]);
 
   const stats = useMemo(() => {
     const total = transactions.length;
-    const categorized = transactions.filter((t) => t.status === "categorized").length;
-    const pending = transactions.filter((t) => t.status === "pending").length;
+    const categorized = transactions.filter(t => t.status === "categorized").length;
+    const pending = transactions.filter(t => t.status === "pending").length;
     const avgConfidence = total > 0 ? transactions.reduce((acc, t) => acc + t.confidence, 0) / total : 0;
     return { total, categorized, pending, avgConfidence };
   }, [transactions]);
 
   const filteredTransactions = useMemo(() => {
-    return transactions.filter((t) => {
+    return transactions.filter(t => {
       const matchesSearch =
         t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         t.suggestedCategory.toLowerCase().includes(searchTerm.toLowerCase());
@@ -116,25 +133,21 @@ export default function SmartCategorization() {
   }, [transactions, searchTerm, filterCategory]);
 
   const handleCategorize = (txId: string) => {
-    setTransactions((prev) =>
-      prev.map((t) => (t.id === txId ? { ...t, status: "categorized" as const } : t))
-    );
-    const tx = transactions.find((t) => t.id === txId);
+    setTransactions(prev => prev.map(t => (t.id === txId ? { ...t, status: "categorized" as const } : t)));
+    const tx = transactions.find(t => t.id === txId);
     toast.success(`Categorized as "${tx?.suggestedCategory}"`, { description: `${tx?.description} - $${tx?.amount}` });
   };
 
   const handleCategorizeAll = () => {
-    setTransactions((prev) =>
-      prev.map((t) => (t.status === "pending" ? { ...t, status: "categorized" as const } : t))
-    );
-    const pendingCount = transactions.filter((t) => t.status === "pending").length;
-    toast.success(`${pendingCount} transactions categorized`, { description: "All pending transactions have been categorized." });
+    setTransactions(prev => prev.map(t => (t.status === "pending" ? { ...t, status: "categorized" as const } : t)));
+    const pendingCount = transactions.filter(t => t.status === "pending").length;
+    toast.success(`${pendingCount} transactions categorized`, {
+      description: "All pending transactions have been categorized.",
+    });
   };
 
   const handleSkip = (txId: string) => {
-    setTransactions((prev) =>
-      prev.map((t) => (t.id === txId ? { ...t, status: "skipped" as const } : t))
-    );
+    setTransactions(prev => prev.map(t => (t.id === txId ? { ...t, status: "skipped" as const } : t)));
     toast.info("Transaction skipped");
   };
 
@@ -150,7 +163,7 @@ export default function SmartCategorization() {
       priority: rules.length + 1,
       timesApplied: 0,
     };
-    setRules((prev) => [...prev, newRule]);
+    setRules(prev => [...prev, newRule]);
     setNewRuleKeyword("");
     setNewRuleCategory("");
     setRuleDialogOpen(false);
@@ -158,7 +171,7 @@ export default function SmartCategorization() {
   };
 
   const handleDeleteRule = (ruleId: string) => {
-    setRules((prev) => prev.filter((r) => r.id !== ruleId));
+    setRules(prev => prev.filter(r => r.id !== ruleId));
     toast.info("Rule deleted");
   };
 
@@ -176,14 +189,14 @@ export default function SmartCategorization() {
             <Brain className="h-8 w-8 text-purple-600" />
             Smart Categorization
           </h1>
-          <p className="text-muted-foreground mt-1">
-            AI-powered transaction categorization with learning rules
-          </p>
+          <p className="text-muted-foreground mt-1">AI-powered transaction categorization with learning rules</p>
         </div>
         <div className="flex gap-2">
           <Dialog open={ruleDialogOpen} onOpenChange={setRuleDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline"><Plus className="mr-2 h-4 w-4" /> Add Rule</Button>
+              <Button variant="outline">
+                <Plus className="mr-2 h-4 w-4" /> Add Rule
+              </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -193,18 +206,30 @@ export default function SmartCategorization() {
               <div className="space-y-4 mt-4">
                 <div className="space-y-2">
                   <Label>Keyword</Label>
-                  <Input placeholder="e.g. uber, amazon, spotify" value={newRuleKeyword} onChange={(e) => setNewRuleKeyword(e.target.value)} />
+                  <Input
+                    placeholder="e.g. uber, amazon, spotify"
+                    value={newRuleKeyword}
+                    onChange={e => setNewRuleKeyword(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Category</Label>
                   <Select value={newRuleCategory} onValueChange={setNewRuleCategory}>
-                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
                     <SelectContent>
-                      {CATEGORIES.map((cat) => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}
+                      {CATEGORIES.map(cat => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <Button onClick={handleAddRule} className="w-full">Create Rule</Button>
+                <Button onClick={handleAddRule} className="w-full">
+                  Create Rule
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -220,7 +245,9 @@ export default function SmartCategorization() {
             <CardDescription>Total Transactions</CardDescription>
             <CardTitle className="text-2xl">{stats.total}</CardTitle>
           </CardHeader>
-          <CardContent><Badge variant="outline">{transactions.length} this period</Badge></CardContent>
+          <CardContent>
+            <Badge variant="outline">{transactions.length} this period</Badge>
+          </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
@@ -236,7 +263,9 @@ export default function SmartCategorization() {
             <CardDescription>Pending</CardDescription>
             <CardTitle className="text-2xl text-orange-600">{stats.pending}</CardTitle>
           </CardHeader>
-          <CardContent><Badge className="bg-orange-100 text-orange-800">Needs attention</Badge></CardContent>
+          <CardContent>
+            <Badge className="bg-orange-100 text-orange-800">Needs attention</Badge>
+          </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
@@ -244,15 +273,21 @@ export default function SmartCategorization() {
             <CardTitle className="text-2xl">{(stats.avgConfidence * 100).toFixed(1)}%</CardTitle>
           </CardHeader>
           <CardContent>
-            <Badge className="bg-blue-100 text-blue-800"><TrendingUp className="mr-1 h-3 w-3" /> AI-powered</Badge>
+            <Badge className="bg-blue-100 text-blue-800">
+              <TrendingUp className="mr-1 h-3 w-3" /> AI-powered
+            </Badge>
           </CardContent>
         </Card>
       </div>
 
       <Tabs defaultValue="transactions">
         <TabsList>
-          <TabsTrigger value="transactions" className="flex items-center gap-2"><Zap className="h-4 w-4" /> Uncategorized Transactions</TabsTrigger>
-          <TabsTrigger value="rules" className="flex items-center gap-2"><Target className="h-4 w-4" /> Categorization Rules</TabsTrigger>
+          <TabsTrigger value="transactions" className="flex items-center gap-2">
+            <Zap className="h-4 w-4" /> Uncategorized Transactions
+          </TabsTrigger>
+          <TabsTrigger value="rules" className="flex items-center gap-2">
+            <Target className="h-4 w-4" /> Categorization Rules
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="transactions" className="space-y-4">
@@ -263,13 +298,24 @@ export default function SmartCategorization() {
                 <div className="flex gap-2">
                   <div className="relative">
                     <Filter className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search transactions..." className="pl-8 w-64" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                    <Input
+                      placeholder="Search transactions..."
+                      className="pl-8 w-64"
+                      value={searchTerm}
+                      onChange={e => setSearchTerm(e.target.value)}
+                    />
                   </div>
                   <Select value={filterCategory} onValueChange={setFilterCategory}>
-                    <SelectTrigger className="w-48"><SelectValue placeholder="Filter category" /></SelectTrigger>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Filter category" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Categories</SelectItem>
-                      {CATEGORIES.map((cat) => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}
+                      {CATEGORIES.map(cat => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -293,36 +339,62 @@ export default function SmartCategorization() {
                   </TableHeader>
                   <TableBody>
                     {filteredTransactions.length === 0 && (
-                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-gray-500">No transactions found</TableCell></TableRow>
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                          No transactions found
+                        </TableCell>
+                      </TableRow>
                     )}
-                    {filteredTransactions.map((tx) => (
+                    {filteredTransactions.map(tx => (
                       <TableRow key={tx.id}>
                         <TableCell className="text-muted-foreground">{tx.date}</TableCell>
                         <TableCell className="font-medium">{tx.description}</TableCell>
-                        <TableCell className={tx.amount < 0 ? "text-red-600" : "text-green-600"}>${Math.abs(tx.amount).toFixed(2)}</TableCell>
-                        <TableCell><Badge className="bg-purple-100 text-purple-800">{tx.suggestedCategory}</Badge></TableCell>
+                        <TableCell className={tx.amount < 0 ? "text-red-600" : "text-green-600"}>
+                          ${Math.abs(tx.amount).toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className="bg-purple-100 text-purple-800">{tx.suggestedCategory}</Badge>
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Progress value={tx.confidence * 100} className="h-1.5 w-16" />
-                            <span className={`text-sm font-medium ${getConfidenceColor(tx.confidence)}`}>{(tx.confidence * 100).toFixed(0)}%</span>
+                            <span className={`text-sm font-medium ${getConfidenceColor(tx.confidence)}`}>
+                              {(tx.confidence * 100).toFixed(0)}%
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            {tx.keywords.map((kw) => (<Badge key={kw} variant="secondary" className="text-xs">{kw}</Badge>))}
+                            {tx.keywords.map(kw => (
+                              <Badge key={kw} variant="secondary" className="text-xs">
+                                {kw}
+                              </Badge>
+                            ))}
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-1 justify-end">
                             {tx.status === "pending" ? (
                               <>
-                                <Button size="sm" onClick={() => handleCategorize(tx.id)} className="h-8 bg-green-600 hover:bg-green-700">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleCategorize(tx.id)}
+                                  className="h-8 bg-green-600 hover:bg-green-700"
+                                >
                                   <CheckCircle2 className="mr-1 h-3 w-3" /> Accept
                                 </Button>
-                                <Button size="sm" variant="ghost" onClick={() => handleSkip(tx.id)} className="h-8">Skip</Button>
+                                <Button size="sm" variant="ghost" onClick={() => handleSkip(tx.id)} className="h-8">
+                                  Skip
+                                </Button>
                               </>
                             ) : (
-                              <Badge className={tx.status === "categorized" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
+                              <Badge
+                                className={
+                                  tx.status === "categorized"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-gray-100 text-gray-800"
+                                }
+                              >
                                 {tx.status === "categorized" ? "Categorized" : "Skipped"}
                               </Badge>
                             )}
@@ -341,7 +413,9 @@ export default function SmartCategorization() {
           <Card>
             <CardHeader>
               <CardTitle>Active Categorization Rules</CardTitle>
-              <CardDescription>Rules are applied in priority order. Higher priority rules are checked first.</CardDescription>
+              <CardDescription>
+                Rules are applied in priority order. Higher priority rules are checked first.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -355,11 +429,15 @@ export default function SmartCategorization() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rules.map((rule) => (
+                  {rules.map(rule => (
                     <TableRow key={rule.id}>
-                      <TableCell><Badge variant="outline">#{rule.priority}</Badge></TableCell>
+                      <TableCell>
+                        <Badge variant="outline">#{rule.priority}</Badge>
+                      </TableCell>
                       <TableCell className="font-mono font-medium">{rule.keyword}</TableCell>
-                      <TableCell><Badge className="bg-purple-100 text-purple-800">{rule.category}</Badge></TableCell>
+                      <TableCell>
+                        <Badge className="bg-purple-100 text-purple-800">{rule.category}</Badge>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{rule.timesApplied}</span>
@@ -367,7 +445,12 @@ export default function SmartCategorization() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="ghost" onClick={() => handleDeleteRule(rule.id)} className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDeleteRule(rule.id)}
+                          className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -380,14 +463,21 @@ export default function SmartCategorization() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Brain className="h-5 w-5 text-purple-600" /> Learning Insights</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-purple-600" /> Learning Insights
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 border rounded-lg">
                   <div className="text-sm text-muted-foreground">Most Applied Rule</div>
-                  <div className="font-medium mt-1">{rules.sort((a, b) => b.timesApplied - a.timesApplied)[0]?.keyword || "N/A"} → {rules.sort((a, b) => b.timesApplied - a.timesApplied)[0]?.category || "N/A"}</div>
-                  <div className="text-sm text-muted-foreground mt-1">Applied {rules.sort((a, b) => b.timesApplied - a.timesApplied)[0]?.timesApplied || 0} times</div>
+                  <div className="font-medium mt-1">
+                    {rules.sort((a, b) => b.timesApplied - a.timesApplied)[0]?.keyword || "N/A"} →{" "}
+                    {rules.sort((a, b) => b.timesApplied - a.timesApplied)[0]?.category || "N/A"}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    Applied {rules.sort((a, b) => b.timesApplied - a.timesApplied)[0]?.timesApplied || 0} times
+                  </div>
                 </div>
                 <div className="p-4 border rounded-lg">
                   <div className="text-sm text-muted-foreground">Active Rules</div>

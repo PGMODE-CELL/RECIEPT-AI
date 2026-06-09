@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { trpc } from "@/providers/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,8 +7,36 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Activity, Database, Server, Users, HardDrive, Clock, CheckCircle, XCircle, AlertTriangle, RefreshCw, Wifi, Cpu, MemoryStick, Timer } from "lucide-react";
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  Activity,
+  Database,
+  Server,
+  Users,
+  HardDrive,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  RefreshCw,
+  Wifi,
+  Cpu,
+  MemoryStick,
+  Timer,
+} from "lucide-react";
 import { toast } from "sonner";
 
 interface ServiceStatus {
@@ -24,99 +52,63 @@ interface MetricPoint {
   value: number;
 }
 
-// TODO: Replace with trpc.audit.list.useQuery() or systemHealth endpoint when available
-const responseTimeData: MetricPoint[] = [
-  { time: "00:00", value: 120 },
-  { time: "04:00", value: 95 },
-  { time: "08:00", value: 180 },
-  { time: "12:00", value: 210 },
-  { time: "16:00", value: 195 },
-  { time: "20:00", value: 140 },
-  { time: "23:59", value: 110 },
-];
-
-// TODO: Replace with trpc endpoint when available
-const errorRateData = [
-  { time: "Mon", errors: 12, requests: 4500 },
-  { time: "Tue", errors: 8, requests: 5200 },
-  { time: "Wed", errors: 22, requests: 4800 },
-  { time: "Thu", errors: 5, requests: 6100 },
-  { time: "Fri", errors: 15, requests: 5800 },
-  { time: "Sat", errors: 3, requests: 2100 },
-  { time: "Sun", errors: 2, requests: 1800 },
-];
-
-// TODO: Replace with trpc endpoint when available
-const activeUsersData = [
-  { hour: "6am", users: 12 },
-  { hour: "8am", users: 45 },
-  { hour: "10am", users: 78 },
-  { hour: "12pm", users: 65 },
-  { hour: "2pm", users: 82 },
-  { hour: "4pm", users: 71 },
-  { hour: "6pm", users: 38 },
-  { hour: "8pm", users: 15 },
-];
-
-// TODO: Replace with trpc endpoint when available
-const defaultServices: ServiceStatus[] = [
-  { name: "API Server", status: "healthy", uptime: "99.98%", responseTime: 45, lastChecked: "2026-05-31 09:00:00" },
-  { name: "PostgreSQL Database", status: "healthy", uptime: "99.99%", responseTime: 12, lastChecked: "2026-05-31 09:00:00" },
-  { name: "Redis Cache", status: "healthy", uptime: "100%", responseTime: 2, lastChecked: "2026-05-31 09:00:00" },
-  { name: "File Storage (S3)", status: "healthy", uptime: "99.95%", responseTime: 85, lastChecked: "2026-05-31 09:00:00" },
-  { name: "Email Service (SES)", status: "degraded", uptime: "99.20%", responseTime: 340, lastChecked: "2026-05-31 09:00:00" },
-  { name: "Payment Gateway", status: "healthy", uptime: "99.97%", responseTime: 220, lastChecked: "2026-05-31 09:00:00" },
-  { name: "Background Jobs", status: "healthy", uptime: "99.90%", responseTime: 0, lastChecked: "2026-05-31 09:00:00" },
-  { name: "CDN", status: "healthy", uptime: "99.99%", responseTime: 15, lastChecked: "2026-05-31 09:00:00" },
-];
-
-// TODO: Replace with trpc.audit.list.useQuery() when backend endpoint exists
-const recentErrors = [
-  { id: 1, level: "error", message: "Connection timeout to payment gateway", service: "Payment Gateway", timestamp: "2026-05-31 08:45:12", count: 3 },
-  { id: 2, level: "warning", message: "Email delivery delay > 5s", service: "Email Service", timestamp: "2026-05-31 08:30:00", count: 12 },
-  { id: 3, level: "error", message: "Database connection pool exhausted", service: "PostgreSQL", timestamp: "2026-05-30 22:15:00", count: 1 },
-  { id: 4, level: "warning", message: "Memory usage above 80%", service: "API Server", timestamp: "2026-05-30 14:20:00", count: 2 },
-  { id: 5, level: "info", message: "Scheduled backup completed", service: "Background Jobs", timestamp: "2026-05-31 02:00:00", count: 1 },
-];
-
-// TODO: Replace with trpc endpoint when available
-const dbMetrics = [
-  { metric: "Connections", value: "42/100", percentage: 42 },
-  { metric: "Query Time (avg)", value: "8ms", percentage: 8 },
-  { metric: "Cache Hit Ratio", value: "98.5%", percentage: 98.5 },
-  { metric: "Disk Usage", value: "124 GB / 500 GB", percentage: 24.8 },
-  { metric: "Replication Lag", value: "0.2s", percentage: 2 },
-];
+// Time-series telemetry (response times, error rates, active users, audit logs)
+// requires a monitoring backend that is not wired yet, so these are empty until then.
+const responseTimeData: MetricPoint[] = [];
+const errorRateData: { time: string; errors: number; requests: number }[] = [];
+const activeUsersData: { hour: string; users: number }[] = [];
+const recentErrors: {
+  id: number;
+  level: string;
+  message: string;
+  service: string;
+  timestamp: string;
+  count: number;
+}[] = [];
+const dbMetrics: { metric: string; value: string; percentage: number }[] = [];
 
 export default function SystemHealth() {
-  const [services, setServices] = useState<ServiceStatus[]>(defaultServices);
+  const { data: health, isFetching, refetch } = trpc.health.useQuery(undefined, { refetchInterval: 30000 });
   const [activeTab, setActiveTab] = useState("overview");
-  const [refreshing, setRefreshing] = useState(false);
+
+  // Real service status derived from the backend /api/health endpoint.
+  const services: ServiceStatus[] = useMemo(() => {
+    if (!health) return [];
+    const checked = String(health.timestamp || new Date().toISOString())
+      .replace("T", " ")
+      .slice(0, 19);
+    const list: ServiceStatus[] = [
+      { name: "API Server", status: "healthy", uptime: "\u2014", responseTime: 0, lastChecked: checked },
+      {
+        name: "Database",
+        status: health.database === "ok" ? "healthy" : "down",
+        uptime: "\u2014",
+        responseTime: 0,
+        lastChecked: checked,
+      },
+    ];
+    if (health.redis && health.redis !== "not_configured") {
+      list.push({
+        name: "Redis Cache",
+        status: health.redis === "ok" ? "healthy" : "down",
+        uptime: "\u2014",
+        responseTime: 0,
+        lastChecked: checked,
+      });
+    }
+    return list;
+  }, [health]);
+  const refreshing = isFetching;
 
   const healthyCount = services.filter(s => s.status === "healthy").length;
   const degradedCount = services.filter(s => s.status === "degraded").length;
   const downCount = services.filter(s => s.status === "down").length;
 
-  const overallStatus = downCount > 0 ? "down" : degradedCount > 0 ? "degraded" : "healthy";
-
-  const storageUsed = 67.5;
-  const storageTotal = 256;
-  const storagePercentage = (storageUsed / storageTotal) * 100;
-
-  const cpuUsage = 34;
-  const memoryUsage = 62;
+  const overallStatus = !health ? "degraded" : downCount > 0 ? "down" : degradedCount > 0 ? "degraded" : "healthy";
 
   const refresh = () => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setServices(services.map(s => ({
-        ...s,
-        responseTime: s.responseTime + Math.floor(Math.random() * 20) - 10,
-        lastChecked: new Date().toISOString().replace("T", " ").slice(0, 19),
-      })));
-      setRefreshing(false);
-      toast.success("Health data refreshed");
-    }, 1000);
+    refetch();
+    toast.success("Refreshing health data");
   };
 
   return (
@@ -124,7 +116,9 @@ export default function SystemHealth() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">System Health</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Database, API, errors, and performance metrics</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Database, API, errors, and performance metrics
+          </p>
         </div>
         <Button variant="outline" onClick={refresh} disabled={refreshing}>
           <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`} /> Refresh
@@ -132,17 +126,52 @@ export default function SystemHealth() {
       </div>
 
       {/* Overall Status */}
-      <Card className={`border-2 ${overallStatus === "healthy" ? "border-green-200 bg-green-50 dark:bg-green-950" : overallStatus === "degraded" ? "border-amber-200 bg-amber-50 dark:bg-amber-950" : "border-red-200 bg-red-50 dark:bg-red-950"}`}>
+      <Card
+        className={`border-2 ${
+          overallStatus === "healthy"
+            ? "border-green-200 bg-green-50 dark:bg-green-950"
+            : overallStatus === "degraded"
+              ? "border-amber-200 bg-amber-50 dark:bg-amber-950"
+              : "border-red-200 bg-red-50 dark:bg-red-950"
+        }`}
+      >
         <CardContent className="p-6">
           <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-full ${overallStatus === "healthy" ? "bg-green-100" : overallStatus === "degraded" ? "bg-amber-100" : "bg-red-100"}`}>
-              <Activity className={`w-8 h-8 ${overallStatus === "healthy" ? "text-green-600" : overallStatus === "degraded" ? "text-amber-600" : "text-red-600"}`} />
+            <div
+              className={`p-3 rounded-full ${
+                overallStatus === "healthy"
+                  ? "bg-green-100"
+                  : overallStatus === "degraded"
+                    ? "bg-amber-100"
+                    : "bg-red-100"
+              }`}
+            >
+              <Activity
+                className={`w-8 h-8 ${
+                  overallStatus === "healthy"
+                    ? "text-green-600"
+                    : overallStatus === "degraded"
+                      ? "text-amber-600"
+                      : "text-red-600"
+                }`}
+              />
             </div>
             <div>
-              <h2 className={`text-xl font-bold ${overallStatus === "healthy" ? "text-green-700" : overallStatus === "degraded" ? "text-amber-700" : "text-red-700"}`}>
-                System {overallStatus === "healthy" ? "Operational" : overallStatus === "degraded" ? "Degraded" : "Down"}
+              <h2
+                className={`text-xl font-bold ${
+                  overallStatus === "healthy"
+                    ? "text-green-700"
+                    : overallStatus === "degraded"
+                      ? "text-amber-700"
+                      : "text-red-700"
+                }`}
+              >
+                System{" "}
+                {overallStatus === "healthy" ? "Operational" : overallStatus === "degraded" ? "Degraded" : "Down"}
               </h2>
-              <p className="text-sm text-gray-500">{healthyCount} services healthy • {degradedCount} degraded • {downCount} down</p>
+              <p className="text-sm text-gray-500">
+                {healthyCount} services healthy • {degradedCount} degraded • {downCount} down
+              </p>
             </div>
           </div>
         </CardContent>
@@ -153,10 +182,12 @@ export default function SystemHealth() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg"><Timer className="w-6 h-6 text-blue-600" /></div>
+              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                <Timer className="w-6 h-6 text-blue-600" />
+              </div>
               <div>
                 <p className="text-sm text-gray-500">Avg Response Time</p>
-                <p className="text-xl font-bold text-blue-600">148ms</p>
+                <p className="text-xl font-bold text-blue-600">—</p>
               </div>
             </div>
           </CardContent>
@@ -164,10 +195,12 @@ export default function SystemHealth() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg"><CheckCircle className="w-6 h-6 text-green-600" /></div>
+              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
               <div>
                 <p className="text-sm text-gray-500">Uptime (30d)</p>
-                <p className="text-xl font-bold text-green-600">99.97%</p>
+                <p className="text-xl font-bold text-green-600">—</p>
               </div>
             </div>
           </CardContent>
@@ -175,10 +208,12 @@ export default function SystemHealth() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg"><Users className="w-6 h-6 text-purple-600" /></div>
+              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                <Users className="w-6 h-6 text-purple-600" />
+              </div>
               <div>
                 <p className="text-sm text-gray-500">Active Users</p>
-                <p className="text-xl font-bold text-purple-600">82</p>
+                <p className="text-xl font-bold text-purple-600">—</p>
               </div>
             </div>
           </CardContent>
@@ -186,10 +221,12 @@ export default function SystemHealth() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg"><AlertTriangle className="w-6 h-6 text-amber-600" /></div>
+              <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
+                <AlertTriangle className="w-6 h-6 text-amber-600" />
+              </div>
               <div>
                 <p className="text-sm text-gray-500">Errors (24h)</p>
-                <p className="text-xl font-bold text-amber-600">25</p>
+                <p className="text-xl font-bold text-amber-600">—</p>
               </div>
             </div>
           </CardContent>
@@ -207,7 +244,9 @@ export default function SystemHealth() {
         <TabsContent value="overview" className="space-y-4">
           {/* Services */}
           <Card>
-            <CardHeader><CardTitle>Service Status</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Service Status</CardTitle>
+            </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
@@ -220,13 +259,36 @@ export default function SystemHealth() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {services.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                        Checking services…
+                      </TableCell>
+                    </TableRow>
+                  )}
                   {services.map(service => (
                     <TableRow key={service.name}>
                       <TableCell className="font-medium">{service.name}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${service.status === "healthy" ? "bg-green-500" : service.status === "degraded" ? "bg-amber-500" : "bg-red-500"}`} />
-                          <Badge className={service.status === "healthy" ? "bg-green-100 text-green-700" : service.status === "degraded" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}>
+                          <div
+                            className={`w-2 h-2 rounded-full ${
+                              service.status === "healthy"
+                                ? "bg-green-500"
+                                : service.status === "degraded"
+                                  ? "bg-amber-500"
+                                  : "bg-red-500"
+                            }`}
+                          />
+                          <Badge
+                            className={
+                              service.status === "healthy"
+                                ? "bg-green-100 text-green-700"
+                                : service.status === "degraded"
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "bg-red-100 text-red-700"
+                            }
+                          >
                             {service.status}
                           </Badge>
                         </div>
@@ -252,9 +314,10 @@ export default function SystemHealth() {
                 <div className="flex items-center gap-3 mb-3">
                   <Cpu className="w-5 h-5 text-blue-500" />
                   <span className="font-medium">CPU Usage</span>
-                  <span className="ml-auto font-bold text-blue-600">{cpuUsage}%</span>
+                  <span className="ml-auto font-bold text-blue-600">—</span>
                 </div>
-                <Progress value={cpuUsage} className="h-3" />
+                <Progress value={0} className="h-3" />
+                <p className="text-xs text-gray-400 mt-2">Host metrics not available</p>
               </CardContent>
             </Card>
             <Card>
@@ -262,9 +325,10 @@ export default function SystemHealth() {
                 <div className="flex items-center gap-3 mb-3">
                   <MemoryStick className="w-5 h-5 text-purple-500" />
                   <span className="font-medium">Memory</span>
-                  <span className="ml-auto font-bold text-purple-600">{memoryUsage}%</span>
+                  <span className="ml-auto font-bold text-purple-600">—</span>
                 </div>
-                <Progress value={memoryUsage} className="h-3" />
+                <Progress value={0} className="h-3" />
+                <p className="text-xs text-gray-400 mt-2">Host metrics not available</p>
               </CardContent>
             </Card>
             <Card>
@@ -272,9 +336,10 @@ export default function SystemHealth() {
                 <div className="flex items-center gap-3 mb-3">
                   <HardDrive className="w-5 h-5 text-green-500" />
                   <span className="font-medium">Storage</span>
-                  <span className="ml-auto font-bold text-green-600">{storageUsed}GB / {storageTotal}GB</span>
+                  <span className="ml-auto font-bold text-green-600">—</span>
                 </div>
-                <Progress value={storagePercentage} className="h-3" />
+                <Progress value={0} className="h-3" />
+                <p className="text-xs text-gray-400 mt-2">Host metrics not available</p>
               </CardContent>
             </Card>
           </div>
@@ -282,40 +347,61 @@ export default function SystemHealth() {
 
         <TabsContent value="performance" className="space-y-4">
           <Card>
-            <CardHeader><CardTitle>API Response Times (Today)</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>API Response Times (Today)</CardTitle>
+            </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={responseTimeData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="time" />
-                  <YAxis label={{ value: "ms", angle: -90, position: "insideLeft" }} />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="#3b82f630" name="Response Time (ms)" />
-                </AreaChart>
-              </ResponsiveContainer>
+              {responseTimeData.length === 0 ? (
+                <div className="h-[300px] flex items-center justify-center text-sm text-gray-500">
+                  No response-time history available yet.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={responseTimeData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="time" />
+                    <YAxis label={{ value: "ms", angle: -90, position: "insideLeft" }} />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="#3b82f630" name="Response Time (ms)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle>Active Users Today</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Active Users Today</CardTitle>
+            </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={activeUsersData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="hour" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="users" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Active Users" />
-                </BarChart>
-              </ResponsiveContainer>
+              {activeUsersData.length === 0 ? (
+                <div className="h-[250px] flex items-center justify-center text-sm text-gray-500">
+                  No active-user history available yet.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={activeUsersData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="hour" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="users" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Active Users" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="database">
           <Card>
-            <CardHeader><CardTitle>Database Metrics</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Database Metrics</CardTitle>
+            </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                {dbMetrics.length === 0 && (
+                  <p className="text-center text-gray-500 py-8">Detailed database metrics are not available.</p>
+                )}
                 {dbMetrics.map(m => (
                   <div key={m.metric} className="flex items-center gap-4">
                     <span className="w-48 text-sm font-medium">{m.metric}</span>
@@ -332,22 +418,32 @@ export default function SystemHealth() {
 
         <TabsContent value="errors">
           <Card>
-            <CardHeader><CardTitle>Error Rate (7 Days)</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Error Rate (7 Days)</CardTitle>
+            </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={errorRateData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="time" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="errors" fill="#ef4444" name="Errors" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {errorRateData.length === 0 ? (
+                <div className="h-[250px] flex items-center justify-center text-sm text-gray-500">
+                  No error-rate history available yet.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={errorRateData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="time" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="errors" fill="#ef4444" name="Errors" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
           <Card className="mt-4">
-            <CardHeader><CardTitle>Recent Errors & Warnings</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Recent Errors & Warnings</CardTitle>
+            </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
@@ -360,10 +456,25 @@ export default function SystemHealth() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {recentErrors.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                        No recent errors or warnings.
+                      </TableCell>
+                    </TableRow>
+                  )}
                   {recentErrors.map(err => (
                     <TableRow key={err.id}>
                       <TableCell>
-                        <Badge className={err.level === "error" ? "bg-red-100 text-red-700" : err.level === "warning" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}>
+                        <Badge
+                          className={
+                            err.level === "error"
+                              ? "bg-red-100 text-red-700"
+                              : err.level === "warning"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-blue-100 text-blue-700"
+                          }
+                        >
                           {err.level}
                         </Badge>
                       </TableCell>

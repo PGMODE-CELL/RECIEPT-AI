@@ -46,11 +46,7 @@ const sourceTemplates = {
   },
 };
 
-const initialHistory: ImportHistory[] = [
-  { id: "1", source: "QuickBooks", fileName: "qbo_export_2026.csv", date: "2026-05-28", totalRows: 245, successCount: 240, errorCount: ["Row 12: Missing date", "Row 45: Invalid amount", "Row 89: Duplicate reference", "Row 102: Empty account", "Row 156: Missing payee"] },
-  { id: "2", source: "Xero", fileName: "xero_jan_mar.csv", date: "2026-05-25", totalRows: 182, successCount: 182, errorCount: [] },
-  { id: "3", source: "Wave", fileName: "wave_transactions.csv", date: "2026-05-20", totalRows: 95, successCount: 88, errorCount: ["Row 5: Invalid date format", "Row 23: Missing account", "Row 67: Negative amount", "Row 78: Empty description", "Row 82: Invalid category", "Row 90: Missing reference", "Row 91: Duplicate entry"] },
-];
+const initialHistory: ImportHistory[] = [];
 
 export default function DataImport() {
   const [history, setHistory] = useState<ImportHistory[]>(initialHistory);
@@ -69,10 +65,10 @@ export default function DataImport() {
     setUploadedFile(file);
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = event => {
       const text = event.target?.result as string;
       const lines = text.split("\n").slice(0, 6);
-      const data = lines.map((line) => line.split(",").map((cell) => cell.trim()));
+      const data = lines.map(line => line.split(",").map(cell => cell.trim()));
       setPreviewData(data);
 
       if (template && template.headers.length > 0) {
@@ -83,7 +79,7 @@ export default function DataImport() {
         setMappedColumns(mappings);
       } else {
         const headers = data[0] || [];
-        const mappings: MappedColumn[] = headers.map((header) => ({
+        const mappings: MappedColumn[] = headers.map(header => ({
           source: header,
           target: "",
         }));
@@ -94,34 +90,31 @@ export default function DataImport() {
   };
 
   const updateMapping = (index: number, target: string) => {
-    setMappedColumns((prev) =>
-      prev.map((col, i) => (i === index ? { ...col, target } : col))
-    );
+    setMappedColumns(prev => prev.map((col, i) => (i === index ? { ...col, target } : col)));
   };
 
   const handleImport = async () => {
-    const unmapped = mappedColumns.filter((col) => !col.target);
+    const unmapped = mappedColumns.filter(col => !col.target);
     if (unmapped.length > 0) {
       toast.error("Please map all columns before importing");
       return;
     }
 
     setImporting(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
-    const totalRows = previewData.length - 1;
-    const errorCount = Math.floor(Math.random() * 3);
+    const totalRows = Math.max(0, previewData.length - 1);
     const newEntry: ImportHistory = {
       id: Date.now().toString(),
       source: template?.name || "Generic CSV",
       fileName: uploadedFile?.name || "unknown.csv",
       date: new Date().toISOString().split("T")[0],
       totalRows,
-      successCount: totalRows - errorCount,
-      errorCount: Array.from({ length: errorCount }, (_, i) => `Row ${Math.floor(Math.random() * totalRows) + 1}: Sample error`),
+      successCount: totalRows,
+      errorCount: [],
     };
 
-    setHistory((prev) => [newEntry, ...prev]);
+    setHistory(prev => [newEntry, ...prev]);
     setImporting(false);
     setImportDialogOpen(false);
     setUploadedFile(null);
@@ -143,7 +136,13 @@ export default function DataImport() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Data Import</h1>
-        <Dialog open={importDialogOpen} onOpenChange={(open) => { if (!open) resetDialog(); else setImportDialogOpen(true); }}>
+        <Dialog
+          open={importDialogOpen}
+          onOpenChange={open => {
+            if (!open) resetDialog();
+            else setImportDialogOpen(true);
+          }}
+        >
           <DialogTrigger asChild>
             <Button>Import Data</Button>
           </DialogTrigger>
@@ -181,9 +180,7 @@ export default function DataImport() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          {previewData[0]?.map((header, i) => (
-                            <TableHead key={i}>{header}</TableHead>
-                          ))}
+                          {previewData[0]?.map((header, i) => <TableHead key={i}>{header}</TableHead>)}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -216,13 +213,15 @@ export default function DataImport() {
                           <TableRow key={i}>
                             <TableCell>{col.source}</TableCell>
                             <TableCell>
-                              <Select value={col.target} onValueChange={(val) => updateMapping(i, val)}>
+                              <Select value={col.target} onValueChange={val => updateMapping(i, val)}>
                                 <SelectTrigger className="w-48">
                                   <SelectValue placeholder="Select field" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {template?.targets.map((t) => (
-                                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                                  {template?.targets.map(t => (
+                                    <SelectItem key={t} value={t}>
+                                      {t}
+                                    </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
@@ -267,7 +266,9 @@ export default function DataImport() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Errors</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{history.reduce((sum, h) => sum + h.errorCount.length, 0)}</div>
+            <div className="text-2xl font-bold text-red-600">
+              {history.reduce((sum, h) => sum + h.errorCount.length, 0)}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -290,7 +291,7 @@ export default function DataImport() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {history.map((entry) => (
+              {history.map(entry => (
                 <TableRow key={entry.id}>
                   <TableCell>{entry.date}</TableCell>
                   <TableCell>{entry.source}</TableCell>

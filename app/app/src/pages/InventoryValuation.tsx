@@ -42,34 +42,47 @@ export default function InventoryValuation() {
   const { data: products, isLoading } = trpc.product.list.useQuery();
   const { data: valuations, refetch } = trpc.inventoryValuation.list.useQuery();
   const updateMethod = trpc.inventoryValuation.updateMethod.useMutation({
-    onSuccess: () => { setUpdateMethodId(null); refetch(); toast.success("Valuation method updated"); },
-    onError: (e) => toast.error(e.message),
+    onSuccess: () => {
+      setUpdateMethodId(null);
+      refetch();
+      toast.success("Valuation method updated");
+    },
+    onError: e => toast.error(e.message),
   });
 
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
 
-  const productValuations: ProductValuation[] = products?.map((p: any) => {
-    const qty = Number(p.quantityOnHand) || 0;
-    const cost = Number(p.costPrice) || 0;
-    const val = valuations?.find((v: any) => v.productId === p.id);
-    const method: ValuationMethod = val?.method || "weighted_average";
-    return {
-      productId: p.id,
-      productName: p.name,
-      sku: p.sku || "—",
-      quantityOnHand: qty,
-      costPrice: p.costPrice || "0",
-      valuationMethod: method,
-      fifoValue: cost * qty * (1 + (Math.random() * 0.1 - 0.05)),
-      lifoValue: cost * qty * (1 + (Math.random() * 0.1 - 0.05)),
-      weightedAvgValue: cost * qty,
-      currentValue: cost * qty,
-    };
-  }) || [];
+  const productValuations: ProductValuation[] =
+    products?.map((p: any) => {
+      const qty = Number(p.quantityOnHand) || 0;
+      const cost = Number(p.costPrice) || 0;
+      const val = valuations?.find((v: any) => (v.itemId ?? v.item_id ?? v.productId) === p.id);
+      const method: ValuationMethod = (val?.method as ValuationMethod) || "weighted_average";
+      // Backend stores a single valuation per item for its chosen method; we do
+      // not fabricate method-specific spreads, so all columns reflect that value.
+      const baseValue = val ? Number(val.totalValue ?? val.total_value) || 0 : cost * qty;
+      return {
+        productId: p.id,
+        productName: p.name,
+        sku: p.sku || "—",
+        quantityOnHand: qty,
+        costPrice: p.costPrice || "0",
+        valuationMethod: method,
+        fifoValue: baseValue,
+        lifoValue: baseValue,
+        weightedAvgValue: baseValue,
+        currentValue: baseValue,
+      };
+    }) || [];
 
-  const filtered = productValuations.filter((p) => {
-    if (search && !p.productName.toLowerCase().includes(search.toLowerCase()) && !p.sku.toLowerCase().includes(search.toLowerCase())) return false;
+  const filtered = productValuations.filter(p => {
+    if (
+      search &&
+      !p.productName.toLowerCase().includes(search.toLowerCase()) &&
+      !p.sku.toLowerCase().includes(search.toLowerCase())
+    )
+      return false;
     if (methodFilter !== "all" && p.valuationMethod !== methodFilter) return false;
     return true;
   });
@@ -79,17 +92,30 @@ export default function InventoryValuation() {
   const totalLifo = filtered.reduce((s, p) => s + p.lifoValue, 0);
   const totalWeightedAvg = filtered.reduce((s, p) => s + p.weightedAvgValue, 0);
 
-  const methodCounts = productValuations.reduce((acc, p) => {
-    acc[p.valuationMethod] = (acc[p.valuationMethod] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const methodCounts = productValuations.reduce(
+    (acc, p) => {
+      acc[p.valuationMethod] = (acc[p.valuationMethod] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
-  const valuationHistory = [
-    { date: "2026-01-31", period: "January 2026", totalValue: totalValue * 0.92, method: "weighted_average" },
-    { date: "2025-12-31", period: "December 2025", totalValue: totalValue * 0.88, method: "weighted_average" },
-    { date: "2025-11-30", period: "November 2025", totalValue: totalValue * 0.95, method: "fifo" },
-    { date: "2025-10-31", period: "October 2025", totalValue: totalValue * 0.91, method: "fifo" },
-  ];
+  // Real history aggregated from stored valuation snapshots by calculation date.
+  const historyByDate: Record<string, { total: number; method: string }> = {};
+  for (const v of (valuations ?? []) as any[]) {
+    const ts = String(v.calculatedAt ?? v.calculated_at ?? "").slice(0, 10);
+    if (!ts) continue;
+    if (!historyByDate[ts]) historyByDate[ts] = { total: 0, method: v.method || "weighted_average" };
+    historyByDate[ts].total += Number(v.totalValue ?? v.total_value) || 0;
+  }
+  const valuationHistory = Object.entries(historyByDate)
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([date, d]) => ({
+      date,
+      period: new Date(date).toLocaleString("en-US", { month: "long", year: "numeric" }),
+      totalValue: d.total,
+      method: d.method,
+    }));
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -98,7 +124,9 @@ export default function InventoryValuation() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Package className="w-6 h-6 text-indigo-600" /> Inventory Valuation
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage valuation methods and track inventory value</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Manage valuation methods and track inventory value
+          </p>
         </div>
       </div>
 
@@ -107,7 +135,9 @@ export default function InventoryValuation() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg"><Package className="w-5 h-5 text-blue-600" /></div>
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Package className="w-5 h-5 text-blue-600" />
+              </div>
               <div>
                 <p className="text-sm text-gray-500">Total Products</p>
                 <p className="text-xl font-bold">{productValuations.length}</p>
@@ -118,7 +148,9 @@ export default function InventoryValuation() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg"><TrendingUp className="w-5 h-5 text-green-600" /></div>
+              <div className="p-2 bg-green-100 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-green-600" />
+              </div>
               <div>
                 <p className="text-sm text-gray-500">Current Value</p>
                 <p className="text-xl font-bold">{formatCurrency(totalValue)}</p>
@@ -129,7 +161,9 @@ export default function InventoryValuation() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg"><TrendingUp className="w-5 h-5 text-purple-600" /></div>
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-purple-600" />
+              </div>
               <div>
                 <p className="text-sm text-gray-500">FIFO Value</p>
                 <p className="text-xl font-bold">{formatCurrency(totalFifo)}</p>
@@ -140,7 +174,9 @@ export default function InventoryValuation() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-100 rounded-lg"><TrendingUp className="w-5 h-5 text-amber-600" /></div>
+              <div className="p-2 bg-amber-100 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-amber-600" />
+              </div>
               <div>
                 <p className="text-sm text-gray-500">LIFO Value</p>
                 <p className="text-xl font-bold">{formatCurrency(totalLifo)}</p>
@@ -163,10 +199,17 @@ export default function InventoryValuation() {
               <div className="flex items-center gap-4">
                 <div className="relative flex-1 max-w-sm">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input placeholder="Search products..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+                  <Input
+                    placeholder="Search products..."
+                    className="pl-9"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                  />
                 </div>
                 <Select value={methodFilter} onValueChange={setMethodFilter}>
-                  <SelectTrigger className="w-44"><SelectValue placeholder="All Methods" /></SelectTrigger>
+                  <SelectTrigger className="w-44">
+                    <SelectValue placeholder="All Methods" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Methods</SelectItem>
                     <SelectItem value="fifo">FIFO</SelectItem>
@@ -190,22 +233,49 @@ export default function InventoryValuation() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoading && <TableRow><TableCell colSpan={7} className="text-center py-8">Loading...</TableCell></TableRow>}
-                  {filtered.length === 0 && !isLoading && <TableRow><TableCell colSpan={7} className="text-center py-8 text-gray-500">No products found</TableCell></TableRow>}
-                  {filtered.map((p) => (
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        Loading...
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {filtered.length === 0 && !isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                        No products found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {filtered.map(p => (
                     <TableRow key={p.productId}>
                       <TableCell className="font-mono text-sm">{p.sku}</TableCell>
                       <TableCell className="font-medium">{p.productName}</TableCell>
                       <TableCell className="text-right">{p.quantityOnHand}</TableCell>
                       <TableCell className="text-right">{formatCurrency(Number(p.costPrice))}</TableCell>
                       <TableCell>
-                        <Badge variant={p.valuationMethod === "fifo" ? "default" : p.valuationMethod === "lifo" ? "secondary" : "outline"}>
+                        <Badge
+                          variant={
+                            p.valuationMethod === "fifo"
+                              ? "default"
+                              : p.valuationMethod === "lifo"
+                                ? "secondary"
+                                : "outline"
+                          }
+                        >
                           {valuationLabels[p.valuationMethod]}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-medium">{formatCurrency(p.currentValue)}</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => { setUpdateMethodId(p.productId); setNewMethod(p.valuationMethod); }}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setUpdateMethodId(p.productId);
+                            setNewMethod(p.valuationMethod);
+                          }}
+                        >
                           <ArrowRight className="w-4 h-4 text-gray-400" />
                         </Button>
                       </TableCell>
@@ -219,7 +289,9 @@ export default function InventoryValuation() {
 
         <TabsContent value="compare" className="space-y-4">
           <Card>
-            <CardHeader><CardTitle>Method Comparison</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Method Comparison</CardTitle>
+            </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
@@ -232,22 +304,32 @@ export default function InventoryValuation() {
                 </TableHeader>
                 <TableBody>
                   <TableRow>
-                    <TableCell><Badge className="bg-blue-100 text-blue-700">FIFO</Badge></TableCell>
+                    <TableCell>
+                      <Badge className="bg-blue-100 text-blue-700">FIFO</Badge>
+                    </TableCell>
                     <TableCell className="text-right">{methodCounts.fifo || 0}</TableCell>
                     <TableCell className="text-right font-medium">{formatCurrency(totalFifo)}</TableCell>
-                    <TableCell className="text-right text-green-600">+{formatCurrency(totalFifo - totalValue)}</TableCell>
+                    <TableCell className="text-right text-green-600">
+                      +{formatCurrency(totalFifo - totalValue)}
+                    </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell><Badge className="bg-purple-100 text-purple-700">LIFO</Badge></TableCell>
+                    <TableCell>
+                      <Badge className="bg-purple-100 text-purple-700">LIFO</Badge>
+                    </TableCell>
                     <TableCell className="text-right">{methodCounts.lifo || 0}</TableCell>
                     <TableCell className="text-right font-medium">{formatCurrency(totalLifo)}</TableCell>
                     <TableCell className="text-right text-red-600">{formatCurrency(totalLifo - totalValue)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell><Badge className="bg-green-100 text-green-700">Weighted Average</Badge></TableCell>
+                    <TableCell>
+                      <Badge className="bg-green-100 text-green-700">Weighted Average</Badge>
+                    </TableCell>
                     <TableCell className="text-right">{methodCounts.weighted_average || 0}</TableCell>
                     <TableCell className="text-right font-medium">{formatCurrency(totalWeightedAvg)}</TableCell>
-                    <TableCell className="text-right text-gray-600">{formatCurrency(totalWeightedAvg - totalValue)}</TableCell>
+                    <TableCell className="text-right text-gray-600">
+                      {formatCurrency(totalWeightedAvg - totalValue)}
+                    </TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -257,7 +339,11 @@ export default function InventoryValuation() {
 
         <TabsContent value="history" className="space-y-4">
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><History className="w-5 h-5" /> Valuation History</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="w-5 h-5" /> Valuation History
+              </CardTitle>
+            </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
@@ -269,14 +355,24 @@ export default function InventoryValuation() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {valuationHistory.map((h, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="font-medium">{h.period}</TableCell>
-                      <TableCell className="font-mono text-sm">{h.date}</TableCell>
-                      <TableCell><Badge variant="outline">{valuationLabels[h.method as ValuationMethod]}</Badge></TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(h.totalValue)}</TableCell>
+                  {valuationHistory.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-gray-500 py-8">
+                        No valuation snapshots recorded yet.
+                      </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    valuationHistory.map((h, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="font-medium">{h.period}</TableCell>
+                        <TableCell className="font-mono text-sm">{h.date}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{valuationLabels[h.method as ValuationMethod]}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">{formatCurrency(h.totalValue)}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -292,12 +388,15 @@ export default function InventoryValuation() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-gray-500">
-              Change the valuation method for: <strong>{productValuations.find(p => p.productId === updateMethodId)?.productName}</strong>
+              Change the valuation method for:{" "}
+              <strong>{productValuations.find(p => p.productId === updateMethodId)?.productName}</strong>
             </p>
             <div className="space-y-2">
               <Label>Valuation Method</Label>
-              <Select value={newMethod} onValueChange={(v) => setNewMethod(v as ValuationMethod)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={newMethod} onValueChange={v => setNewMethod(v as ValuationMethod)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="fifo">FIFO (First In, First Out)</SelectItem>
                   <SelectItem value="lifo">LIFO (Last In, First Out)</SelectItem>
@@ -307,8 +406,13 @@ export default function InventoryValuation() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUpdateMethodId(null)}>Cancel</Button>
-            <Button onClick={() => updateMethodId && updateMethod.mutate({ productId: updateMethodId, method: newMethod })} disabled={updateMethod.isPending}>
+            <Button variant="outline" onClick={() => setUpdateMethodId(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => updateMethodId && updateMethod.mutate({ productId: updateMethodId, method: newMethod })}
+              disabled={updateMethod.isPending}
+            >
               {updateMethod.isPending ? "Updating..." : "Update Method"}
             </Button>
           </DialogFooter>

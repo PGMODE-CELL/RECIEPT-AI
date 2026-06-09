@@ -6,14 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { trpc } from "@/providers/trpc";
 import {
@@ -51,15 +44,25 @@ interface CategoryData {
   color: string;
 }
 
-const CATEGORY_COLORS = [
-  "#6366f1", "#22c55e", "#f97316", "#eab308", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899",
-];
+const CATEGORY_COLORS = ["#6366f1", "#22c55e", "#f97316", "#eab308", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899"];
 
 export default function ExpenseAnalytics() {
-  const { data: billData, isLoading: loadingBills } = trpc.bill.list.useQuery();
+  const { data: billData, isLoading: loadingBills } = trpc.bill.list.useQuery({ limit: 1000 });
   const { data: transactions = [], isLoading: loadingTxns } = trpc.transaction.list.useQuery();
+  const { data: contactsData = [] } = trpc.contact.list.useQuery();
+  const { data: budgetData } = trpc.budget.list.useQuery();
 
-  const bills = useMemo(() => billData?.bills ?? [], [billData]);
+  const bills = useMemo(() => billData?.bills ?? billData?.items ?? [], [billData]);
+  const budgetByCategory = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const b of budgetData?.items ?? []) m[String(b.category)] = Number(b.budgeted) || 0;
+    return m;
+  }, [budgetData]);
+  const vendorName = useMemo(() => {
+    const m: Record<number, string> = {};
+    for (const c of contactsData as any[]) m[c.id] = c.name;
+    return (id: any) => m[id] ?? "Unknown vendor";
+  }, [contactsData]);
 
   const SPENDING_BY_CATEGORY = useMemo(() => {
     const catMap: Record<string, number> = {};
@@ -70,7 +73,7 @@ export default function ExpenseAnalytics() {
       }
     }
     for (const bill of bills) {
-      const cat = bill.contactName || "Vendor Expenses";
+      const cat = vendorName(bill.contact_id);
       catMap[cat] = (catMap[cat] || 0) + (Number(bill.total) || 0);
     }
 
@@ -85,33 +88,30 @@ export default function ExpenseAnalytics() {
     return cats.map(([category, amount], i) => ({
       category,
       amount: Math.round(amount),
-      budget: Math.round(amount * 1.15),
+      budget: Math.round(budgetByCategory[category] ?? 0),
       color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
     }));
-  }, [transactions, bills]);
+  }, [transactions, bills, vendorName, budgetByCategory]);
 
   const VENDOR_SPENDING = useMemo(() => {
-    const vendorMap: Record<string, { amount: number; count: number; dates: string[] }> = {};
+    const vendorMap: Record<string, { amount: number; count: number; monthly: Record<string, number> }> = {};
     for (const bill of bills) {
-      const vendor = bill.contactName || "Unknown";
-      if (!vendorMap[vendor]) vendorMap[vendor] = { amount: 0, count: 0, dates: [] };
-      vendorMap[vendor].amount += Number(bill.total) || 0;
+      const vendor = vendorName(bill.contact_id);
+      if (!vendorMap[vendor]) vendorMap[vendor] = { amount: 0, count: 0, monthly: {} };
+      const amt = Number(bill.total) || 0;
+      vendorMap[vendor].amount += amt;
       vendorMap[vendor].count++;
-      if (bill.billDate) vendorMap[vendor].dates.push(String(bill.billDate));
+      const mk = String(bill.date || "").slice(0, 7);
+      if (mk) vendorMap[vendor].monthly[mk] = (vendorMap[vendor].monthly[mk] || 0) + amt;
     }
     return Object.entries(vendorMap)
       .sort((a, b) => b[1].amount - a[1].amount)
       .slice(0, 8)
       .map(([vendor, data]) => {
-        const dates = data.dates.sort();
-        const recent = dates[dates.length - 1] || "";
-        const prev = dates[dates.length - 2] || "";
-        let trend = 0;
-        if (recent && prev) {
-          const recentMonth = recent.substring(0, 7);
-          const prevMonth = prev.substring(0, 7);
-          if (recentMonth !== prevMonth) trend = Math.round((Math.random() * 20) - 10);
-        }
+        const months = Object.keys(data.monthly).sort();
+        const cur = months.length ? data.monthly[months[months.length - 1]] : 0;
+        const prev = months.length > 1 ? data.monthly[months[months.length - 2]] : 0;
+        const trend = prev > 0 ? Math.round(((cur - prev) / prev) * 100) : 0;
         return {
           vendor,
           amount: Math.round(data.amount),
@@ -119,44 +119,34 @@ export default function ExpenseAnalytics() {
           trend,
         };
       });
-  }, [bills]);
+  }, [bills, vendorName]);
 
   const MONTHLY_EXPENSES = useMemo(() => {
-    const monthly: Record<string, { current: number; previous: number }> = {};
+    const monthly: Record<string, number> = {};
     for (const txn of transactions) {
       if (txn.type !== "expense") continue;
-      const d = new Date(txn.date);
-      const key = d.toLocaleString("en-US", { month: "short" });
-      if (!monthly[key]) monthly[key] = { current: 0, previous: 0 };
-      monthly[key].current += Number(txn.debit) || 0;
+      const key = String(txn.date || "").slice(0, 7);
+      if (!key) continue;
+      monthly[key] = (monthly[key] || 0) + (Number(txn.debit) || 0);
     }
     for (const bill of bills) {
-      const d = new Date(bill.billDate);
-      const key = d.toLocaleString("en-US", { month: "short" });
-      if (!monthly[key]) monthly[key] = { current: 0, previous: 0 };
-      monthly[key].current += Number(bill.total) || 0;
+      const key = String(bill.date || "").slice(0, 7);
+      if (!key) continue;
+      monthly[key] = (monthly[key] || 0) + (Number(bill.total) || 0);
     }
-    return Object.entries(monthly).map(([month, data]) => ({
-      month,
-      current: Math.round(data.current),
-      previous: Math.round(data.current * 0.9),
+    const keys = Object.keys(monthly).sort();
+    return keys.map((key, i) => ({
+      month: new Date(key + "-01").toLocaleString("en-US", { month: "short" }),
+      current: Math.round(monthly[key]),
+      previous: i > 0 ? Math.round(monthly[keys[i - 1]]) : 0,
     }));
   }, [transactions, bills]);
-
-  const EXPENSE_TRENDS = useMemo(() => {
-    return MONTHLY_EXPENSES.map((m) => ({
-      month: m.month,
-      categories: Math.round(m.current * 0.25),
-      overhead: Math.round(m.current * 0.2),
-      operational: Math.round(m.current * 0.55),
-    }));
-  }, [MONTHLY_EXPENSES]);
 
   const stats = useMemo(() => {
     const totalExpenses = SPENDING_BY_CATEGORY.reduce((acc, c) => acc + c.amount, 0);
     const totalBudget = SPENDING_BY_CATEGORY.reduce((acc, c) => acc + c.budget, 0);
     const burnRate = totalExpenses / 31 || 0;
-    const overBudgetItems = SPENDING_BY_CATEGORY.filter((c) => c.amount > c.budget).length;
+    const overBudgetItems = SPENDING_BY_CATEGORY.filter(c => c.amount > c.budget).length;
     const savingsOpportunity = totalBudget - totalExpenses;
     return { totalExpenses, totalBudget, burnRate, overBudgetItems, savingsOpportunity };
   }, [SPENDING_BY_CATEGORY]);
@@ -207,10 +197,7 @@ export default function ExpenseAnalytics() {
             <CardTitle className="text-2xl">${stats.totalBudget.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent>
-            <Progress
-              value={(stats.totalExpenses / stats.totalBudget) * 100}
-              className="h-2"
-            />
+            <Progress value={(stats.totalExpenses / stats.totalBudget) * 100} className="h-2" />
           </CardContent>
         </Card>
         <Card>
@@ -236,9 +223,7 @@ export default function ExpenseAnalytics() {
         <Card className="border-green-200">
           <CardHeader className="pb-2">
             <CardDescription>Savings Opportunity</CardDescription>
-            <CardTitle className="text-2xl text-green-600">
-              ${stats.savingsOpportunity.toLocaleString()}
-            </CardTitle>
+            <CardTitle className="text-2xl text-green-600">${stats.savingsOpportunity.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent>
             <Badge className="bg-green-100 text-green-800">
@@ -269,15 +254,12 @@ export default function ExpenseAnalytics() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" />
                     <YAxis dataKey="category" type="category" width={140} tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, ""]} />
+                    <Tooltip formatter={value => [`$${Number(value).toLocaleString()}`, ""]} />
                     <Legend />
                     <Bar dataKey="budget" fill="#e5e7eb" name="Budget" />
                     <Bar dataKey="amount" name="Actual">
                       {SPENDING_BY_CATEGORY.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={entry.amount > entry.budget ? "#ef4444" : entry.color}
-                        />
+                        <Cell key={`cell-${index}`} fill={entry.amount > entry.budget ? "#ef4444" : entry.color} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -305,7 +287,7 @@ export default function ExpenseAnalytics() {
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, "Amount"]} />
+                    <Tooltip formatter={value => [`$${Number(value).toLocaleString()}`, "Amount"]} />
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -329,7 +311,7 @@ export default function ExpenseAnalytics() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {SPENDING_BY_CATEGORY.map((cat) => {
+                  {SPENDING_BY_CATEGORY.map(cat => {
                     const remaining = cat.budget - cat.amount;
                     const utilization = (cat.amount / cat.budget) * 100;
                     const overBudget = cat.amount > cat.budget;
@@ -337,9 +319,7 @@ export default function ExpenseAnalytics() {
                       <TableRow key={cat.category}>
                         <TableCell className="font-medium">{cat.category}</TableCell>
                         <TableCell>${cat.amount.toLocaleString()}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          ${cat.budget.toLocaleString()}
-                        </TableCell>
+                        <TableCell className="text-muted-foreground">${cat.budget.toLocaleString()}</TableCell>
                         <TableCell className={overBudget ? "text-red-600" : "text-green-600"}>
                           {overBudget ? "-" : ""}${Math.abs(remaining).toLocaleString()}
                         </TableCell>
@@ -383,7 +363,7 @@ export default function ExpenseAnalytics() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {VENDOR_SPENDING.map((vendor) => (
+                  {VENDOR_SPENDING.map(vendor => (
                     <TableRow key={vendor.vendor}>
                       <TableCell className="font-medium">{vendor.vendor}</TableCell>
                       <TableCell>${vendor.amount.toLocaleString()}</TableCell>
@@ -395,8 +375,8 @@ export default function ExpenseAnalytics() {
                             vendor.trend > 0
                               ? "bg-red-100 text-red-800"
                               : vendor.trend < 0
-                              ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-800"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
                           }
                         >
                           {vendor.trend > 0 ? (
@@ -404,7 +384,8 @@ export default function ExpenseAnalytics() {
                           ) : vendor.trend < 0 ? (
                             <ArrowDownRight className="mr-1 h-3 w-3" />
                           ) : null}
-                          {vendor.trend > 0 ? "+" : ""}{vendor.trend}%
+                          {vendor.trend > 0 ? "+" : ""}
+                          {vendor.trend}%
                         </Badge>
                       </TableCell>
                     </TableRow>
@@ -428,10 +409,17 @@ export default function ExpenseAnalytics() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
-                    <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, ""]} />
+                    <Tooltip formatter={value => [`$${Number(value).toLocaleString()}`, ""]} />
                     <Legend />
                     <Line type="monotone" dataKey="current" stroke="#f97316" name="Current Year" strokeWidth={2} />
-                    <Line type="monotone" dataKey="previous" stroke="#94a3b8" name="Previous Year" strokeWidth={2} strokeDasharray="5 5" />
+                    <Line
+                      type="monotone"
+                      dataKey="previous"
+                      stroke="#94a3b8"
+                      name="Previous Year"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -439,20 +427,33 @@ export default function ExpenseAnalytics() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Expense Trends by Type</CardTitle>
-                <CardDescription>Operational vs overhead vs categories</CardDescription>
+                <CardTitle>Monthly Expenses: Current vs Previous</CardTitle>
+                <CardDescription>Month-over-month total expenses</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={EXPENSE_TRENDS}>
+                  <AreaChart data={MONTHLY_EXPENSES}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
-                    <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, ""]} />
+                    <Tooltip formatter={value => [`$${Number(value).toLocaleString()}`, ""]} />
                     <Legend />
-                    <Area type="monotone" dataKey="operational" stackId="1" stroke="#6366f1" fill="#6366f1" fillOpacity={0.3} name="Operational" />
-                    <Area type="monotone" dataKey="categories" stackId="1" stroke="#f97316" fill="#f97316" fillOpacity={0.3} name="Categories" />
-                    <Area type="monotone" dataKey="overhead" stackId="1" stroke="#22c55e" fill="#22c55e" fillOpacity={0.3} name="Overhead" />
+                    <Area
+                      type="monotone"
+                      dataKey="current"
+                      stroke="#6366f1"
+                      fill="#6366f1"
+                      fillOpacity={0.3}
+                      name="Current"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="previous"
+                      stroke="#94a3b8"
+                      fill="#94a3b8"
+                      fillOpacity={0.2}
+                      name="Previous month"
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -462,8 +463,8 @@ export default function ExpenseAnalytics() {
 
         <TabsContent value="savings" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {SPENDING_BY_CATEGORY.filter((c) => c.amount > c.budget * 0.8).map((saving, i) => {
-              const opportunity = Math.round((saving.amount - saving.budget * 0.85));
+            {SPENDING_BY_CATEGORY.filter(c => c.amount > c.budget * 0.8).map((saving, i) => {
+              const opportunity = Math.round(saving.amount - saving.budget * 0.85);
               const confidence = Math.min(95, Math.max(50, 100 - Math.round((saving.amount / saving.budget) * 10)));
               return (
                 <Card key={i} className="border-green-200">
@@ -471,8 +472,7 @@ export default function ExpenseAnalytics() {
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">{saving.category}</CardTitle>
                       <Badge className="bg-green-100 text-green-800">
-                        <PiggyBank className="mr-1 h-3 w-3" />
-                        ${opportunity.toLocaleString()}/mo
+                        <PiggyBank className="mr-1 h-3 w-3" />${opportunity.toLocaleString()}/mo
                       </Badge>
                     </div>
                   </CardHeader>

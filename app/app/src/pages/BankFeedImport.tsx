@@ -1,37 +1,45 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { trpc } from "@/providers/trpc"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { toast } from "sonner"
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { trpc } from "@/providers/trpc";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 interface Transaction {
-  id: string
-  date: string
-  description: string
-  amount: number
-  type: "income" | "expense"
-  category: string
-  selected: boolean
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  type: "income" | "expense";
+  category: string;
+  selected: boolean;
 }
 
 interface ImportHistory {
-  id: string
-  date: string
-  fileName: string
-  count: number
-  status: "success" | "partial" | "failed"
+  id: string;
+  date: string;
+  fileName: string;
+  count: number;
+  status: "success" | "partial" | "failed";
 }
 
 interface ColumnMapping {
-  date: number
-  description: number
-  amount: number
-  type: number
+  date: number;
+  description: number;
+  amount: number;
+  type: number;
 }
 
 const categorizationRules: { keyword: string; category: string; type: "income" | "expense" }[] = [
@@ -56,28 +64,23 @@ const categorizationRules: { keyword: string; category: string; type: "income" |
   { keyword: "tax", category: "Taxes", type: "expense" },
   { keyword: "interest", category: "Interest Income", type: "income" },
   { keyword: "refund", category: "Refund", type: "income" },
-]
+];
 
-const sampleHistory: ImportHistory[] = [
-  { id: "1", date: "2026-05-28", fileName: "bank_may_2026.csv", count: 47, status: "success" },
-  { id: "2", date: "2026-05-15", fileName: "bank_apr_2026.csv", count: 52, status: "success" },
-  { id: "3", date: "2026-04-30", fileName: "bank_mar_2026.csv", count: 38, status: "partial" },
-  { id: "4", date: "2026-04-15", fileName: "bank_feb_2026.csv", count: 0, status: "failed" },
-]
+const sampleHistory: ImportHistory[] = [];
 
 export default function BankFeedImport() {
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [importHistory, setImportHistory] = useState<ImportHistory[]>(sampleHistory)
-  const [fileName, setFileName] = useState("")
-  const [isDragging, setIsDragging] = useState(false)
-  const [columnMapping, setColumnMapping] = useState<ColumnMapping>({ date: 0, description: 1, amount: 2, type: 3 })
-  const [showMapping, setShowMapping] = useState(false)
-  const [rawData, setRawData] = useState<string[][]>([])
-  const [fileType, setFileType] = useState<"csv" | "ofx" | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const ofxInputRef = useRef<HTMLInputElement>(null)
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [importHistory, setImportHistory] = useState<ImportHistory[]>(sampleHistory);
+  const [fileName, setFileName] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+  const [columnMapping, setColumnMapping] = useState<ColumnMapping>({ date: 0, description: 1, amount: 2, type: 3 });
+  const [showMapping, setShowMapping] = useState(false);
+  const [rawData, setRawData] = useState<string[][]>([]);
+  const [fileType, setFileType] = useState<"csv" | "ofx" | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const ofxInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: bankRules } = trpc.bankRule.list.useQuery(undefined, { placeholderData: [] })
+  const { data: bankRules } = trpc.bankRule.list.useQuery(undefined, { placeholderData: [] });
 
   const activeRules = useMemo(() => {
     if (bankRules && bankRules.length > 0) {
@@ -88,56 +91,61 @@ export default function BankFeedImport() {
           category: r.actionValue || "Uncategorized",
           type: "expense" as "income" | "expense",
         }))
-        .filter((r: any) => r.keyword)
+        .filter((r: any) => r.keyword);
     }
-    return categorizationRules
-  }, [bankRules])
+    return categorizationRules;
+  }, [bankRules]);
 
   const categorizeTransaction = (description: string): { category: string; type: "income" | "expense" } => {
-    const lowerDesc = description.toLowerCase()
+    const lowerDesc = description.toLowerCase();
     for (const rule of activeRules) {
       if (lowerDesc.includes(rule.keyword)) {
-        return { category: rule.category, type: rule.type }
+        return { category: rule.category, type: rule.type };
       }
     }
-    return { category: "Uncategorized", type: "expense" }
-  }
+    return { category: "Uncategorized", type: "expense" };
+  };
 
   const parseCSV = useCallback((text: string, name: string) => {
-    const lines = text.split("\n").filter((l) => l.trim())
+    const lines = text.split("\n").filter(l => l.trim());
     if (lines.length < 2) {
-      toast.error("File appears to be empty or has no data rows")
-      return
+      toast.error("File appears to be empty or has no data rows");
+      return;
     }
-    const rows = lines.map((line) => {
-      const result: string[] = []
-      let current = ""
-      let inQuotes = false
+    const rows = lines.map(line => {
+      const result: string[] = [];
+      let current = "";
+      let inQuotes = false;
       for (const char of line) {
-        if (char === '"') { inQuotes = !inQuotes }
-        else if (char === "," && !inQuotes) { result.push(current.trim()); current = "" }
-        else { current += char }
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === "," && !inQuotes) {
+          result.push(current.trim());
+          current = "";
+        } else {
+          current += char;
+        }
       }
-      result.push(current.trim())
-      return result
-    })
-    setRawData(rows)
-    setFileName(name)
-    setFileType("csv")
-    setShowMapping(true)
-    toast.success(`Loaded ${rows.length - 1} rows from ${name}`)
-  }, [])
+      result.push(current.trim());
+      return result;
+    });
+    setRawData(rows);
+    setFileName(name);
+    setFileType("csv");
+    setShowMapping(true);
+    toast.success(`Loaded ${rows.length - 1} rows from ${name}`);
+  }, []);
 
   const processWithMapping = () => {
-    if (rawData.length < 2) return
-    const header = rawData[0]
-    const dataRows = rawData.slice(1)
+    if (rawData.length < 2) return;
+    const header = rawData[0];
+    const dataRows = rawData.slice(1);
     const parsed: Transaction[] = dataRows
-      .filter((row) => row.length > Math.max(columnMapping.date, columnMapping.description, columnMapping.amount))
+      .filter(row => row.length > Math.max(columnMapping.date, columnMapping.description, columnMapping.amount))
       .map((row, i) => {
-        const desc = row[columnMapping.description] || ""
-        const rawAmount = parseFloat((row[columnMapping.amount] || "0").replace(/[$,\s]/g, ""))
-        const { category, type } = categorizeTransaction(desc)
+        const desc = row[columnMapping.description] || "";
+        const rawAmount = parseFloat((row[columnMapping.amount] || "0").replace(/[$,\s]/g, ""));
+        const { category, type } = categorizeTransaction(desc);
         return {
           id: `tx-${Date.now()}-${i}`,
           date: row[columnMapping.date] || "",
@@ -146,29 +154,30 @@ export default function BankFeedImport() {
           type,
           category,
           selected: true,
-        }
-      })
-    setTransactions(parsed)
-    setShowMapping(false)
-    toast.success(`Parsed ${parsed.length} transactions`)
-  }
+        };
+      });
+    setTransactions(parsed);
+    setShowMapping(false);
+    toast.success(`Parsed ${parsed.length} transactions`);
+  };
 
   const parseOFX = useCallback((text: string, name: string) => {
-    const txns: Transaction[] = []
-    const stmtTrnRegex = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/g
-    let match
-    let i = 0
+    const txns: Transaction[] = [];
+    const stmtTrnRegex = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/g;
+    let match;
+    let i = 0;
     while ((match = stmtTrnRegex.exec(text)) !== null) {
-      const block = match[1]
+      const block = match[1];
       const get = (tag: string) => {
-        const m = block.match(new RegExp(`<${tag}>([^<]*)`))
-        return m ? m[1].trim() : ""
-      }
-      const dateStr = get("DTPOSTED")
-      const amount = parseFloat(get("TRNAMT") || "0")
-      const name2 = get("NAME") || get("MEMO") || ""
-      const formattedDate = dateStr.length >= 8 ? `${dateStr.slice(4, 6)}/${dateStr.slice(6, 8)}/${dateStr.slice(0, 4)}` : dateStr
-      const { category, type } = categorizeTransaction(name2)
+        const m = block.match(new RegExp(`<${tag}>([^<]*)`));
+        return m ? m[1].trim() : "";
+      };
+      const dateStr = get("DTPOSTED");
+      const amount = parseFloat(get("TRNAMT") || "0");
+      const name2 = get("NAME") || get("MEMO") || "";
+      const formattedDate =
+        dateStr.length >= 8 ? `${dateStr.slice(4, 6)}/${dateStr.slice(6, 8)}/${dateStr.slice(0, 4)}` : dateStr;
+      const { category, type } = categorizeTransaction(name2);
       txns.push({
         id: `ofx-${Date.now()}-${i++}`,
         date: formattedDate,
@@ -177,53 +186,56 @@ export default function BankFeedImport() {
         type: amount >= 0 ? "income" : "expense",
         category,
         selected: true,
-      })
+      });
     }
-    setTransactions(txns)
-    setFileName(name)
-    setFileType("ofx")
-    toast.success(`Parsed ${txns.length} transactions from OFX file`)
-  }, [])
+    setTransactions(txns);
+    setFileName(name);
+    setFileType("ofx");
+    toast.success(`Parsed ${txns.length} transactions from OFX file`);
+  }, []);
 
   const handleFile = (file: File) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const text = e.target?.result as string
+    const reader = new FileReader();
+    reader.onload = e => {
+      const text = e.target?.result as string;
       if (file.name.endsWith(".csv")) {
-        parseCSV(text, file.name)
+        parseCSV(text, file.name);
       } else if (file.name.endsWith(".ofx") || file.name.endsWith(".qfx")) {
-        parseOFX(text, file.name)
+        parseOFX(text, file.name);
       } else {
-        toast.error("Unsupported file type. Please use CSV or OFX/QFX files.")
+        toast.error("Unsupported file type. Please use CSV or OFX/QFX files.");
       }
-    }
-    reader.readAsText(file)
-  }
+    };
+    reader.readAsText(file);
+  };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    const file = e.dataTransfer.files[0]
-    if (file) handleFile(file)
-  }, [])
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  }, []);
 
-  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true) }
-  const handleDragLeave = () => setIsDragging(false)
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  const handleDragLeave = () => setIsDragging(false);
 
   const toggleSelect = (id: string) => {
-    setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, selected: !t.selected } : t)))
-  }
+    setTransactions(prev => prev.map(t => (t.id === id ? { ...t, selected: !t.selected } : t)));
+  };
 
   const toggleAll = () => {
-    const allSelected = transactions.every((t) => t.selected)
-    setTransactions((prev) => prev.map((t) => ({ ...t, selected: !allSelected })))
-  }
+    const allSelected = transactions.every(t => t.selected);
+    setTransactions(prev => prev.map(t => ({ ...t, selected: !allSelected })));
+  };
 
   const importSelected = () => {
-    const selected = transactions.filter((t) => t.selected)
+    const selected = transactions.filter(t => t.selected);
     if (selected.length === 0) {
-      toast.error("No transactions selected")
-      return
+      toast.error("No transactions selected");
+      return;
     }
     const newEntry: ImportHistory = {
       id: Date.now().toString(),
@@ -231,16 +243,16 @@ export default function BankFeedImport() {
       fileName,
       count: selected.length,
       status: "success",
-    }
-    setImportHistory((prev) => [newEntry, ...prev])
-    toast.success(`Imported ${selected.length} transactions`)
-    setTransactions([])
-    setFileName("")
-  }
+    };
+    setImportHistory(prev => [newEntry, ...prev]);
+    toast.success(`Imported ${selected.length} transactions`);
+    setTransactions([]);
+    setFileName("");
+  };
 
-  const totalIncome = transactions.filter((t) => t.selected && t.type === "income").reduce((s, t) => s + t.amount, 0)
-  const totalExpense = transactions.filter((t) => t.selected && t.type === "expense").reduce((s, t) => s + t.amount, 0)
-  const selectedCount = transactions.filter((t) => t.selected).length
+  const totalIncome = transactions.filter(t => t.selected && t.type === "income").reduce((s, t) => s + t.amount, 0);
+  const totalExpense = transactions.filter(t => t.selected && t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  const selectedCount = transactions.filter(t => t.selected).length;
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -269,19 +281,44 @@ export default function BankFeedImport() {
                 >
                   <div className="text-gray-400 mb-4">
                     <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                      />
                     </svg>
                   </div>
                   <p className="text-lg font-medium text-gray-700">Drop files here or click to upload</p>
                   <p className="text-sm text-gray-500 mt-1">Supports CSV, OFX, and QFX formats</p>
                 </div>
-                <input ref={fileInputRef} type="file" accept=".csv,.ofx,.qfx" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = "" }} />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,.ofx,.qfx"
+                  className="hidden"
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) handleFile(f);
+                    e.target.value = "";
+                  }}
+                />
 
                 <div className="mt-4 flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => ofxInputRef.current?.click()}>
                     Upload OFX/QFX
                   </Button>
-                  <input ref={ofxInputRef} type="file" accept=".ofx,.qfx" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = "" }} />
+                  <input
+                    ref={ofxInputRef}
+                    type="file"
+                    accept=".ofx,.qfx"
+                    className="hidden"
+                    onChange={e => {
+                      const f = e.target.files?.[0];
+                      if (f) handleFile(f);
+                      e.target.value = "";
+                    }}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -292,10 +329,14 @@ export default function BankFeedImport() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle>Imported Transactions</CardTitle>
-                      <CardDescription>{fileName} ({fileType?.toUpperCase()}) - {transactions.length} transactions found</CardDescription>
+                      <CardDescription>
+                        {fileName} ({fileType?.toUpperCase()}) - {transactions.length} transactions found
+                      </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => setShowMapping(true)}>Column Mapping</Button>
+                      <Button size="sm" variant="outline" onClick={() => setShowMapping(true)}>
+                        Column Mapping
+                      </Button>
                       <Button size="sm" onClick={importSelected} disabled={selectedCount === 0}>
                         Import Selected ({selectedCount})
                       </Button>
@@ -314,7 +355,9 @@ export default function BankFeedImport() {
                     </div>
                     <div className="p-3 rounded-lg bg-blue-50">
                       <p className="text-sm text-blue-600">Net</p>
-                      <p className="text-lg font-bold text-blue-700">${(totalIncome - totalExpense).toLocaleString()}</p>
+                      <p className="text-lg font-bold text-blue-700">
+                        ${(totalIncome - totalExpense).toLocaleString()}
+                      </p>
                     </div>
                   </div>
 
@@ -323,7 +366,12 @@ export default function BankFeedImport() {
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-10">
-                            <input type="checkbox" checked={transactions.length > 0 && transactions.every((t) => t.selected)} onChange={toggleAll} className="rounded" />
+                            <input
+                              type="checkbox"
+                              checked={transactions.length > 0 && transactions.every(t => t.selected)}
+                              onChange={toggleAll}
+                              className="rounded"
+                            />
                           </TableHead>
                           <TableHead>Date</TableHead>
                           <TableHead>Description</TableHead>
@@ -333,14 +381,21 @@ export default function BankFeedImport() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {transactions.map((tx) => (
+                        {transactions.map(tx => (
                           <TableRow key={tx.id}>
                             <TableCell>
-                              <input type="checkbox" checked={tx.selected} onChange={() => toggleSelect(tx.id)} className="rounded" />
+                              <input
+                                type="checkbox"
+                                checked={tx.selected}
+                                onChange={() => toggleSelect(tx.id)}
+                                className="rounded"
+                              />
                             </TableCell>
                             <TableCell className="whitespace-nowrap">{tx.date}</TableCell>
                             <TableCell className="max-w-[200px] truncate">{tx.description}</TableCell>
-                            <TableCell><Badge variant="outline">{tx.category}</Badge></TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{tx.category}</Badge>
+                            </TableCell>
                             <TableCell className="text-right font-medium">${tx.amount.toLocaleString()}</TableCell>
                             <TableCell>
                               <Badge variant={tx.type === "income" ? "default" : "destructive"}>{tx.type}</Badge>
@@ -366,7 +421,7 @@ export default function BankFeedImport() {
                   <p className="text-sm text-gray-500 text-center py-8">No imports yet</p>
                 ) : (
                   <div className="space-y-3">
-                    {importHistory.map((entry) => (
+                    {importHistory.map(entry => (
                       <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg border">
                         <div>
                           <p className="font-medium text-sm">{entry.fileName}</p>
@@ -374,7 +429,15 @@ export default function BankFeedImport() {
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-medium">{entry.count} txns</p>
-                          <Badge variant={entry.status === "success" ? "default" : entry.status === "partial" ? "secondary" : "destructive"}>
+                          <Badge
+                            variant={
+                              entry.status === "success"
+                                ? "default"
+                                : entry.status === "partial"
+                                  ? "secondary"
+                                  : "destructive"
+                            }
+                          >
                             {entry.status}
                           </Badge>
                         </div>
@@ -401,19 +464,43 @@ export default function BankFeedImport() {
               )}
               <div>
                 <Label>Date Column</Label>
-                <Input type="number" min={0} max={rawData[0]?.length || 5} value={columnMapping.date} onChange={(e) => setColumnMapping({ ...columnMapping, date: parseInt(e.target.value) || 0 })} />
+                <Input
+                  type="number"
+                  min={0}
+                  max={rawData[0]?.length || 5}
+                  value={columnMapping.date}
+                  onChange={e => setColumnMapping({ ...columnMapping, date: parseInt(e.target.value) || 0 })}
+                />
               </div>
               <div>
                 <Label>Description Column</Label>
-                <Input type="number" min={0} max={rawData[0]?.length || 5} value={columnMapping.description} onChange={(e) => setColumnMapping({ ...columnMapping, description: parseInt(e.target.value) || 0 })} />
+                <Input
+                  type="number"
+                  min={0}
+                  max={rawData[0]?.length || 5}
+                  value={columnMapping.description}
+                  onChange={e => setColumnMapping({ ...columnMapping, description: parseInt(e.target.value) || 0 })}
+                />
               </div>
               <div>
                 <Label>Amount Column</Label>
-                <Input type="number" min={0} max={rawData[0]?.length || 5} value={columnMapping.amount} onChange={(e) => setColumnMapping({ ...columnMapping, amount: parseInt(e.target.value) || 0 })} />
+                <Input
+                  type="number"
+                  min={0}
+                  max={rawData[0]?.length || 5}
+                  value={columnMapping.amount}
+                  onChange={e => setColumnMapping({ ...columnMapping, amount: parseInt(e.target.value) || 0 })}
+                />
               </div>
               <div>
                 <Label>Type Column (optional, -1 to skip)</Label>
-                <Input type="number" min={-1} max={rawData[0]?.length || 5} value={columnMapping.type} onChange={(e) => setColumnMapping({ ...columnMapping, type: parseInt(e.target.value) || -1 })} />
+                <Input
+                  type="number"
+                  min={-1}
+                  max={rawData[0]?.length || 5}
+                  value={columnMapping.type}
+                  onChange={e => setColumnMapping({ ...columnMapping, type: parseInt(e.target.value) || -1 })}
+                />
               </div>
             </div>
             <DialogFooter>
@@ -426,5 +513,5 @@ export default function BankFeedImport() {
         </Dialog>
       </div>
     </div>
-  )
+  );
 }
