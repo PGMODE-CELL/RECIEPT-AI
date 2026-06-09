@@ -46,7 +46,12 @@ jobs:
         run: |
           cd huh/backend
           pip install -r requirements.txt
-          pip install pytest pytest-asyncio
+          pip install pytest pytest-asyncio ruff
+
+      - name: Lint (ruff)
+        run: |
+          cd huh/backend
+          ruff check . || true
 
       - name: Run tests
         run: |
@@ -106,7 +111,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./huh/backend
-          file: ./Dockerfile.backend
+          file: ./huh/backend/Dockerfile
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/receipt-ai-backend:latest
@@ -117,8 +122,8 @@ jobs:
       - name: Build and push frontend
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./Dockerfile.frontend
+          context: ./app/app
+          file: ./app/app/Dockerfile
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/receipt-ai-frontend:latest

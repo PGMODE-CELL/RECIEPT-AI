@@ -3,21 +3,34 @@ uvicorn[standard]==0.27.0
 sqlalchemy==2.0.25
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+bcrypt==4.0.1  # passlib 1.7.4 is incompatible with bcrypt>=4.1
 python-multipart==0.0.6
-pydantic==2.5.3
+pydantic[email]==2.5.3
 reportlab==4.0.9
 pytest==8.0.0
+pytest-asyncio>=0.23.0
 httpx==0.26.0
 # Production hardening
 python-dotenv==1.0.0
 slowapi==0.1.9
-alembic==1.18.4
 cryptography==48.0.0
+
+# Two-factor auth
+pyotp>=2.9.0
+qrcode[pil]>=7.4.0
+
+# Background scheduling
+apscheduler>=3.10.0
+
+# Payments (optional integration)
+stripe>=7.0.0
 
 # Async database
 asyncpg>=0.29.0
 aiosqlite>=0.20.0
 sqlalchemy[asyncio]>=2.0.0
+# Sync Postgres driver (used by the sync engine / Alembic)
+psycopg2-binary>=2.9.0
 
 # Redis caching
 redis[hiredis]>=5.0.0

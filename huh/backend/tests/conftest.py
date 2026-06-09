@@ -1,25 +1,38 @@
 import asyncio
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.pool import StaticPool
+import os
 
-from app.database import Base
-from app.database_async import get_async_db
-from main import app
+os.environ.setdefault("ENVIRONMENT", "test")
+os.environ.setdefault("SECRET_KEY", "test-secret-key")
+os.environ.setdefault("ENCRYPTION_KEY", "test-encryption-key")
+# Force sqlite for the test run regardless of any DATABASE_URL the CI exports,
+# so the app engine created at import never needs a Postgres driver. The request
+# DB dependency is overridden below to the dedicated sqlite test engine anyway.
+os.environ["DATABASE_URL"] = "sqlite:///./test_receipt_ai.db"
+os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
 
-# Debug: verify the function identity
-import app.routes.auth as auth_mod
-print(f"[CONFTEST] get_async_db id = {id(get_async_db)}")
-print(f"[CONFTEST] auth.get_db id = {id(auth_mod.get_db)}")
-print(f"[CONFTEST] Same? {get_async_db is auth_mod.get_db}")
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy.ext.asyncio import (  # noqa: E402
+    create_async_engine,
+    AsyncSession,
+    async_sessionmaker,
+)
+from sqlalchemy.pool import NullPool  # noqa: E402
+
+from app.database import Base  # noqa: E402
+from app.database_async import get_async_db  # noqa: E402
+from main import app  # noqa: E402
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test_receipt_ai.db"
 
+# NullPool ensures every request opens (and closes) its own aiosqlite connection
+# in whatever event loop the sync TestClient is currently using. Reusing a pooled
+# connection across the per-request loops that TestClient spins up is what caused
+# the suite to hang.
 _test_engine = create_async_engine(
     TEST_DATABASE_URL,
     connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
+    poolclass=NullPool,
 )
 
 _TestSessionLocal = async_sessionmaker(
@@ -37,31 +50,23 @@ async def override_get_db():
             await db.close()
 
 
-# Register override
 app.dependency_overrides[get_async_db] = override_get_db
-print(f"[CONFTEST] Override registered for {get_async_db}")
-print(f"[CONFTEST] Override count: {len(app.dependency_overrides)}")
+
+
+async def _recreate_tables():
+    # A throwaway engine confined to this call's event loop, so DDL never shares
+    # a connection with the request-handling loops.
+    engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+    await engine.dispose()
 
 
 @pytest.fixture(autouse=True)
 def setup_db():
-    engine = _test_engine
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(_create_tables(engine))
+    asyncio.run(_recreate_tables())
     yield
-    loop.run_until_complete(_drop_tables(engine))
-    loop.close()
-
-
-async def _create_tables(engine):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-
-async def _drop_tables(engine):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
 
 
 @pytest.fixture
