@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Wallet, Shield, BarChart3, Users, Loader2, Mail, Lock, UserPlus } from "lucide-react";
 import { useApi, ApiError } from "@/providers/ApiProvider";
 import { toast } from "sonner";
+import { trackLogin, trackSignup } from "@/lib/analytics";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email, password);
+      trackLogin("email");
       toast.success("Logged in successfully");
       navigate("/org-setup");
     } catch (err) {
@@ -42,6 +44,7 @@ export default function Login() {
     setLoading(true);
     try {
       await register(email, password, fullName);
+      trackSignup("email", false);
       toast.success("Account created successfully");
       navigate("/org-setup");
     } catch (err) {

@@ -9,6 +9,7 @@ import { Wallet, Loader2, Building2, Globe } from "lucide-react";
 import { useApi, ApiError } from "@/providers/ApiProvider";
 import { getToken } from "@/lib/api";
 import { toast } from "sonner";
+import { trackOrgCreated } from "@/lib/analytics";
 
 export default function OrgSetup() {
   const navigate = useNavigate();
@@ -41,8 +42,9 @@ export default function OrgSetup() {
     try {
       const result = await api.setup.create({ name, country, tax_id: taxId || undefined });
       setOrg(result.org_id);
+      trackOrgCreated();
       toast.success(result.message);
-navigate("/dashboard");
+      navigate("/dashboard");
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to create organization");
     } finally {

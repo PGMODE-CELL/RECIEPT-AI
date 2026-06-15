@@ -53,6 +53,7 @@ from app.models.inventory_lot import InventoryLot
 from app.models.inventory_valuation import InventoryValuation
 from app.models.webhook import Webhook
 from app.models.webhook_log import WebhookLog
+from app.models.analytics import AnalyticsEvent
 
 __all__ = [
     "User",
@@ -128,4 +129,5 @@ __all__ = [
     "InventoryValuation",
     "Webhook",
     "WebhookLog",
+    "AnalyticsEvent",
 ]

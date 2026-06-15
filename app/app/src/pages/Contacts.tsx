@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Users, Building2, UserCircle, Trash, Pencil, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { trackContactCreated } from "@/lib/analytics";
 
 export default function Contacts() {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ export default function Contacts() {
 
   const { data: contacts, isLoading, refetch } = trpc.contact.list.useQuery();
   const createContact = trpc.contact.create.useMutation({
-    onSuccess: () => { setOpen(false); refetch(); toast.success("Contact created"); },
+    onSuccess: (result) => { setOpen(false); refetch(); trackContactCreated(result.id); toast.success("Contact created"); },
     onError: (error) => toast.error(error.message),
   });
   const updateContact = trpc.contact.update.useMutation({

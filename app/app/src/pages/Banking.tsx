@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Landmark, Plus, ArrowUpRight, Trash } from "lucide-react";
 import { toast } from "sonner";
+import { trackTransactionCreated } from "@/lib/analytics";
 
 export default function Banking() {
   const [open, setOpen] = useState(false);
@@ -31,7 +32,7 @@ export default function Banking() {
     onError: (error) => toast.error(error.message),
   });
   const createTxn = trpc.transaction.create.useMutation({
-    onSuccess: () => { setTxnOpen(false); refetchTxn(); refetch(); utils.dashboard.stats.invalidate(); toast.success("Transaction added"); },
+    onSuccess: (result) => { setTxnOpen(false); refetchTxn(); refetch(); utils.dashboard.stats.invalidate(); trackTransactionCreated(result.id, Number(result.amount || 0)); toast.success("Transaction added"); },
     onError: (error) => toast.error(error.message),
   });
   const deleteTxn = trpc.transaction.delete.useMutation({

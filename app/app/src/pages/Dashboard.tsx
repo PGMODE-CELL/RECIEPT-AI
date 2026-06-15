@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router";
+import { useEffect } from "react";
 import {
   TrendingUp, TrendingDown, Wallet, AlertCircle,
   Receipt, FileText, Users, Package, ClipboardList,
@@ -10,6 +11,7 @@ import {
   Clock, DollarSign, Activity
 } from "lucide-react";
 import { useApi } from "@/providers/ApiProvider";
+import { trackDashboardViewed } from "@/lib/analytics";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -18,6 +20,10 @@ export default function Dashboard() {
 
   const { data: stats, isLoading } = trpc.dashboard.stats.useQuery(undefined, { enabled });
   const { data: recent } = trpc.dashboard.recentActivity.useQuery(undefined, { enabled });
+
+  useEffect(() => {
+    if (enabled) trackDashboardViewed();
+  }, [enabled]);
 
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);

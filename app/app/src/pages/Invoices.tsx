@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Trash, FileText, Search, Download, Eye, CreditCard, X, Edit, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { trackInvoiceCreated } from "@/lib/analytics";
 
 const statusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-700",
@@ -60,10 +61,11 @@ export default function Invoices() {
   const { data: nextNumber } = trpc.invoice.nextNumber.useQuery();
 
   const createInvoice = trpc.invoice.create.useMutation({
-    onSuccess: () => {
+    onSuccess: (result) => {
       setOpen(false);
       refetch();
       setLineItems([{ description: "", quantity: "1", unitPrice: "0", discount: "0", taxRate: "0", amount: "0" }]);
+      trackInvoiceCreated(result.id, Number(result.totalAmount || 0));
       toast.success("Invoice created");
     },
     onError: (error) => toast.error(error.message),

@@ -19,7 +19,7 @@ from app.routes import (
     activity_notes, vendor_portal, recurring_billing, warehouses, dunning, data_export,
     crm, manufacturing, leases, bank_rules, revenue_recognition,
     cash_flow_forecast, job_costing, document_versions, inventory_lots,
-    inventory_valuation, webhooks, exports, wellknown,
+    inventory_valuation, webhooks, exports, wellknown, analytics,
 )
 from app.errors import catch_all_exceptions
 from app.security_middleware import (
@@ -104,7 +104,7 @@ routers = [
     activity_notes, vendor_portal, recurring_billing, warehouses, dunning, data_export,
     crm, manufacturing, leases, bank_rules, revenue_recognition,
     cash_flow_forecast, job_costing, document_versions, inventory_lots,
-    inventory_valuation, webhooks, exports, wellknown,
+    inventory_valuation, webhooks, exports, wellknown, analytics,
 ]
 for r in routers:
     app.include_router(r.router)
