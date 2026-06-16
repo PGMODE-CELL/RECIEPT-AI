@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Index
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String, DateTime, Text, Index, JSON
 from datetime import datetime, UTC
 
 from app.database import Base
@@ -13,7 +12,7 @@ class AnalyticsEvent(Base):
     user_id = Column(Integer, nullable=True, index=True)
     org_id = Column(Integer, nullable=True, index=True)
     session_id = Column(String(64), nullable=True, index=True)
-    properties = Column(JSONB, nullable=True)
+    properties = Column(JSON, nullable=True)
     user_agent = Column(Text, nullable=True)
     ip_hash = Column(String(64), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
