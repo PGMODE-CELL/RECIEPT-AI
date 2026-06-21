@@ -15,7 +15,7 @@ alembic==1.18.4
 cryptography==48.0.0
 
 # Async database
-asyncpg>=0.29.0
+asyncpg>=0.31.0
 aiosqlite>=0.20.0
 sqlalchemy[asyncio]>=2.0.0
 
