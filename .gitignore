@@ -47,3 +47,5 @@ netlify/functions/backend/
 # - Uploads ----
 uploads/
 huh/backend/app/uploads/
+
+.vercel
