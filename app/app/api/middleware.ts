@@ -25,7 +25,7 @@ export const publicQuery = t.procedure;
 const requireAuth = t.middleware(async (opts) => {
   const { ctx, next } = opts;
 
-  if (!ctx.user) {
+  if (!ctx.user && !ctx.supabaseUser) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: ErrorMessages.unauthenticated,
@@ -33,6 +33,19 @@ const requireAuth = t.middleware(async (opts) => {
   }
 
   return next({ ctx: { ...ctx, user: ctx.user } });
+});
+
+const requireSupabaseAuth = t.middleware(async (opts) => {
+  const { ctx, next } = opts;
+
+  if (!ctx.supabaseUser) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Supabase authentication required",
+    });
+  }
+
+  return next({ ctx });
 });
 
 function requireRole(role: string) {
@@ -54,3 +67,7 @@ export const authedQuery = t.procedure.use(requireAuth);
 export const authedMutation = t.procedure.use(requireAuth);
 export const adminQuery = authedQuery.use(requireRole("admin"));
 export const adminMutation = authedMutation.use(requireRole("admin"));
+
+// Supabase-specific middleware
+export const supabaseQuery = t.procedure.use(requireSupabaseAuth);
+export const supabaseMutation = t.procedure.use(requireSupabaseAuth);
