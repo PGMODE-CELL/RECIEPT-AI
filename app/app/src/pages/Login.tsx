@@ -9,6 +9,7 @@ import { Wallet, Shield, BarChart3, Users, Loader2, Mail, Lock, UserPlus } from 
 import { useApi, ApiError } from "@/providers/ApiProvider";
 import { toast } from "sonner";
 import { trackLogin, trackSignup } from "@/lib/analytics";
+import { signInWithOAuth } from "@/lib/supabase-auth";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -23,6 +24,14 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+
+  const handleOAuthLogin = async (provider: "google" | "github") => {
+    try {
+      await signInWithOAuth(provider);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "OAuth login failed");
+    }
+  };
 
   const handleRealLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,6 +144,32 @@ export default function Login() {
                 </form>
               </TabsContent>
             </Tabs>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-500">Or continue with</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => handleOAuthLogin("google")}
+              >
+                Google
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => handleOAuthLogin("github")}
+              >
+                GitHub
+              </Button>
+            </div>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
