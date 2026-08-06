@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router";
 import AppLayout from "./components/AppLayout";
 import Login from "./pages/Login";
 import SupabaseLogin from "./pages/SupabaseLogin";
+import AuthCallback from "./pages/AuthCallback";
 import Landing from "./pages/Landing";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
@@ -135,6 +136,7 @@ export default function App() {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/login" element={<Login />} />
       <Route path="/supabase-login" element={<SupabaseLogin />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/org-setup" element={<OrgSetup />} />
